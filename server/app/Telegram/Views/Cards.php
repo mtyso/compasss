@@ -265,7 +265,7 @@ class Cards
                 ]);
         }
 
-        return $keyboard->row([Keyboard::webApp('🧭 '.__('bot.buttons.open_app', [], $l), '/')]);
+        return $keyboard->row([Keyboard::webApp('🧭 '.__('bot.buttons.open_app', [], $l), '/advice')]);
     }
 
     /** @param  iterable<Insight>  $insights */

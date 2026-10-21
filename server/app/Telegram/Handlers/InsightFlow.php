@@ -8,8 +8,7 @@ use App\Telegram\Views\Cards;
 
 /**
  * The buttons under an insight the bot sent on its own (App\Telegram\Notifier): «Полезно»,
- * «Не присылать такое» and «Разовая покупка», the same answers the «Советы» feed takes
- * (InsightController::feedback and ::act).
+ * «Не присылать такое» and «Разовая покупка», the same answers the «Советы» feed takes.
  */
 class InsightFlow
 {
@@ -37,16 +36,13 @@ class InsightFlow
                 break;
 
             case 'mute':
-                $muted = array_values(array_unique([...(array) $user->setting('muted_rules', []), $insight->rule]));
-                $user->update(['settings' => [...($user->settings ?? []), 'muted_rules' => $muted]]);
-                $user->insights()->where('rule', $insight->rule)->whereIn('status', ['new', 'seen'])->update(['status' => 'dismissed']);
+                $insight->mute();
                 $toast = __('bot.insight.muted', [], $l);
                 break;
 
             default: // oneoff
                 if ($insight->action() === 'mark_one_off') {
-                    $user->transactions()->find($insight->payload['transaction_id'] ?? 0)?->update(['is_one_off' => true]);
-                    $insight->update(['status' => 'useful']);
+                    $insight->markOneOff();
                 }
                 $toast = __('bot.insight.one_off_done', [], $l);
         }

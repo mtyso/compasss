@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import { i18n } from './i18n'
+import { closeTopOverlay, overlayDepth } from './components/ui/overlays'
 import { bindBackButton, initTelegram } from './lib/telegram'
 import { router } from './router'
 import { useSettings } from './stores/settings'
@@ -18,7 +19,7 @@ async function start(): Promise<void> {
 
   // Applies the saved language and theme before the first screen renders.
   useSettings()
-  bindBackButton(router)
+  bindBackButton(router, { depth: overlayDepth, closeTop: closeTopOverlay })
 
   app.mount('#app')
 }

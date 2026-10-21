@@ -224,11 +224,11 @@ class RecordFlow
                 break;
 
             case 'oneoff':
-                // Same as the button on the insight in the app (InsightController::act).
-                $tx->update(['is_one_off' => true]);
-                $user->insights()->where('rule', 'large_spend')->whereIn('status', ['new', 'seen'])
-                    ->where('payload->transaction_id', $tx->id)->update(['status' => 'useful']);
-                $this->redraw($chatId, $messageId, $tx, $user);
+                // Same as the button on the insight in the app.
+                $insight = $user->insights()->where('rule', 'large_spend')->whereIn('status', ['new', 'seen'])
+                    ->where('payload->transaction_id', $tx->id)->first();
+                $insight ? $insight->markOneOff() : $tx->update(['is_one_off' => true]);
+                $this->redraw($chatId, $messageId, $tx->refresh(), $user);
                 $toast = __('bot.insight.one_off_done', [], $user->locale);
                 break;
         }

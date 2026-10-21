@@ -26,6 +26,12 @@ export interface TelegramWebApp {
   onEvent(event: string, handler: () => void): void
   offEvent(event: string, handler: () => void): void
   BackButton: { isVisible: boolean; show(): void; hide(): void; onClick(handler: () => void): void }
+  /** Used by lib/haptics. */
+  HapticFeedback?: {
+    impactOccurred(style: 'light' | 'medium' | 'heavy'): void
+    notificationOccurred(type: 'success' | 'warning' | 'error'): void
+    selectionChanged(): void
+  }
 }
 
 declare global {

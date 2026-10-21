@@ -191,7 +191,7 @@ it('pushes an alert from an operation entered in the app, once', function () {
     $message = advCalls('sendRichMessage');
     expect($message)->toHaveCount(1)
         ->and($message[0]['rich_message']['html'])->toContain('<h3>🔴 Транспорт: бюджет превышен</h3>')
-        ->and(advButtons($message[0]))->toBe(["ins:useful:{$insight->id}", "ins:mute:{$insight->id}", 'https://kompas.example.uz/'])
+        ->and(advButtons($message[0]))->toBe(["ins:useful:{$insight->id}", "ins:mute:{$insight->id}", 'https://kompas.example.uz/advice'])
         ->and($insight->fresh()->sent_via)->toBe(['telegram']);
 });
 
@@ -233,7 +233,7 @@ it('takes «Полезно», «Не присылать такое» and «Ра�
     advTap("ins:useful:{$useful->id}");
     expect($useful->fresh()->status)->toBe('useful')
         ->and(advToast())->toBe('Спасибо, учту')
-        ->and(advButtons(collect(advCalls('editMessageReplyMarkup'))->last()))->toBe(['https://kompas.example.uz/']);
+        ->and(advButtons(collect(advCalls('editMessageReplyMarkup'))->last()))->toBe(['https://kompas.example.uz/advice']);
 
     $muted = $insight('overspend_forecast', ['forecast_uzs' => 200_000, 'limit_uzs' => 100_000]);
     $other = $insight('overspend_forecast', ['forecast_uzs' => 300_000, 'limit_uzs' => 100_000]);
