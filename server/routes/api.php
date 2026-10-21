@@ -1,7 +1,12 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\TelegramLoginController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\MeController;
+use App\Http\Controllers\RateController;
+use App\Http\Controllers\SummaryController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => [
@@ -19,4 +24,11 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::post('/auth/logout', [TelegramLoginController::class, 'logout']);
     Route::get('/me', [MeController::class, 'show']);
     Route::patch('/me', [MeController::class, 'update']);
+
+    Route::apiResource('accounts', AccountController::class)->except('show')->parameters(['accounts' => 'id']);
+    Route::apiResource('categories', CategoryController::class)->except('show')->parameters(['categories' => 'id']);
+    Route::apiResource('transactions', TransactionController::class)->parameters(['transactions' => 'id']);
+    Route::post('/transactions/{id}/restore', [TransactionController::class, 'restore']);
+    Route::get('/summary', SummaryController::class);
+    Route::get('/rates', RateController::class);
 });
