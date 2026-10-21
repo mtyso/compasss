@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
 import { useAuth, type User } from '@/stores/auth'
 import { useMoney } from '@/stores/money'
+import { usePlan } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
 
 const auth = useAuth()
@@ -17,6 +18,7 @@ watch(
   (signedIn) => {
     if (!signedIn) {
       useMoney().reset()
+      usePlan().reset()
       router.replace({ name: 'login' })
     }
   },

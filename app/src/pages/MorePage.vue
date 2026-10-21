@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ChevronRight, KeyRound, LayoutGrid, LogOut, Wallet } from 'lucide-vue-next'
+import { CalendarClock, ChevronRight, HandCoins, KeyRound, LayoutGrid, LogOut, PieChart, Wallet } from 'lucide-vue-next'
 import { api } from '@/lib/api'
 import { useAuth } from '@/stores/auth'
 import { useSettings, type Theme } from '@/stores/settings'
@@ -75,6 +75,21 @@ onMounted(async () => {
         <RouterLink :to="{ name: 'categories' }" class="flex items-center gap-3 px-4 py-3 active:bg-line">
           <LayoutGrid class="size-5 text-ink-2" />
           <span class="flex-1">{{ $t('more.categories') }}</span>
+          <ChevronRight class="size-4 text-ink-3" />
+        </RouterLink>
+        <RouterLink :to="{ name: 'budget' }" class="flex items-center gap-3 px-4 py-3 active:bg-line">
+          <PieChart class="size-5 text-ink-2" />
+          <span class="flex-1">{{ $t('more.budget') }}</span>
+          <ChevronRight class="size-4 text-ink-3" />
+        </RouterLink>
+        <RouterLink :to="{ name: 'income' }" class="flex items-center gap-3 px-4 py-3 active:bg-line">
+          <HandCoins class="size-5 text-ink-2" />
+          <span class="flex-1">{{ $t('more.income') }}</span>
+          <ChevronRight class="size-4 text-ink-3" />
+        </RouterLink>
+        <RouterLink :to="{ name: 'payments' }" class="flex items-center gap-3 px-4 py-3 active:bg-line">
+          <CalendarClock class="size-5 text-ink-2" />
+          <span class="flex-1">{{ $t('more.payments') }}</span>
           <ChevronRight class="size-4 text-ink-3" />
         </RouterLink>
       </div>
