@@ -95,3 +95,21 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: none;
+  }
+}

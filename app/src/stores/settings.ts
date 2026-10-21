@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { i18n } from '@/i18n'
+import { setApiLocale } from '@/lib/api'
 import type { Locale } from '@/lib/format'
 
 export type Theme = 'system' | 'light' | 'dark'
@@ -30,6 +31,7 @@ export const useSettings = defineStore('settings', () => {
   function applyLocale(): void {
     i18n.global.locale.value = locale.value
     document.documentElement.lang = locale.value
+    setApiLocale(locale.value)
   }
 
   media.addEventListener('change', applyTheme)

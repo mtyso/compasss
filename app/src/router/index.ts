@@ -1,10 +1,22 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AppShell from '@/layouts/AppShell.vue'
+import { useAuth } from '@/stores/auth'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    /** Reachable without signing in. */
+    public?: boolean
+    /** Part of signing in or unlocking: reachable while the app is locked. */
+    gate?: boolean
+  }
+}
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', name: 'login', component: () => import('@/pages/LoginPage.vue'), meta: { public: true } },
+    { path: '/pin', name: 'pin-setup', component: () => import('@/pages/PinSetupPage.vue'), meta: { gate: true } },
+    { path: '/lock', name: 'lock', component: () => import('@/pages/LockPage.vue'), meta: { gate: true } },
     {
       path: '/',
       component: AppShell,
@@ -17,4 +29,23 @@ export const router = createRouter({
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
+})
+
+router.beforeEach((to) => {
+  const auth = useAuth()
+
+  if (!auth.signedIn) {
+    return to.meta.public ? true : { name: 'login' }
+  }
+  if (!auth.pin) {
+    // Signed in on this device for the first time: choose a PIN before anything else.
+    return to.name === 'pin-setup' ? true : { name: 'pin-setup' }
+  }
+  if (!auth.unlocked) {
+    return to.name === 'lock' ? true : { name: 'lock', query: to.fullPath !== '/' ? { next: to.fullPath } : {} }
+  }
+  if (to.meta.public || to.name === 'lock') {
+    return { name: 'today' }
+  }
+  return true
 })
