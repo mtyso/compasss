@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
 import { useAdvisor } from '@/stores/advisor'
 import { useAuth, type User } from '@/stores/auth'
+import { useHabits } from '@/stores/habits'
 import { useMoney } from '@/stores/money'
 import { usePlan } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
+import { useTasks } from '@/stores/tasks'
 
 const auth = useAuth()
 const settings = useSettings()
@@ -21,6 +23,8 @@ watch(
       useMoney().reset()
       usePlan().reset()
       useAdvisor().reset()
+      useTasks().reset()
+      useHabits().reset()
       router.replace({ name: 'login' })
     }
   },
