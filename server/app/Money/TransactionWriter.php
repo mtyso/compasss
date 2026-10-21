@@ -2,6 +2,7 @@
 
 namespace App\Money;
 
+use App\Events\TransactionSaved;
 use App\Models\Account;
 use App\Models\Transaction;
 use App\Models\User;
@@ -52,6 +53,7 @@ class TransactionWriter
             $transaction->source = $data['source'] ?? 'app';
         }
         $transaction->save();
+        TransactionSaved::dispatch($transaction);
 
         return $transaction;
     }

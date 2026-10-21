@@ -19,7 +19,7 @@ class MeController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:60'],
             'locale' => ['sometimes', Rule::in(User::LOCALES)],
-            'settings' => ['sometimes', 'array:'.implode(',', array_keys(User::SETTINGS))],
+            'settings' => ['sometimes', 'array:'.collect(User::SETTINGS)->keys()->reject(fn ($key) => str_contains($key, '.'))->implode(',')],
             ...collect(User::SETTINGS)->mapWithKeys(fn ($rules, $key) => ["settings.{$key}" => $rules])->all(),
         ]);
 

@@ -22,6 +22,14 @@ class User extends Authenticatable
     public const SETTINGS = [
         // Money that must stay on the spending accounts whatever happens (docs/PLAN.md, 2.1)
         'min_balance_uzs' => ['integer', 'min:0', 'max:1000000000000'],
+        // The advisor (docs/PLAN.md, 2.5): how often and how firmly it speaks, and its thresholds
+        'advisor_strictness' => ['string', 'in:soft,normal,strict'],
+        'budget_alert_percent' => ['integer', 'min:50', 'max:100'],
+        'large_spend_factor' => ['numeric', 'min:1.5', 'max:10'],
+        'cushion_target_months' => ['integer', 'min:1', 'max:12'],
+        // «Не показывать такое»: rules switched off
+        'muted_rules' => ['array', 'max:20'],
+        'muted_rules.*' => ['string', 'distinct', 'in:'.Insight::RULES_LIST],
     ];
 
     protected static function booted(): void
@@ -66,6 +74,11 @@ class User extends Authenticatable
     public function recurringPayments(): HasMany
     {
         return $this->hasMany(RecurringPayment::class);
+    }
+
+    public function insights(): HasMany
+    {
+        return $this->hasMany(Insight::class);
     }
 
     /** A user setting with its default (docs/PLAN.md, 2.5: thresholds are settings). */
