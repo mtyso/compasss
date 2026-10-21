@@ -48,7 +48,9 @@ router.beforeEach((to) => {
   if (!auth.signedIn) {
     if (inTelegram()) {
       // The Mini App signs in by itself, then comes back to the screen a bot button opened.
-      return to.name === 'telegram' ? true : { name: 'telegram', query: to.meta.public ? {} : { next: to.fullPath } }
+      // Without the hash: it holds Telegram's launch data (already read by the SDK), not an anchor.
+      const next = to.fullPath.replace(/#.*$/, '')
+      return to.name === 'telegram' ? true : { name: 'telegram', query: to.meta.public ? {} : { next } }
     }
     return to.meta.public && to.name !== 'telegram' ? true : { name: 'login' }
   }
