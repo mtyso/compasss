@@ -1,0 +1,93 @@
+name: Release
+
+# Builds the production tree (deploy/build-release.sh) and commits it, as one commit, to the branch `release` (D13).
+# The server takes it with `bash deploy/deploy-git.sh`; nothing reaches the server until that command runs.
+# A pull request that touches the release kit only builds the tree, to show it still assembles.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - deploy/**
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, intl, pdo_mysql
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Server dependencies without dev packages
+        working-directory: server
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress --prefer-dist
+
+      # VITE_API_URL stays empty: the web app and the Mini App call the API on their own address.
+      - name: Web app
+        working-directory: app
+        run: |
+          npm ci
+          npm run build
+
+      - name: Assemble the release tree
+        run: bash deploy/build-release.sh "$RUNNER_TEMP/release"
+
+      - name: Commit to the release branch
+        if: github.event_name != 'pull_request'
+        env:
+          TREE_DIR: ${{ runner.temp }}/release
+          INDEX: ${{ runner.temp }}/release.index
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          parent=''
+          if git fetch --quiet --depth=1 origin +refs/heads/release:refs/remotes/origin/release 2>/dev/null; then
+            parent="$(git rev-parse refs/remotes/origin/release)"
+          fi
+
+          # the tree is staged into a separate index, so the checkout of main stays as it is
+          GIT_INDEX_FILE="$INDEX" git --work-tree="$TREE_DIR" add -A -f .
+          tree="$(GIT_INDEX_FILE="$INDEX" git --work-tree="$TREE_DIR" write-tree)"
+
+          if [ -n "$parent" ] && [ "$tree" = "$(git rev-parse "$parent^{tree}")" ]; then
+            echo "The tree is identical to the current release ${parent:0:12}: nothing to commit."
+            exit 0
+          fi
+
+          short="$(git rev-parse --short=9 HEAD)"
+          files="$(find "$TREE_DIR" -type f | wc -l | tr -d ' ')"
+          size="$(du -sh "$TREE_DIR" | cut -f1)"
+          commit="$(printf 'release: %s %s\n\nSource: %s\nFiles: %s, %s\n' "$short" "$(git log -1 --format=%s HEAD)" "$(git rev-parse HEAD)" "$files" "$size" \
+            | git commit-tree "$tree" ${parent:+-p "$parent"})"
+          git push origin "$commit:refs/heads/release"
+
+          {
+            echo "### Release ${commit:0:12}"
+            echo
+            echo "From \`$short\` ($files files, $size). On the server:"
+            echo
+            echo '```'
+            echo 'cd ~/apps/kompas && bash deploy/deploy-git.sh'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -10,7 +10,7 @@ When the plan and the code disagree, fix whichever is wrong and update the decis
 
 - `server/` — Laravel 13 API, PHP 8.4. Production DB is MariaDB 11.4 on AHost shared hosting (cPanel).
 - `app/` — Vue 3 + TypeScript + Vite + Tailwind 4 SPA. The same build is the web app and, through Capacitor, the Android app (`app/android`, built into an APK by `.github/workflows/android.yml`; there is no local Android SDK).
-- `deploy/` — release build and server update scripts (same model as `mtyso/emerich-dealers`, `docs/ops/DEPLOY_CPANEL.md` there).
+- `deploy/` — `build-release.sh` (assembles the production tree; `.github/workflows/release.yml` commits it to the branch `release` on every push to main) and `deploy-git.sh` (the owner runs it on AHost to update). First install and updates: `docs/DEPLOY.md`.
 - `docs/` — plan and decisions.
 
 ## Local commands
@@ -31,7 +31,7 @@ npm install
 npm run dev             # Vite on http://localhost:5173, proxies /api to 127.0.0.1:8000
 npm run typecheck
 npm test                # vitest
-npm run build           # app/dist; deploy copies it into server/public
+npm run build           # app/dist; the release build copies it into public/
 ```
 
 Production runs PHP 8.4; `composer.json` still allows 8.3 so the sandbox and older local PHP can install.

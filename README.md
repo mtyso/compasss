@@ -5,7 +5,7 @@
 
 - Android-приложение, веб и Telegram-бот на одном сервере.
 - Сервер: Laravel 13 + MariaDB (хостинг AHost). Клиент: Vue 3 + TypeScript + Tailwind, Android через Capacitor.
-- План и решения: [docs/PLAN.md](docs/PLAN.md).
+- План и решения: [docs/PLAN.md](docs/PLAN.md). Выкладка на хостинг: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Приложение на телефон
 
