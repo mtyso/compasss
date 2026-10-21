@@ -5,6 +5,7 @@
 //    so swiping a sheet down does not fold the whole app.
 // Outside Telegram (browser, Android app) nothing here runs and the SDK is never loaded.
 
+import { watch, type Ref } from 'vue'
 import type { Router } from 'vue-router'
 
 /** The parts of window.Telegram.WebApp the app uses (https://core.telegram.org/bots/webapps). */
@@ -174,17 +175,26 @@ export function isNestedPath(path: string): boolean {
   return path.split('/').filter(Boolean).length > 1
 }
 
-export function bindBackButton(router: Router): void {
+/** Open sheets and dialogs (components/ui/overlays.ts): «Back» closes the top one before it leaves the screen. */
+export interface BackOverlays {
+  depth: Readonly<Ref<number>>
+  closeTop(): boolean
+}
+
+export function bindBackButton(router: Router, overlays?: BackOverlays): void {
   const app = webApp
   if (!app) return
 
   app.BackButton.onClick(() => {
+    if (overlays?.closeTop()) return
     // Opened straight on a nested screen from a bot button: there is no history to go back to.
     if (window.history.state?.back) router.back()
     else router.replace('/' + router.currentRoute.value.path.split('/').filter(Boolean)[0])
   })
-  router.afterEach((to) => {
-    if (isNestedPath(to.path)) app.BackButton.show()
-    else app.BackButton.hide()
-  })
+  // Shown on nested screens and over an open sheet, so «Back» also closes Quick add on a tab screen.
+  watch(
+    () => isNestedPath(router.currentRoute.value.path) || (overlays?.depth.value ?? 0) > 0,
+    (visible) => (visible ? app.BackButton.show() : app.BackButton.hide()),
+    { immediate: true, flush: 'sync' },
+  )
 }

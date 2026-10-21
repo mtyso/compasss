@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { bindBackButton, isNestedPath, launchedFromTelegram, setTelegramApp, syncColors, toHex, type TelegramWebApp } from './telegram'
 
@@ -86,6 +87,38 @@ describe('inside Telegram', () => {
     const onBack = vi.mocked(app.BackButton.onClick).mock.calls[0][0]
     onBack()
     await vi.waitFor(() => expect(router.currentRoute.value.path).toBe('/more'))
+    expect(app.BackButton.hide).toHaveBeenCalled()
+  })
+
+  it('closes an open sheet first and shows «Back» over a sheet on a tab screen', async () => {
+    const app = fakeApp()
+    setTelegramApp(app)
+    const component = { template: '<div />' }
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component },
+        { path: '/more', component },
+        { path: '/more/accounts', component },
+      ],
+    })
+    const depth = ref(0)
+    const closeTop = vi.fn(() => {
+      if (depth.value === 0) return false
+      depth.value--
+      return true
+    })
+    bindBackButton(router, { depth, closeTop })
+
+    await router.push('/more')
+    expect(app.BackButton.show).not.toHaveBeenCalled()
+    depth.value = 1
+    expect(app.BackButton.show).toHaveBeenCalledOnce()
+
+    const onBack = vi.mocked(app.BackButton.onClick).mock.calls[0][0]
+    onBack()
+    expect(router.currentRoute.value.path).toBe('/more')
+    expect(depth.value).toBe(0)
     expect(app.BackButton.hide).toHaveBeenCalled()
   })
 
