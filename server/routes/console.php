@@ -11,3 +11,8 @@ Schedule::command('rates:fetch')->dailyAt('09:30')->timezone('Asia/Tashkent');
 // The advisor's time-of-day rules (docs/PLAN.md, 2.5). «Сегодня» runs the morning ones itself if this is late.
 Schedule::command('advisor:run morning')->dailyAt('08:00')->timezone('Asia/Tashkent');
 Schedule::command('advisor:run evening')->dailyAt('21:00')->timezone('Asia/Tashkent');
+
+// Bot messages (docs/BOT.md). Times are settings in config/telegram.php.
+Schedule::command('bot:digest morning')->dailyAt(config('telegram.digest.morning_at'))->timezone('Asia/Tashkent');
+Schedule::command('bot:digest evening')->dailyAt(config('telegram.digest.evening_at'))->timezone('Asia/Tashkent');
+Schedule::command('bot:digest weekly')->weeklyOn(0, config('telegram.digest.weekly_at'))->timezone('Asia/Tashkent');

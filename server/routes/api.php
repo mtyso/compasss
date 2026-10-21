@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdvisorController;
 use App\Http\Controllers\Auth\TelegramLoginController;
+use App\Http\Controllers\Auth\TelegramWebAppController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\HabitController;
@@ -27,6 +28,7 @@ Route::prefix('auth/telegram')->controller(TelegramLoginController::class)->grou
     Route::post('/start', 'start')->middleware('throttle:10,1');
     Route::get('/status/{id}', 'status')->middleware('throttle:120,1');
 });
+Route::post('/auth/telegram/webapp', TelegramWebAppController::class)->middleware('throttle:20,1');
 
 Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::post('/auth/logout', [TelegramLoginController::class, 'logout']);

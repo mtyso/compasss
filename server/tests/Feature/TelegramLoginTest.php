@@ -170,7 +170,7 @@ it('does not accept a confirmation after the link expired', function () {
 it('answers a plain /start with what the bot does, in Uzbek for an Uzbek Telegram', function () {
     webhook(startMessage(OWNER_ID, '/start', 'uz'));
 
-    expect(sentTo('sendMessage')[0]['text'])->toBe(__('bot.welcome', [], 'uz'));
+    expect(sentTo('sendRichMessage')[0]['rich_message']['html'])->toContain(__('bot.start.title', [], 'uz'));
 });
 
 it('rejects webhook calls without the secret header', function () {
