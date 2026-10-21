@@ -32,6 +32,8 @@
 | D18 | Тесты: Pest на сервере, Vitest на клиенте. CI в GitHub Actions гоняет тесты сервера на MariaDB 11.4, как на хостинге. |
 | D19 | Операция всегда в валюте своего счёта: трата в долларах записывается со счёта в долларах. Обмен валюты — перевод между счетами, где указано, сколько пришло. Валюту счёта нельзя поменять после создания. |
 | D20 | Курс на дату операции берётся из сохранённых курсов ЦБ; если его нет, сервер сразу спрашивает `cbu.uz`, а если ЦБ не отвечает — берёт последний известный курс. Если курса нет совсем, приложение просит ввести его вручную. |
+| D21 | Задачи: срок (дата и время) необязателен, приоритет 0 обычная / 1 важная / 2 срочная. Повтор задаётся правилом (каждые N дней, недель по выбранным дням, месяцев, лет). Отметка повторяющейся задачи не закрывает её, а переносит на следующую дату после сегодняшней; «Вернуть» ставит прежнюю дату. |
+| D22 | Привычки трёх типов: «сделать» (отметка одним касанием), «набрать» (дневная цель, например 8 стаканов) и «не больше» (ограничение, например 2 кофе; день без отметок считается выдержанным). График: дни недели или «N раз в неделю». Серия считает выдержанные дни по графику подряд (или недели для «N раз в неделю»); сегодняшний день добавляет к серии, когда выполнен, и не обрывает её, пока не кончился. |
 
 ## 2. Советник
 
@@ -128,8 +130,8 @@
 | `budgets` | `category_id`, `month` (`YYYY-MM`), `limit_uzs`; новый месяц копирует прошлый |
 | `income_schedules` | `name`, `day_of_month`, `expected_amount`, `currency`, `account_id`, `active` |
 | `recurring_payments` | `name`, `amount`, `currency`, `category_id`, `account_id`, `day_of_month`, `next_due_on`, `active` |
-| `tasks` | `title`, `notes`, `due_on`, `due_time`, `priority`, `repeat` (json), `done_at`, мягкое удаление |
-| `habits`, `habit_logs` | тип (check/count/limit), цель, единица, график (json), цвет; отметки по датам |
+| `tasks` | `title`, `notes`, `due_on`, `due_time`, `priority` (0–2), `repeat` (json: `unit`, `every`, `days`, `day`), `done_at`, мягкое удаление |
+| `habits`, `habit_logs` | `type` (check/count/limit), `target`, `unit`, `schedule` (json: `days` или `per_week`), `color`, `icon`, `sort`, `started_on`, `archived_at`, мягкое удаление; отметки: `date`, `value`, одна на день |
 | `insights` | `rule`, `severity` (good/info/warn/alert), `period_key`, `subject`, `payload` (json), `status` (new/seen/useful/dismissed), `sent_via` (json) |
 | `device_tokens` | токен Firebase, платформа (появится в 1.8) |
 
@@ -148,8 +150,8 @@ GET    /api/me            PATCH /api/me    настройки, язык, сов�
 GET    /api/budgets?month=  PUT /api/budgets/{month}
        /api/income-schedules                CRUD
        /api/recurring-payments              CRUD, POST {id}/pay
-       /api/tasks                           CRUD, POST {id}/complete
-       /api/habits                          CRUD, PUT {id}/logs/{date}
+       /api/tasks                           CRUD, POST|DELETE {id}/complete, POST {id}/restore
+       /api/habits                          CRUD, PUT {id}/logs/{date}, POST {id}/restore
 GET    /api/today                           всё для экрана «Сегодня» одним запросом
 GET    /api/rates?date=
 POST   /api/advisor/can-afford              вердикт и объяснение
