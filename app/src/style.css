@@ -113,3 +113,20 @@ body {
     transition: none;
   }
 }
+
+/* Selectable pill used for accounts, subcategories and dates. */
+@layer components {
+  .chip {
+    @apply flex shrink-0 items-center gap-2 rounded-2xl border border-line px-3 py-2 text-sm whitespace-nowrap text-ink transition-colors;
+  }
+
+  .chip-on {
+    @apply border-ink bg-ink text-surface;
+  }
+}
+
+@layer components {
+  .field {
+    @apply rounded-2xl border border-line bg-surface px-4 py-3 text-base text-ink outline-none placeholder:text-ink-3 focus:border-ink-3;
+  }
+}
