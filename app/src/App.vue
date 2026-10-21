@@ -49,5 +49,10 @@ watch(
 </script>
 
 <template>
-  <RouterView />
+  <!-- Sign-in, PIN and the app itself cross-fade; screens inside the app animate in AppShell. -->
+  <RouterView v-slot="{ Component, route }">
+    <Transition name="fade" mode="out-in">
+      <component :is="Component" :key="route.matched[0]?.path" />
+    </Transition>
+  </RouterView>
 </template>

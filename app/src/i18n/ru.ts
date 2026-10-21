@@ -231,4 +231,10 @@ export default {
     forgot: 'Забыл PIN? Войти заново',
     erase: 'Стереть',
   },
+  // Shared interface pieces (components/ui).
+  ui: {
+    close: 'Закрыть',
+    saved: 'Записано',
+    updated: 'Сохранено',
+  },
 }

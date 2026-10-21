@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Loader2, Send } from 'lucide-vue-next'
+import { Send } from 'lucide-vue-next'
+import CompassMark from '@/components/ui/CompassMark.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiSpinner from '@/components/ui/UiSpinner.vue'
 import { useAuth } from '@/stores/auth'
 
 const auth = useAuth()
@@ -37,57 +40,93 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mx-auto flex min-h-full max-w-sm flex-col justify-center gap-8 px-6 py-10">
-    <div class="flex flex-col gap-2">
-      <h1 class="font-display text-4xl font-bold">{{ $t('appName') }}</h1>
-      <p class="text-ink-2">{{ $t('login.subtitle') }}</p>
+  <div class="mx-auto flex min-h-dvh max-w-sm flex-col px-6 pt-[max(2rem,calc(var(--safe-top)+1rem))] pb-[max(1.5rem,var(--safe-bottom))]">
+    <!-- The one orchestrated moment: the needle swings in and settles, then the name and the button rise. -->
+    <div class="flex flex-1 flex-col justify-center gap-7 py-8">
+      <CompassMark :size="112" swing />
+      <div class="flex flex-col gap-3">
+        <h1 class="rise font-display text-[2.75rem] leading-none font-bold tracking-[-0.04em]" style="--delay: 260ms">{{ $t('appName') }}</h1>
+        <p class="rise max-w-64 text-[1.0625rem] text-ink-2" style="--delay: 340ms">{{ $t('login.subtitle') }}</p>
+      </div>
     </div>
 
-    <p v-if="auth.signedOutReason" class="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">
-      {{ $t(`login.signedOut.${auth.signedOutReason}`) }}
-    </p>
+    <div class="rise flex flex-col gap-3" style="--delay: 440ms">
+      <p v-if="auth.signedOutReason" class="rounded-control bg-danger-soft px-4 py-3 text-sm text-danger">
+        {{ $t(`login.signedOut.${auth.signedOutReason}`) }}
+      </p>
 
-    <Transition name="fade" mode="out-in">
-      <div v-if="auth.loginState === 'waiting'" key="waiting" class="flex flex-col gap-5 rounded-3xl bg-surface p-5 shadow-sm">
-        <div class="flex items-center gap-3">
-          <Loader2 class="size-5 shrink-0 animate-spin text-ink-3 motion-reduce:animate-none" />
-          <p class="font-semibold">{{ $t('login.waiting') }}</p>
+      <Transition name="fade" mode="out-in">
+        <div v-if="auth.loginState === 'waiting'" key="waiting" class="card flex flex-col gap-4 p-5">
+          <div class="flex items-center gap-3">
+            <UiSpinner class="text-money" />
+            <p class="font-semibold">{{ $t('login.waiting') }}</p>
+          </div>
+          <ol class="steps flex flex-col gap-2.5 text-sm text-ink-2">
+            <li>{{ $t('login.step1') }}</li>
+            <li>{{ $t('login.step2') }}</li>
+            <li>{{ $t('login.step3') }}</li>
+          </ol>
+          <div class="flex flex-col gap-1 pt-1">
+            <UiButton variant="telegram" block :href="auth.loginLink ?? undefined" target="_blank" rel="noopener">
+              <template #icon><Send class="size-[18px]" /></template>
+              {{ $t('login.openTelegram') }}
+            </UiButton>
+            <UiButton variant="ghost" block @click="auth.cancelLogin()">{{ $t('login.cancel') }}</UiButton>
+          </div>
         </div>
-        <ol class="flex list-decimal flex-col gap-1.5 pl-5 text-sm text-ink-2">
-          <li>{{ $t('login.step1') }}</li>
-          <li>{{ $t('login.step2') }}</li>
-          <li>{{ $t('login.step3') }}</li>
-        </ol>
-        <div class="flex flex-col gap-2">
-          <a
-            :href="auth.loginLink ?? undefined"
-            target="_blank"
-            rel="noopener"
-            class="flex items-center justify-center gap-2 rounded-2xl bg-[#229ED9] py-3 font-semibold text-white active:opacity-80"
-          >
-            <Send class="size-4" />
-            {{ $t('login.openTelegram') }}
-          </a>
-          <button type="button" class="py-2 text-sm text-ink-2" @click="auth.cancelLogin()">{{ $t('login.cancel') }}</button>
-        </div>
-      </div>
 
-      <div v-else key="idle" class="flex flex-col gap-3">
-        <p v-if="['denied', 'expired', 'error'].includes(auth.loginState)" class="px-1 text-sm text-danger">
-          {{ $t(`login.${auth.loginState}`) }}
-        </p>
-        <button
-          type="button"
-          class="flex items-center justify-center gap-2 rounded-2xl bg-[#229ED9] py-3.5 font-semibold text-white transition-opacity active:opacity-80 disabled:opacity-60"
-          :disabled="auth.loginState === 'starting'"
-          @click="signIn"
-        >
-          <Loader2 v-if="auth.loginState === 'starting'" class="size-5 animate-spin motion-reduce:animate-none" />
-          <Send v-else class="size-5" />
-          {{ $t('login.telegram') }}
-        </button>
-        <p class="px-1 text-xs text-ink-3">{{ $t('login.hint') }}</p>
-      </div>
-    </Transition>
+        <div v-else key="idle" class="flex flex-col gap-3">
+          <p v-if="['denied', 'expired', 'error'].includes(auth.loginState)" class="px-1 text-sm text-danger" role="alert">
+            {{ $t(`login.${auth.loginState}`) }}
+          </p>
+          <UiButton variant="telegram" size="lg" block :loading="auth.loginState === 'starting'" @click="signIn">
+            <template #icon><Send class="size-5" /></template>
+            {{ $t('login.telegram') }}
+          </UiButton>
+          <p class="px-1 text-center text-caption text-ink-3">{{ $t('login.hint') }}</p>
+        </div>
+      </Transition>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.rise {
+  animation: rise 560ms var(--ease-enter) both;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* Numbered steps with the number in a small disc: the order matters here. */
+.steps {
+  counter-reset: step;
+}
+
+.steps li {
+  counter-increment: step;
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.steps li::before {
+  content: counter(step);
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  background: var(--c-surface-2);
+  color: var(--c-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  transform: translateY(-1px);
+}
+</style>

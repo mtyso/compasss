@@ -234,6 +234,12 @@ const uz: typeof ru = {
     forgot: 'PIN-kodni unutdingizmi? Qaytadan kirish',
     erase: "O'chirish",
   },
+  // Shared interface pieces (components/ui).
+  ui: {
+    close: 'Yopish',
+    saved: 'Yozildi',
+    updated: 'Saqlandi',
+  },
 }
 
 export default uz
