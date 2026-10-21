@@ -3,13 +3,13 @@
 Personal app of the owner (Elyor) for money, habits and tasks, with a rule-based financial advisor at its core.
 The owner communicates in **Russian**; UI is **Russian and Uzbek (Latin)**; code, comments, table names and commits are in **English**.
 
-Read `docs/PLAN.md` first: it holds the numbered decisions (D1…D22), the advisor design, the data model and the stage plan.
+Read `docs/PLAN.md` first: it holds the numbered decisions (D1…D23), the advisor design, the data model and the stage plan.
 When the plan and the code disagree, fix whichever is wrong and update the decision.
 
 ## Layout
 
 - `server/` — Laravel 13 API, PHP 8.4. Production DB is MariaDB 11.4 on AHost shared hosting (cPanel).
-- `app/` — Vue 3 + TypeScript + Vite + Tailwind 4 SPA. The same build is the web app and, through Capacitor, the Android app.
+- `app/` — Vue 3 + TypeScript + Vite + Tailwind 4 SPA. The same build is the web app and, through Capacitor, the Android app (`app/android`, built into an APK by `.github/workflows/android.yml`; there is no local Android SDK).
 - `deploy/` — release build and server update scripts (same model as `mtyso/emerich-dealers`, `docs/ops/DEPLOY_CPANEL.md` there).
 - `docs/` — plan and decisions.
 
