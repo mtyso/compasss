@@ -59,7 +59,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="contents">
     <!-- Compact bar. With a back button it takes its own row; without, it only appears over the content. -->
-    <div class="sticky top-0 z-20 -mx-4" :class="showBack ? 'h-12' : 'h-0'">
+    <div class="bar sticky top-0 z-20 -mx-4" :class="showBack ? 'h-12' : 'h-0'">
       <div
         class="absolute inset-x-0 top-0 flex h-12 items-center gap-1 px-2 transition-[background-color,box-shadow] duration-200"
         :class="collapsed ? 'bg-bg shadow-[0_1px_0_var(--c-line)]' : showBack ? 'bg-bg' : 'pointer-events-none'"
@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <header class="flex items-end gap-3 px-1" :class="showBack ? 'pt-1' : 'pt-3'">
+    <header class="flex items-end gap-3 px-1" :class="showBack ? '' : 'pt-2'">
       <div class="flex min-w-0 flex-1 flex-col gap-1">
         <span v-if="overline || $slots.overline" class="text-caption font-medium text-ink-3">
           <slot name="overline">{{ overline }}</slot>
@@ -97,6 +97,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* The bar is a flex item of the screen's column; cancel the column gap so it adds no space of its own. */
+.bar {
+  margin-bottom: calc(-1 * var(--page-gap, 1.25rem));
+}
+
 .compact {
   opacity: 0;
   transform: translateY(6px);

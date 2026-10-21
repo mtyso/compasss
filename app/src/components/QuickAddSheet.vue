@@ -11,8 +11,11 @@ import UiSpinner from '@/components/ui/UiSpinner.vue'
 import UiSwitch from '@/components/ui/UiSwitch.vue'
 import { showToast } from '@/components/ui/toast'
 import { haptics } from '@/lib/haptics'
+import { softHyphenate } from '@/lib/hyphenate'
+import { CATEGORY_COLORS } from '@/lib/palette'
 import { ApiError } from '@/lib/api'
 import { isoDate, isoTime, shiftDate } from '@/lib/dates'
+import { groupDigits, groupInput } from '@/lib/digits'
 import { formatMoney } from '@/lib/format'
 import { amountToInput, parseAmount, toUzs } from '@/lib/money'
 import { readJson, writeJson } from '@/lib/storage'
@@ -79,11 +82,11 @@ function fill(transaction: Transaction | null): void {
   error.value = null
   if (transaction) {
     type.value = transaction.type
-    amountText.value = amountToInput(transaction.amount, transaction.currency)
+    amountText.value = groupDigits(amountToInput(transaction.amount, transaction.currency))
     accountId.value = transaction.account_id
     toAccountId.value = transaction.to_account_id
     const target = transaction.to_account_id ? money.accountById.get(transaction.to_account_id) : null
-    toAmountText.value = transaction.to_amount && target ? amountToInput(transaction.to_amount, target.currency) : ''
+    toAmountText.value = transaction.to_amount && target ? groupDigits(amountToInput(transaction.to_amount, target.currency)) : ''
     categoryId.value = transaction.category_id
     const category = transaction.category_id ? money.categoryById.get(transaction.category_id) : null
     openParentId.value = category ? money.rootOf(category).id : null
@@ -147,6 +150,16 @@ function pickParent(category: Category): void {
   haptics.selection()
   categoryId.value = category.id
   openParentId.value = money.childCategories(category.id).length ? category.id : null
+  // The subcategories appear under the grid; bring them into view so they're noticed.
+  if (openParentId.value) void nextTick(() => subcategories.value?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+}
+
+const subcategories = ref<HTMLElement | null>(null)
+
+const typedPlain = computed(() => /^[\d\s\u00a0\u202f]*$/.test(amountText.value))
+
+function ringOf(category: Category): string {
+  return CATEGORY_COLORS[category.color ?? 'gray'] ?? CATEGORY_COLORS.gray!
 }
 
 async function save(): Promise<void> {
@@ -250,29 +263,34 @@ function addAccount(): void {
       <UiButton @click="addAccount">{{ $t('quickAdd.addAccount') }}</UiButton>
     </div>
 
-    <div v-else class="flex flex-col gap-6 pt-1">
-      <!-- Amount: the first thing the eye and the keyboard land on. -->
-      <label class="flex flex-col gap-1.5">
-        <span class="sr-only">{{ $t('quickAdd.amount') }}</span>
-        <span class="amount-line flex items-baseline gap-2 pb-2" :class="{ 'is-on': amount }">
-          <input
-            ref="amountInput"
-            v-model="amountText"
-            inputmode="decimal"
-            enterkeyhint="done"
-            autocomplete="off"
-            placeholder="0"
-            class="num min-w-0 flex-1 bg-transparent font-display text-[2.75rem] leading-none font-bold tracking-[-0.03em] outline-none placeholder:text-ink/20"
-            :class="type === 'income' ? 'text-money' : 'text-ink'"
-            @keydown.enter="save"
-          />
-          <span class="font-display text-xl font-semibold text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
-        </span>
-        <span class="num h-5 text-caption text-ink-3">
-          <template v-if="amount && amountText !== amountToInput(amount, currency)">= {{ formatMoney(amount, currency, settings.locale) }}</template>
-          <template v-if="approxUzs"> ≈ {{ formatMoney(approxUzs, 'UZS', settings.locale) }}</template>
-        </span>
-      </label>
+    <div v-else class="flex flex-col gap-5 pt-1">
+      <!-- Amount: the first thing the eye and the keyboard land on. It stays pinned while the rest
+           scrolls, so picking a category never hides what you typed. The hint under the line sits in
+           the padding below it, so nothing jumps while typing «32к». -->
+      <div class="amount-pin sticky top-0 z-10 -mx-5 -mt-1 -mb-3 bg-raised px-5 pt-1 pb-6">
+        <label class="relative flex flex-col">
+          <span class="sr-only">{{ $t('quickAdd.amount') }}</span>
+          <span class="amount-line flex items-baseline gap-2 pb-2" :class="{ 'is-on': amount }">
+            <input
+              ref="amountInput"
+              :value="amountText"
+              inputmode="decimal"
+              enterkeyhint="done"
+              autocomplete="off"
+              placeholder="0"
+              class="num min-w-0 flex-1 bg-transparent font-display text-[2.75rem] leading-none font-bold tracking-[-0.03em] outline-none placeholder:text-ink/20"
+              :class="type === 'income' ? 'text-money' : 'text-ink'"
+              @input="groupInput($event, (value) => (amountText = value))"
+              @keydown.enter="save"
+            />
+            <span class="font-display text-xl font-semibold text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
+          </span>
+          <span class="num absolute top-full left-0 mt-1 text-caption text-ink-3">
+            <template v-if="amount && !typedPlain">= {{ formatMoney(amount, currency, settings.locale) }}</template>
+            <template v-if="approxUzs"> ≈ {{ formatMoney(approxUzs, 'UZS', settings.locale) }}</template>
+          </span>
+        </label>
+      </div>
 
       <!-- Accounts -->
       <section class="flex flex-col gap-2.5">
@@ -315,7 +333,7 @@ function addAccount(): void {
           <label v-if="needsToAmount && toAccount" class="flex flex-col gap-1.5">
             <span class="section-title">{{ $t('quickAdd.received', { account: toAccount.name }) }}</span>
             <span class="field flex items-baseline gap-2">
-              <input v-model="toAmountText" inputmode="decimal" placeholder="0" class="num min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none" />
+              <input :value="toAmountText" inputmode="decimal" autocomplete="off" placeholder="0" class="num min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none" @input="groupInput($event, (value) => (toAmountText = value))" />
               <span class="text-sm text-ink-3">{{ toAccount.currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
             </span>
           </label>
@@ -335,14 +353,14 @@ function addAccount(): void {
             :aria-pressed="categoryId === item.id || openParentId === item.id"
             @click="pickParent(item)"
           >
-            <span class="cat-icon rounded-2xl">
+            <span class="cat-icon rounded-2xl" :style="{ '--ring': ringOf(item) }">
               <CategoryIcon :icon="item.icon" :color="item.color" size="lg" />
             </span>
-            <span class="line-clamp-2 w-full text-[0.71875rem] leading-tight hyphens-auto [overflow-wrap:anywhere]">{{ name(item) }}</span>
+            <span class="line-clamp-2 w-full text-[0.71875rem] leading-tight hyphens-manual">{{ softHyphenate(name(item)) }}</span>
           </button>
         </div>
         <Transition name="fade">
-          <div v-if="children.length" :key="openParentId ?? 0" class="flex flex-wrap gap-2 pt-1">
+          <div v-if="children.length" ref="subcategories" :key="openParentId ?? 0" class="flex scroll-mb-4 flex-wrap gap-2 pt-1">
             <button
               type="button"
               class="chip !py-1.5"
@@ -414,11 +432,30 @@ function addAccount(): void {
   background: var(--c-ink);
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 420ms var(--ease-enter);
+  transition:
+    transform 420ms var(--ease-enter),
+    opacity var(--dur-fast) var(--ease-standard);
+}
+
+/* Content scrolling under the pinned amount fades out instead of being cut at a hard edge. */
+.amount-pin::after {
+  content: '';
+  position: absolute;
+  inset: 100% 0 auto;
+  height: 0.75rem;
+  background: linear-gradient(var(--c-raised), transparent);
+  pointer-events: none;
+}
+
+/* Focused: the line draws in faintly; once there's an amount it turns solid. */
+.amount-line:focus-within::after {
+  transform: none;
+  opacity: 0.3;
 }
 
 .amount-line.is-on::after {
   transform: none;
+  opacity: 1;
 }
 
 /* Chosen category: its tile sits on a soft plate, the icon gets a ring and pops. */
@@ -437,7 +474,7 @@ function addAccount(): void {
   transform: scale(1.08);
   box-shadow:
     0 0 0 2px var(--c-surface-2),
-    0 0 0 4px var(--c-ink);
+    0 0 0 4px var(--ring, var(--c-ink));
 }
 
 .cat.is-on span:last-child {

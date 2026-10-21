@@ -18,7 +18,7 @@ const archived = computed(() => money.accounts.filter((a) => a.archived))
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="page">
     <PageHeader :title="$t('accounts.title')" />
 
     <article class="card flex flex-col gap-1.5 p-5">
@@ -36,7 +36,8 @@ const archived = computed(() => money.accounts.filter((a) => a.archived))
       >
         <template #leading><AccountIcon :type="account.type" :cushion="account.is_cushion" /></template>
         <template #subtitle>
-          {{ $t(`accounts.types.${account.type}`) }}<template v-if="account.is_cushion">, {{ $t('accounts.cushion').toLowerCase() }}</template><template v-else-if="!account.spendable">, {{ $t('accounts.notSpendable') }}</template>
+          <template v-if="account.is_cushion">{{ $t('accounts.cushion') }}</template>
+          <template v-else>{{ $t(`accounts.types.${account.type}`) }}<template v-if="!account.spendable">, {{ $t('accounts.notSpendable') }}</template></template>
         </template>
         <template #trailing>
           <MoneyAmount :amount="account.balance" :currency="account.currency" class="font-semibold" :class="{ 'text-danger': account.balance < 0 }" />

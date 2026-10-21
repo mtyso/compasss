@@ -45,9 +45,9 @@
   --c-danger-soft: #f8e0dd;
   --c-focus: #2c59c8;
 
-  --shadow-card: 0 0 0 1px rgb(19 32 26 / 0.04), 0 1px 2px rgb(19 32 26 / 0.05);
-  --shadow-raised: 0 0 0 1px rgb(19 32 26 / 0.04), 0 2px 6px rgb(19 32 26 / 0.06), 0 16px 40px -12px rgb(19 32 26 / 0.28);
-  --shadow-fab: 0 1px 2px rgb(19 32 26 / 0.2), 0 6px 16px -4px rgb(19 32 26 / 0.35);
+  --c-shadow-card: 0 0 0 1px rgb(19 32 26 / 0.04), 0 1px 2px rgb(19 32 26 / 0.05);
+  --c-shadow-raised: 0 0 0 1px rgb(19 32 26 / 0.04), 0 2px 6px rgb(19 32 26 / 0.06), 0 16px 40px -12px rgb(19 32 26 / 0.28);
+  --c-shadow-fab: 0 1px 2px rgb(19 32 26 / 0.2), 0 6px 16px -4px rgb(19 32 26 / 0.35);
 }
 
 .dark {
@@ -78,9 +78,9 @@
   --c-danger-soft: #3a1d1d;
   --c-focus: #82a4ff;
 
-  --shadow-card: inset 0 0 0 1px rgb(255 255 255 / 0.035);
-  --shadow-raised: inset 0 0 0 1px rgb(255 255 255 / 0.06), 0 20px 48px -12px rgb(0 0 0 / 0.7);
-  --shadow-fab: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 6px 16px -4px rgb(0 0 0 / 0.6);
+  --c-shadow-card: inset 0 0 0 1px rgb(255 255 255 / 0.035);
+  --c-shadow-raised: inset 0 0 0 1px rgb(255 255 255 / 0.06), 0 20px 48px -12px rgb(0 0 0 / 0.7);
+  --c-shadow-fab: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 6px 16px -4px rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
 
@@ -112,9 +112,9 @@
   --color-danger-soft: var(--c-danger-soft);
   --color-focus: var(--c-focus);
 
-  --shadow-card: var(--shadow-card);
-  --shadow-raised: var(--shadow-raised);
-  --shadow-fab: var(--shadow-fab);
+  --shadow-card: var(--c-shadow-card);
+  --shadow-raised: var(--c-shadow-raised);
+  --shadow-fab: var(--c-shadow-fab);
 }
 
 @theme {
@@ -122,9 +122,9 @@
   --font-display: 'Unbounded', 'Onest', system-ui, sans-serif;
 
   /* Type scale. Unbounded only for screen titles and money; Onest for everything people read. */
-  --text-hero: 2.5rem;
-  --text-hero--line-height: 1.05;
-  --text-hero--letter-spacing: -0.035em;
+  --text-amount: 2.5rem;
+  --text-amount--line-height: 1.05;
+  --text-amount--letter-spacing: -0.035em;
   --text-title: 1.625rem;
   --text-title--line-height: 1.15;
   --text-title--letter-spacing: -0.025em;
@@ -196,58 +196,61 @@
   }
 }
 
-html,
-body,
-#app {
-  height: 100%;
-}
+/* Base rules sit in the base layer so a utility on an element (outline-none, say) still wins. */
+@layer base {
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
 
-body {
-  background: var(--c-bg);
-  color: var(--c-ink);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: var(--text-body--line-height);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-tap-highlight-color: transparent;
-  overscroll-behavior: none;
-  text-rendering: optimizeLegibility;
-}
+  body {
+    background: var(--c-bg);
+    color: var(--c-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+    text-rendering: optimizeLegibility;
+  }
 
-/* App chrome behaves like native controls: no text selection or callout on long press. */
-button,
-a,
-[role='button'],
-[role='tab'],
-[role='radio'],
-[role='switch'],
-nav {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
+  /* App chrome behaves like native controls: no text selection or callout on long press. */
+  button,
+  a,
+  [role='button'],
+  [role='tab'],
+  [role='radio'],
+  [role='switch'],
+  nav {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--c-focus);
-  outline-offset: 2px;
-}
+  :focus-visible {
+    outline: 2px solid var(--c-focus);
+    outline-offset: 2px;
+  }
 
-:focus:not(:focus-visible) {
-  outline: none;
-}
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
 
-::selection {
-  background: var(--c-money-soft);
-}
+  ::selection {
+    background: var(--c-money-soft);
+  }
 
-.num {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
 }
 
 @utility no-scrollbar {
@@ -281,6 +284,14 @@ nav {
 }
 
 @layer components {
+  /* A screen: one column with even spacing between its blocks. ScreenHeader reads --page-gap. */
+  .page {
+    --page-gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--page-gap);
+  }
+
   /* Surfaces. A screen has at most one hero; everything else sits on cards or lists. */
   .card {
     @apply rounded-card bg-surface shadow-card;

@@ -53,9 +53,13 @@ onBeforeUnmount(() => removeOverlay?.())
 
 /* ---------- Enter and leave ---------- */
 
-function onEnter(_el: Element, done: () => void): void {
-  const sheet = panel.value!
-  const shade = scrim.value!
+/** The scrim and the sheet, found from the transition's element: template refs are already unset by the time leave runs. */
+function parts(el: Element): { shade: HTMLElement; sheet: HTMLElement } {
+  return { shade: el.children[0] as HTMLElement, sheet: el.children[1] as HTMLElement }
+}
+
+function onEnter(el: Element, done: () => void): void {
+  const { shade, sheet } = parts(el)
   if (prefersReducedMotion()) {
     shade.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 })
     sheet.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150 }).finished.then(entered(done))
@@ -80,9 +84,8 @@ function entered(done: () => void): () => void {
   }
 }
 
-function onLeave(_el: Element, done: () => void): void {
-  const sheet = panel.value!
-  const shade = scrim.value!
+function onLeave(el: Element, done: () => void): void {
+  const { shade, sheet } = parts(el)
   const from = sheet.style.transform || 'translateY(0)'
   const shadeFrom = shade.style.opacity || '1'
   const finish = (): void => {

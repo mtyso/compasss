@@ -63,8 +63,8 @@ async function pay(): Promise<void> {
       <CategoryIcon :icon="root?.icon" :color="root?.color" size="sm" />
       <span class="flex min-w-0 flex-1 flex-col gap-0.5">
         <span class="truncate font-medium">{{ payment.name }}</span>
-        <span class="flex min-w-0 items-center gap-1.5 text-caption">
-          <span class="shrink-0" :class="due.danger ? 'font-medium text-danger' : 'text-ink-3'">{{ due.text }}</span>
+        <span class="flex min-w-0 items-center gap-1 text-caption">
+          <span class="shrink-0" :class="due.danger ? 'font-medium text-danger' : 'text-ink-3'">{{ due.text }}<template v-if="account">,</template></span>
           <span v-if="account" class="truncate text-ink-3">{{ account.name }}</span>
         </span>
       </span>

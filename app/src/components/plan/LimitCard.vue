@@ -27,7 +27,7 @@ const money = (value: number) => formatMoney(value, 'UZS', settings.locale)
         <MoneyAmount
           :amount="Math.abs(limit.left_today_uzs)"
           animate
-          class="font-display text-hero font-bold"
+          class="font-display text-amount font-bold"
           :class="over ? 'text-hero-danger' : 'text-on-hero'"
         />
       </div>
@@ -42,11 +42,11 @@ const money = (value: number) => formatMoney(value, 'UZS', settings.locale)
           :style="{ transform: `scaleX(${Math.min(1, share)})` }"
         />
       </div>
-      <div class="flex items-baseline justify-between gap-3 text-caption text-on-hero-2">
+      <div class="flex flex-col gap-0.5 text-caption text-on-hero-2">
         <span class="num">{{ $t('today.perDay', { amount: money(limit.limit_uzs) }) }}</span>
-        <span class="truncate text-right">
+        <span>
           <template v-if="limit.estimated_end">{{ $t('today.untilMonthEnd', limit.days_left) }}</template>
-          <template v-else>{{ $t('today.untilIncome', { name: incomeName ?? $t('today.income'), date: formatDayMonth(limit.until, settings.locale) }) }}</template>
+          <template v-else>{{ $t('today.untilIncome', { name: incomeName ?? $t('today.income'), date: formatDayMonth(limit.until, settings.locale) }) }}, {{ $t('today.daysLeft', limit.days_left) }}</template>
         </span>
       </div>
     </div>

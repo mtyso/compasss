@@ -47,7 +47,7 @@ function create(parent: Category | null): void {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="page">
     <PageHeader :title="$t('categories.title')" />
 
     <UiSegmented v-model="kind" :options="kindOptions" :label="$t('categories.title')" />

@@ -20,7 +20,7 @@ const resolved = computed(() => {
   return 'money'
 })
 const colors = {
-  neutral: 'bg-ink-2',
+  neutral: 'bg-ink/30',
   money: 'bg-money',
   habit: 'bg-habit',
   task: 'bg-task',

@@ -74,12 +74,14 @@ export function formatDayMonth(day: string, locale: Locale = 'ru'): string {
   return new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, day: 'numeric', month: 'long' }).format(new Date(`${day}T12:00:00+05:00`))
 }
 
-/** «Октябрь 2026 г.», «Oktabr 2026» for a month given as YYYY-MM. */
+/** «Октябрь 2026», «Oktabr 2026» for a month given as YYYY-MM. */
 export function formatMonthTitle(month: string, locale: Locale = 'ru'): string {
   if (locale === 'uz') {
     return `${capitalize(UZ_MONTHS[Number(month.slice(5, 7)) - 1])} ${month.slice(0, 4)}`
   }
   return capitalize(
-    new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, month: 'long', year: 'numeric' }).format(new Date(`${month}-15T12:00:00+05:00`)),
+    new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, month: 'long', year: 'numeric' })
+      .format(new Date(`${month}-15T12:00:00+05:00`))
+      .replace(/\s*г\.$/, ''),
   )
 }

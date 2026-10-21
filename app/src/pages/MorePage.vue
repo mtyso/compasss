@@ -67,7 +67,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="page">
     <ScreenHeader :title="$t('more.title')" />
 
     <div v-if="auth.user" class="card flex items-center gap-3.5 px-4 py-4">

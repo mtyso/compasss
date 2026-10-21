@@ -122,7 +122,7 @@ watch([month, () => money.revision], load)
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="page">
     <ScreenHeader :title="$t('money.title')">
       <template #trailing>
         <div class="-mr-2 flex items-center">
@@ -248,7 +248,7 @@ watch([month, () => money.revision], load)
           <div v-for="group in days" :key="group.day" class="flex flex-col gap-1.5">
             <div class="flex items-baseline justify-between px-1 pt-1">
               <span class="text-caption font-medium text-ink-3">{{ group.heading }}</span>
-              <span v-if="group.spent" class="num text-caption text-ink-3">−{{ formatMoney(group.spent, 'UZS', settings.locale) }}</span>
+              <MoneyAmount v-if="group.spent" :amount="group.spent" sign="expense" class="text-caption text-ink-3" />
             </div>
             <div class="group">
               <TransactionRow v-for="item in group.items" :key="item.id" :transaction="item" @click="quick.start(item)" />

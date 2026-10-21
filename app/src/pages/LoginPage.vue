@@ -46,7 +46,7 @@ onBeforeUnmount(() => {
       <CompassMark :size="112" swing />
       <div class="flex flex-col gap-3">
         <h1 class="rise font-display text-[2.75rem] leading-none font-bold tracking-[-0.04em]" style="--delay: 260ms">{{ $t('appName') }}</h1>
-        <p class="rise max-w-64 text-[1.0625rem] text-ink-2" style="--delay: 340ms">{{ $t('login.subtitle') }}</p>
+        <p class="rise max-w-72 text-[1.0625rem] text-balance text-ink-2" style="--delay: 340ms">{{ $t('login.subtitle') }}</p>
       </div>
     </div>
 
@@ -83,7 +83,7 @@ onBeforeUnmount(() => {
             <template #icon><Send class="size-5" /></template>
             {{ $t('login.telegram') }}
           </UiButton>
-          <p class="px-1 text-center text-caption text-ink-3">{{ $t('login.hint') }}</p>
+          <p class="px-1 text-center text-caption text-balance text-ink-3">{{ $t('login.hint') }}</p>
         </div>
       </Transition>
     </div>

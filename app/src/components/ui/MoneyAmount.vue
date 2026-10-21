@@ -72,6 +72,9 @@ const label = computed(() => `${parts.value.prefix}${formatMoney(Math.abs(props.
 <style scoped>
 .money-sign {
   margin-right: 0.04em;
+  /* A tabular minus is as wide as a digit and reads as «- 85 000»; a proportional one hugs the number. */
+  font-variant-numeric: normal;
+  font-feature-settings: normal;
 }
 
 /* Currency and cents: same baseline, smaller and quieter, so the eye lands on the whole part. */

@@ -9,6 +9,7 @@ import UiSegmented from '@/components/ui/UiSegmented.vue'
 import UiSwitch from '@/components/ui/UiSwitch.vue'
 import { ApiError } from '@/lib/api'
 import type { Currency } from '@/lib/format'
+import { groupDigits, groupInput } from '@/lib/digits'
 import { amountToInput, CURRENCIES, EXPONENT } from '@/lib/money'
 import { useMoney, type AccountType } from '@/stores/money'
 
@@ -45,7 +46,7 @@ onMounted(async () => {
     name.value = account.name
     type.value = account.type
     currency.value = account.currency
-    openingText.value = amountToInput(account.opening_balance, account.currency)
+    openingText.value = groupDigits(amountToInput(account.opening_balance, account.currency))
     spendable.value = account.spendable
     cushion.value = account.is_cushion
   }
@@ -104,7 +105,7 @@ async function remove(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="page">
     <PageHeader :title="existing ? existing.name : $t('accounts.new')" back="/more/accounts" />
 
     <label class="flex flex-col gap-2">
@@ -142,7 +143,7 @@ async function remove(): Promise<void> {
     <label class="flex flex-col gap-2">
       <span class="section-title">{{ existing ? $t('accounts.opening') : $t('accounts.balanceNow') }}</span>
       <span class="field flex items-baseline gap-2 focus-within:shadow-[inset_0_0_0_1.5px_var(--c-ink-3)]">
-        <input v-model="openingText" inputmode="decimal" placeholder="0" class="num min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:font-normal placeholder:text-ink-3" />
+        <input :value="openingText" inputmode="decimal" autocomplete="off" placeholder="0" class="num min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:font-normal placeholder:text-ink-3" @input="groupInput($event, (value) => (openingText = value))" />
         <span class="text-sm font-medium text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
       </span>
       <span class="px-1 text-caption text-ink-3">{{ $t('accounts.openingHint') }}</span>
