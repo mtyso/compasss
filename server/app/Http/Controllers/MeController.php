@@ -19,9 +19,15 @@ class MeController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:60'],
             'locale' => ['sometimes', Rule::in(User::LOCALES)],
+            'settings' => ['sometimes', 'array:'.implode(',', array_keys(User::SETTINGS))],
+            ...collect(User::SETTINGS)->mapWithKeys(fn ($rules, $key) => ["settings.{$key}" => $rules])->all(),
         ]);
 
         $user = $request->user();
+        if (isset($data['settings'])) {
+            // Settings are merged: the app sends only what changed.
+            $data['settings'] = array_merge($user->settings ?? [], $data['settings']);
+        }
         $user->update($data);
 
         return response()->json($user->toApi());

@@ -2,10 +2,14 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\TelegramLoginController;
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\IncomeScheduleController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\RateController;
+use App\Http\Controllers\RecurringPaymentController;
 use App\Http\Controllers\SummaryController;
+use App\Http\Controllers\TodayController;
 use App\Http\Controllers\TransactionController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,4 +35,11 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::post('/transactions/{id}/restore', [TransactionController::class, 'restore']);
     Route::get('/summary', SummaryController::class);
     Route::get('/rates', RateController::class);
+
+    Route::get('/budgets', [BudgetController::class, 'show']);
+    Route::put('/budgets/{month}', [BudgetController::class, 'update']);
+    Route::apiResource('income-schedules', IncomeScheduleController::class)->except('show')->parameters(['income-schedules' => 'id']);
+    Route::apiResource('recurring-payments', RecurringPaymentController::class)->except('show')->parameters(['recurring-payments' => 'id']);
+    Route::post('/recurring-payments/{id}/pay', [RecurringPaymentController::class, 'pay']);
+    Route::get('/today', TodayController::class);
 });
