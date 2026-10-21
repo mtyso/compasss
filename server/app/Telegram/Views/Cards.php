@@ -4,9 +4,12 @@ namespace App\Telegram\Views;
 
 use App\Advisor\DailyLimit;
 use App\Advisor\PurchaseVerdict;
+use App\Habits\HabitProgress;
 use App\Models\Category;
+use App\Models\Habit;
 use App\Models\Insight;
 use App\Models\RecurringPayment;
+use App\Models\Task;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Money\MonthSpending;
@@ -321,10 +324,29 @@ class Cards
             $card->quote(Card::e(__('bot.today.no_paydays', [], $l)));
         }
 
+        $tasks = $this->tasksForToday($user, $today);
+        if ($tasks->isNotEmpty()) {
+            $shown = $tasks->take(self::TASKS_SHOWN);
+            $lines = $shown->map(fn (Task $t) => $this->taskLine($t, $today, $l))->all();
+            if ($tasks->count() > $shown->count()) {
+                $lines[] = Card::e(__('bot.today.tasks_more', ['count' => $tasks->count() - $shown->count()], $l));
+            }
+            $card->heading(__('bot.today.tasks', [], $l), 4)->list($lines);
+        }
+
+        $habits = $this->habitsForToday($user, $today);
+        if ($habits->isNotEmpty()) {
+            $card->heading(__('bot.today.habits', [], $l), 4)
+                ->list($habits->map(fn (array $h) => $this->habitLine($h['habit'], $h['progress'], $today, $l))->all());
+        }
+
         return $this->withInsights($card, $insights, $l)->footer(Card::e(Fmt::longDate($today, $l)));
     }
 
-    /** «Оплачено» for what is due today or overdue, then the app. */
+    /**
+     * «Оплачено» for what is due today or overdue, the first tasks to tick off, a tap for the habits
+     * still open today, then the app.
+     */
     public function todayKeyboard(User $user, ?Carbon $now = null): Keyboard
     {
         $l = $user->locale;
@@ -336,7 +358,84 @@ class Cards
             ->take(3)
             ->each(fn (RecurringPayment $p) => $keyboard->row([Keyboard::callback('✅ '.__('bot.buttons.paid', ['name' => $p->name], $l), "pay:{$p->id}", 'success')]));
 
+        $this->tasksForToday($user, $today)->take(3)
+            ->each(fn (Task $t) => $keyboard->row([Keyboard::callback('☑️ '.$t->title, "task:done:{$t->id}")]));
+
+        // A check habit already done needs no button; a count or limit one can always take one more.
+        $keyboard->grid($this->habitsForToday($user, $today)
+            ->reject(fn (array $h) => $h['habit']->type === 'check' && $h['progress']->stateToday() === 'done')
+            ->take(4)
+            ->map(fn (array $h) => Keyboard::callback(($h['habit']->type === 'check' ? '✓ ' : '+1 ').$h['habit']->name, "habit:inc:{$h['habit']->id}"))
+            ->values()->all(), 2);
+
         return $keyboard->row([Keyboard::webApp('🧭 '.__('bot.buttons.open_app', [], $l), '/')]);
+    }
+
+    private const TASKS_SHOWN = 6;
+
+    /**
+     * Open tasks due today or earlier, in the order «Сегодня» shows them (TodayController).
+     *
+     * @return Collection<int, Task>
+     */
+    private function tasksForToday(User $user, Carbon $today): Collection
+    {
+        return $user->tasks()->whereNull('done_at')->whereNotNull('due_on')->where('due_on', '<=', $today->toDateString())
+            ->orderBy('due_on')->orderByDesc('priority')->orderBy('due_time')->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * Habits that are part of today, as «Сегодня» picks them: not the ones off today.
+     *
+     * @return Collection<int, array{habit: Habit, progress: HabitProgress}>
+     */
+    private function habitsForToday(User $user, Carbon $today): Collection
+    {
+        return $user->habits()->whereNull('archived_at')->orderBy('sort')->orderBy('id')->get()
+            ->map(fn (Habit $h) => ['habit' => $h, 'progress' => HabitProgress::for($h, $today)])
+            ->reject(fn (array $h) => $h['progress']->stateToday() === 'off')
+            ->values();
+    }
+
+    /** «❗ 10:00 Позвонить в банк · просрочено». */
+    private function taskLine(Task $task, Carbon $today, string $l): string
+    {
+        $line = ($task->priority > 0 ? str_repeat('❗', $task->priority).' ' : '')
+            .($task->due_time ? '<b>'.Card::e(substr($task->due_time, 0, 5)).'</b> ' : '')
+            .Card::e($task->title);
+
+        return $task->dueDate()?->lt($today) ? $line.' · <i>'.Card::e(__('bot.today.task_overdue', [], $l)).'</i>' : $line;
+    }
+
+    /** «✅ Зарядка · 🔥 5 дней подряд», «⬜ Вода — 3 из 8 стаканов», «⚠️ Кофе — 3 при лимите 2». */
+    private function habitLine(Habit $habit, HabitProgress $progress, Carbon $today, string $l): string
+    {
+        $state = $progress->stateToday();
+        $mark = ['done' => '✅', 'over' => '⚠️'][$state] ?? '⬜';
+        $text = $mark.' '.$habit->name;
+        if ($habit->type !== 'check') {
+            $text .= ' — '.$this->habitProgress($habit, $progress->value($today), $l);
+        }
+
+        $streak = $progress->streaks();
+        if ($streak['current'] >= 2) {
+            $text .= ' · 🔥 '.trans_choice($streak['unit'] === 'week' ? 'bot.today.streak_weeks' : 'bot.today.streak_days', $streak['current'], ['count' => $streak['current']], $l);
+        }
+
+        return Card::e($text);
+    }
+
+    /** «3 из 8 стаканов» for a count habit, «1, не больше 2» / «3 при лимите 2» for a limit. */
+    public function habitProgress(Habit $habit, int $value, string $l): string
+    {
+        $key = match (true) {
+            $habit->type === 'count' => 'bot.today.habit_count',
+            $habit->keeps($value) => 'bot.today.habit_limit',
+            default => 'bot.today.habit_over',
+        };
+
+        return trim(__($key, ['value' => $value, 'target' => $habit->target], $l).' '.($habit->unit ?? ''));
     }
 
     /** @return Collection<int, RecurringPayment> */

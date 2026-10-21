@@ -7,6 +7,7 @@ use App\Telegram\Handlers\Commands;
 use App\Telegram\Handlers\InsightFlow;
 use App\Telegram\Handlers\LoginFlow;
 use App\Telegram\Handlers\RecordFlow;
+use App\Telegram\Handlers\ThingsFlow;
 
 /**
  * Routes one webhook update (docs/BOT.md): sign-in links and buttons, commands,
@@ -20,6 +21,7 @@ class UpdateHandler
         private RecordFlow $records,
         private Commands $commands,
         private InsightFlow $insights,
+        private ThingsFlow $things,
     ) {}
 
     public function handle(array $update): void
@@ -88,6 +90,7 @@ class UpdateHandler
             str_starts_with($data, 'buy:') => $this->records->onBuy($query, $user),
             str_starts_with($data, 'ins:') => $this->insights->onCallback($query, $user),
             str_starts_with($data, 'pay:') => $this->commands->onPay($query, $user),
+            str_starts_with($data, 'task:'), str_starts_with($data, 'habit:') => $this->things->onCallback($query, $user),
             default => $this->telegram->answerCallbackQuery($query['id']),
         };
     }

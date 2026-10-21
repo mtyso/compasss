@@ -199,3 +199,93 @@ it('refuses forged, stale or foreign Mini App launch data', function () {
 
     expect($this->user->tokens()->count())->toBe(0);
 });
+
+// --- Tasks and habits in the day's summary (step 1.6) ----------------------------------
+
+function cmdThings(User $user): array
+{
+    $every = ['days' => [1, 2, 3, 4, 5, 6, 7]];
+    $habit = fn (array $a) => $user->habits()->create([...$a, 'schedule' => $every, 'started_on' => '2026-10-01']);
+
+    $things = [
+        'call' => $user->tasks()->create(['title' => 'Позвонить в банк', 'due_on' => '2026-10-21', 'due_time' => '10:00', 'priority' => 1]),
+        'gift' => $user->tasks()->create(['title' => 'Купить подарок', 'due_on' => '2026-10-19']),
+        'gym' => $user->tasks()->create(['title' => 'Зал', 'due_on' => '2026-10-21', 'repeat' => ['unit' => 'day', 'every' => 2]]),
+        'later' => $user->tasks()->create(['title' => 'Позже', 'due_on' => '2026-10-25']),
+        'workout' => $habit(['name' => 'Зарядка', 'type' => 'check', 'target' => 1]),
+        'water' => $habit(['name' => 'Вода', 'type' => 'count', 'target' => 8, 'unit' => 'стаканов']),
+        'coffee' => $habit(['name' => 'Кофе', 'type' => 'limit', 'target' => 2]),
+    ];
+    foreach (['2026-10-19', '2026-10-20'] as $day) {
+        $things['workout']->logs()->create(['date' => $day, 'value' => 1, 'user_id' => $user->id]);
+    }
+    $things['water']->logs()->create(['date' => '2026-10-21', 'value' => 3, 'user_id' => $user->id]);
+    $things['coffee']->logs()->create(['date' => '2026-10-21', 'value' => 3, 'user_id' => $user->id]);
+
+    return $things;
+}
+
+function cmdButtons(array $call): array
+{
+    return collect($call['reply_markup']['inline_keyboard'] ?? [])->flatten(1)
+        ->map(fn ($b) => $b['callback_data'] ?? $b['web_app']['url'])->all();
+}
+
+function cmdTap(string $data): void
+{
+    cmdSend(['callback_query' => [
+        'id' => 'cb', 'data' => $data,
+        'from' => ['id' => CMD_OWNER, 'first_name' => 'Elyor'],
+        'message' => ['message_id' => 70, 'chat' => ['id' => CMD_OWNER, 'type' => 'private']],
+    ]]);
+}
+
+it('lists today\'s tasks and habits under the limit, with a tap for each', function () {
+    $t = cmdThings($this->user);
+
+    cmdText('/today');
+
+    $card = cmdCalls('sendRichMessage')[0];
+    expect($card['rich_message']['html'])
+        ->toContain('<h4>Дела на сегодня</h4>')
+        ->toContain('<li>Купить подарок · <i>просрочено</i></li>')
+        ->toContain('<li>❗ <b>10:00</b> Позвонить в банк</li>')
+        ->not->toContain('Позже')
+        ->toContain('<h4>Привычки</h4>')
+        ->toContain('<li>⬜ Зарядка · 🔥 2 дня подряд</li>')
+        ->toContain('<li>⬜ Вода — 3 из 8 стаканов</li>')
+        ->toContain('<li>⚠️ Кофе — 3 при лимите 2</li>')
+        ->and(cmdButtons($card))->toContain(
+            "task:done:{$t['gift']->id}", "task:done:{$t['call']->id}", "task:done:{$t['gym']->id}",
+            "habit:inc:{$t['workout']->id}", "habit:inc:{$t['water']->id}", "habit:inc:{$t['coffee']->id}",
+        );
+});
+
+it('ticks tasks off and logs habits from the summary, once per tap', function () {
+    $t = cmdThings($this->user);
+    $toast = fn () => collect(cmdCalls('answerCallbackQuery'))->last()['text'] ?? null;
+
+    cmdTap("task:done:{$t['gift']->id}");
+    expect($t['gift']->fresh()->done_at)->not->toBeNull()
+        ->and($toast())->toBe('Готово: Купить подарок')
+        ->and(collect(cmdCalls('editMessageText'))->last()['rich_message']['html'])->not->toContain('Купить подарок');
+
+    cmdTap("task:done:{$t['gift']->id}");
+    expect($toast())->toBe(__('bot.record.gone'));
+
+    // A repeating task moves on, and a second tap does not move it again.
+    cmdTap("task:done:{$t['gym']->id}");
+    cmdTap("task:done:{$t['gym']->id}");
+    expect($t['gym']->fresh()->due_on)->toStartWith('2026-10-23')
+        ->and($t['gym']->fresh()->done_at)->toBeNull();
+
+    cmdTap("habit:inc:{$t['water']->id}");
+    expect($t['water']->logs()->where('date', '2026-10-21')->value('value'))->toBe(4)
+        ->and($toast())->toBe('Вода: 4 из 8 стаканов');
+
+    cmdTap("habit:inc:{$t['workout']->id}");
+    cmdTap("habit:inc:{$t['workout']->id}");
+    expect($t['workout']->logs()->where('date', '2026-10-21')->value('value'))->toBe(1)
+        ->and($toast())->toBe('Зарядка: готово')
+        ->and(cmdButtons(collect(cmdCalls('editMessageText'))->last()))->not->toContain("habit:inc:{$t['workout']->id}");
+});

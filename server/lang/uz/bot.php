@@ -11,7 +11,7 @@ return [
         'title' => 'Kompas aloqada',
         'lead' => "Xarajatlarni shu yerga bitta ibora bilan yozing. Summa, valyuta va toifani o'zim aniqlayman.",
         'examples' => ['taksi 32k', 'tushlik 85 000 naqd', '$20 obuna', '+12m maosh', 'quloqchin 600k olsam bo\'ladimi?'],
-        'commands' => '/today — bugun qancha sarflash mumkin · /month — oy xarajatlari',
+        'commands' => '/today — bugungi limit, ishlar va odatlar · /month — oy xarajatlari',
         'footer' => 'Qolgan hammasi ilovada: yozish maydonining chap tomonidagi «Kompas» tugmasi.',
     ],
 
@@ -80,6 +80,22 @@ return [
         'payment_line' => ':name — :amount, :date',
         'overdue' => "muddati o'tgan",
         'no_paydays' => 'Daromad kunlari belgilanmagan, oy oxirigacha hisoblayman.',
+        'tasks' => 'Bugungi ishlar',
+        'task_overdue' => "muddati o'tgan",
+        'tasks_more' => 'yana :count ta',
+        'habits' => 'Odatlar',
+        'habit_count' => ':value / :target',
+        'habit_limit' => ":value, ko'pi bilan :target",
+        'habit_over' => ':value, chegara :target',
+        'streak_days' => ':count kun ketma-ket',
+        'streak_weeks' => ':count hafta ketma-ket',
+    ],
+
+    'things' => [
+        'task_done' => 'Bajarildi: :title',
+        'task_next' => 'Bajarildi. Keyingi safar :date',
+        'habit_done' => ':name: bajarildi',
+        'habit_logged' => ':name: :progress',
     ],
 
     'month' => [
@@ -110,7 +126,7 @@ return [
     ],
 
     'commands' => [
-        'today' => 'Bugun qancha sarflash mumkin',
+        'today' => 'Bugungi limit, ishlar va odatlar',
         'month' => "Oy xarajatlari toifalar bo'yicha",
         'help' => 'Xarajatlarni qanday yozish kerak',
     ],
