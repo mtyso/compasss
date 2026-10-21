@@ -20,11 +20,11 @@ watch(parsed, (value) => {
 </script>
 
 <template>
-  <label class="flex flex-col gap-1.5">
-    <span class="px-1 text-xs font-semibold text-ink-3">{{ label }}</span>
-    <span class="field flex items-baseline gap-2">
-      <input v-model="text" inputmode="decimal" placeholder="0" class="num min-w-0 flex-1 bg-transparent outline-none" />
-      <span class="text-sm text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
+  <label class="flex flex-col gap-2">
+    <span class="section-title">{{ label }}</span>
+    <span class="field flex items-baseline gap-2 focus-within:shadow-[inset_0_0_0_1.5px_var(--c-ink-3)]">
+      <input v-model="text" inputmode="decimal" placeholder="0" class="num min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:font-normal placeholder:text-ink-3" />
+      <span class="text-sm font-medium text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
     </span>
   </label>
 </template>

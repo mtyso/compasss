@@ -8,10 +8,11 @@ import { easingOf, prefersReducedMotion, springs } from '@/lib/motion'
  *
  * `angle` is the bearing in degrees (0 = straight up). With `swing`, the needle arrives from the
  * side and settles on the bearing with a damped spring, the way a real compass needle does.
+ * `alert` turns the north half red: off course.
  */
 const props = withDefaults(
-  defineProps<{ size?: number; angle?: number; swing?: boolean; tone?: 'default' | 'on-hero'; dial?: boolean }>(),
-  { size: 96, angle: 0, swing: false, tone: 'default', dial: true },
+  defineProps<{ size?: number; angle?: number; swing?: boolean; tone?: 'default' | 'on-hero'; dial?: boolean; alert?: boolean }>(),
+  { size: 96, angle: 0, swing: false, tone: 'default', dial: true, alert: false },
 )
 
 const needle = ref<HTMLElement | null>(null)
@@ -59,10 +60,35 @@ defineExpose({ swingFrom })
     </svg>
     <span ref="needle" class="absolute inset-0 will-change-transform">
       <svg viewBox="0 0 100 100" class="size-full" fill="none">
-        <path d="M50 17 58.5 50h-17z" class="fill-money stroke-money" stroke-width="2" stroke-linejoin="round" />
+        <path d="M50 17 58.5 50h-17z" class="north" :class="[tone, { alert }]" stroke-width="2" stroke-linejoin="round" />
         <path d="M41.5 50h17L50 83z" :class="tone === 'on-hero' ? 'fill-on-hero/80 stroke-on-hero/80' : 'fill-ink stroke-ink'" stroke-width="2" stroke-linejoin="round" />
         <circle cx="50" cy="50" r="4.2" :class="tone === 'on-hero' ? 'fill-hero stroke-on-hero/80' : 'fill-bg stroke-ink'" stroke-width="2" />
       </svg>
     </span>
   </span>
 </template>
+
+<style scoped>
+.north {
+  fill: var(--c-money);
+  stroke: var(--c-money);
+  transition:
+    fill 400ms var(--ease-standard),
+    stroke 400ms var(--ease-standard);
+}
+
+.north.on-hero {
+  fill: var(--c-hero-accent);
+  stroke: var(--c-hero-accent);
+}
+
+.north.alert {
+  fill: var(--c-danger);
+  stroke: var(--c-danger);
+}
+
+.north.on-hero.alert {
+  fill: var(--c-hero-danger);
+  stroke: var(--c-hero-danger);
+}
+</style>

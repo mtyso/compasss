@@ -26,6 +26,8 @@
   --c-hero: #13201a;
   --c-on-hero: #f3f7f4;
   --c-on-hero-2: #a8b6ae;
+  --c-hero-accent: #5fd6a8;
+  --c-hero-danger: #ff8f86;
   --c-ink: #13201a;
   --c-ink-2: #46524c;
   --c-ink-3: #646f6a;
@@ -57,6 +59,8 @@
   --c-hero: #183128;
   --c-on-hero: #eaf3ee;
   --c-on-hero-2: #9db3a8;
+  --c-hero-accent: #5fd6a8;
+  --c-hero-danger: #ff8f86;
   --c-ink: #e7ece9;
   --c-ink-2: #a9b3ae;
   --c-ink-3: #848f8a;
@@ -89,6 +93,8 @@
   --color-hero: var(--c-hero);
   --color-on-hero: var(--c-on-hero);
   --color-on-hero-2: var(--c-on-hero-2);
+  --color-hero-accent: var(--c-hero-accent);
+  --color-hero-danger: var(--c-hero-danger);
   --color-ink: var(--c-ink);
   --color-ink-2: var(--c-ink-2);
   --color-ink-3: var(--c-ink-3);
@@ -425,4 +431,11 @@ nav {
   .skeleton::after {
     animation: none;
   }
+}
+
+/* Theme switch (MorePage): the new theme is revealed by a growing circle, not a cross-fade. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
