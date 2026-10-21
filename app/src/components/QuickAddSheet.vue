@@ -268,7 +268,7 @@ function addAccount(): void {
       <!-- Amount: the first thing the eye and the keyboard land on. It stays pinned while the rest
            scrolls, so picking a category never hides what you typed. The hint under the line sits in
            the padding below it, so nothing jumps while typing «32к». -->
-      <div class="amount-pin sticky top-0 z-10 -mx-5 -mt-1 -mb-3 bg-raised px-5 pt-1 pb-6">
+      <div class="amount-pin sticky top-0 z-10 -mx-5 -mt-1 -mb-3 bg-raised px-5 pt-1 pb-7">
         <label class="relative flex flex-col">
           <span class="sr-only">{{ $t('quickAdd.amount') }}</span>
           <span class="amount-line flex items-baseline gap-2 pb-2" :class="{ 'is-on': amount }">
@@ -450,7 +450,7 @@ function addAccount(): void {
   content: '';
   position: absolute;
   inset: 100% 0 auto;
-  height: 0.75rem;
+  height: 0.5rem;
   background: linear-gradient(var(--c-raised), transparent);
   pointer-events: none;
 }
