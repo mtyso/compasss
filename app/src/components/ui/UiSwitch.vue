@@ -4,7 +4,7 @@ import { haptics } from '@/lib/haptics'
 
 /**
  * A setting that is on or off, as a row: title and hint on the left, the switch on the right.
- * The whole row toggles it.
+ * The whole row toggles it. A `leading` icon lines it up with the UiRows of the same group.
  */
 withDefaults(defineProps<{ title: string; hint?: string; disabled?: boolean }>(), { hint: undefined, disabled: false })
 const model = defineModel<boolean>({ required: true })
@@ -22,6 +22,7 @@ function toggle(): void {
     :class="disabled ? 'pointer-events-none opacity-40' : 'cursor-pointer'"
     @click="!disabled && toggle()"
   >
+    <span v-if="$slots.leading" class="flex shrink-0 items-center self-center text-ink-2"><slot name="leading" /></span>
     <span class="flex min-w-0 flex-1 flex-col gap-0.5">
       <span :id="`${id}-title`" class="font-medium">{{ title }}</span>
       <span v-if="hint" :id="`${id}-hint`" class="text-caption text-ink-3">{{ hint }}</span>
