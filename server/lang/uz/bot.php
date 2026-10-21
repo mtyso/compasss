@@ -2,12 +2,9 @@
 
 return [
     'private' => 'Bu shaxsiy bot, unga kirish yopiq.',
-    'currency_uzs' => "so'm",
     'today_word' => 'bugun',
     'yesterday_word' => 'kecha',
     'days' => ':count kun',
-    'months' => ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'],
-    'month_names' => ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'],
     'weekdays' => ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'],
 
     'start' => [
@@ -29,6 +26,10 @@ return [
         'paid' => "To'landi: :name",
         'add_account' => "Hisob qo'shish",
         'today' => 'Bugun',
+        'bought' => 'Oldim, yozish',
+        'one_off' => 'Bir martalik xarid',
+        'useful' => 'Foydali',
+        'mute' => 'Bunday yubormang',
     ],
 
     'record' => [
@@ -49,13 +50,21 @@ return [
         'pick_account' => 'Hisobni tanlang',
         'gone' => "Bu yozuv endi yo'q.",
         'saved' => 'Tayyor',
+        'one_off' => 'bir martalik',
     ],
 
     'question' => [
-        'title' => ':what :amountga?',
-        'title_plain' => ':amountlik xarid?',
-        'numbers' => 'Bugun yana <b>:left</b> sarflash mumkin, daromadgacha <b>:free</b> bo\'sh.',
-        'soon' => "«Olish mumkinmi yoki kutish kerakmi» degan halol javob maslahatchi bilan birga paydo bo'ladi. Hozircha shu raqamlarga qarang.",
+        'what' => ':what — :amount',
+        'what_plain' => ':amountlik xarid',
+        'footer' => "Olsangiz, «Oldim»ni bosing — xarajatni yozib qo'yaman.",
+        'expired' => 'Savol eskirgan. Xaridni oddiy xarajat kabi yozing, masalan «quloqchin 600k».',
+    ],
+
+    'insight' => [
+        'record_hint' => "Shu yerga bitta ibora bilan yozing, masalan <code>tushlik 45k</code>, men hammasini yozib qo'yaman.",
+        'thanks' => 'Rahmat, hisobga olaman',
+        'muted' => 'Bunday maslahatlar endi kelmaydi',
+        'one_off_done' => 'Bir martalik deb belgilandi',
     ],
 
     'today' => [
@@ -87,8 +96,6 @@ return [
         'morning_title' => 'Xayrli tong! Bugun :amount sarflash mumkin',
         'morning_over' => "Xayrli tong! Daromadgacha bo'sh pul tugadi",
         'payments_today' => "Bugun to'lanadi",
-        'evening_title' => 'Bugun hech narsa yozilmadi',
-        'evening_text' => "Xarajatlar bo'ldimi? Bitta ibora bilan yozing, masalan <code>tushlik 45k</code>, men hammasini yozib qo'yaman.",
         'weekly_title' => 'Hafta: :amount sarflandi',
         'weekly_less' => "O'tgan haftadan :amount kam.",
         'weekly_more' => "O'tgan haftadan :amount ko'p.",

@@ -115,16 +115,30 @@ it('answers /month with spending by category against the budget', function () {
         ->toContain(cmdNb('<td>🍽 Кафе и рестораны</td><td align="right">120 000</td><td align="right"><b>120%</b></td>'));
 });
 
-it('sends the morning summary and the evening reminder only when nothing was recorded', function () {
+it('sends the morning summary with the advice that waited for it, once', function () {
+    $cafe = $this->user->categories()->firstWhere('system_key', 'cafe');
+    $insight = $this->user->insights()->create([
+        'rule' => 'budget_threshold', 'severity' => 'warn', 'period_key' => '2026-10:near', 'subject' => (string) $cafe->id,
+        'payload' => ['variant' => 'near', 'category_id' => $cafe->id, 'percent' => 85, 'left_uzs' => 30_000], 'status' => 'new',
+    ]);
+
     $this->artisan('bot:digest morning')->assertSuccessful();
-    expect(cmdCalls('sendRichMessage')[0]['rich_message']['html'])->toContain('Доброе утро! Сегодня можно');
+    $this->artisan('bot:notify')->assertSuccessful();
 
-    $this->artisan('bot:digest evening')->assertSuccessful();
-    expect(cmdCalls('sendRichMessage')[1]['rich_message']['html'])->toContain(__('bot.digest.evening_title'));
+    expect(cmdCalls('sendRichMessage'))->toHaveCount(1)
+        ->and(cmdCalls('sendRichMessage')[0]['rich_message']['html'])
+        ->toContain('Доброе утро! Сегодня можно')
+        ->toContain('<h4>🟠 Кафе и рестораны: 85% бюджета</h4>')
+        ->and($insight->fresh()->sent_via)->toBe(['telegram']);
+});
 
-    cmdText('кофе 20к');
-    $this->artisan('bot:digest evening')->assertSuccessful();
-    expect(cmdCalls('sendRichMessage'))->toHaveCount(3);
+it('stays silent before the bot token is set', function () {
+    config(['telegram.bot_token' => null]);
+
+    $this->artisan('bot:digest morning')->assertSuccessful();
+    $this->artisan('bot:notify')->assertSuccessful();
+
+    expect(cmdCalls('sendRichMessage'))->toBeEmpty();
 });
 
 it('sends weekly totals compared with the week before', function () {

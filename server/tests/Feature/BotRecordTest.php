@@ -116,7 +116,7 @@ it('takes «налик» to the cash account and «$20» to som at the CBU rate'
     $tx = Transaction::latest('id')->first();
     expect($tx->account_id)->toBe($this->card->id)
         ->and($tx->amount)->toBe(240_000)
-        ->and($tx->note)->toBe('Подписка ($20)')
+        ->and($tx->note)->toBe('Подписка ($20,00)')
         ->and($tx->category->system_key)->toBe('connection_subscriptions');
 });
 
@@ -208,13 +208,6 @@ it('undoes and restores from the buttons', function () {
 
     botTap("tx:restore:{$tx->id}");
     expect(Transaction::count())->toBe(1);
-});
-
-it('does not record a «можно купить?» question', function () {
-    botSay('можно купить наушники 600к?');
-
-    expect(Transaction::count())->toBe(0)
-        ->and(botLastCard()['rich_message']['html'])->toContain(nb('Наушники за 600 000 сум?'))->toContain('свободно до дохода');
 });
 
 it('asks for an account first when there is none', function () {

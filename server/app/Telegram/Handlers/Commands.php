@@ -2,10 +2,12 @@
 
 namespace App\Telegram\Handlers;
 
+use App\Advisor\Advisor;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Money\TransactionWriter;
 use App\Support\MonthDay;
+use App\Telegram\Notifier;
 use App\Telegram\TelegramClient;
 use App\Telegram\Views\Cards;
 use App\Telegram\Views\Fmt;
@@ -18,6 +20,7 @@ class Commands
         private TelegramClient $telegram,
         private TransactionWriter $writer,
         private Cards $cards,
+        private Advisor $advisor,
     ) {}
 
     public function handle(string $command, int $chatId, User $user): void
@@ -37,7 +40,18 @@ class Commands
             return;
         }
 
-        $this->telegram->sendCard($chatId, $this->cards->today($user, morning: $morning), $this->cards->todayKeyboard($user));
+        if (! $morning) {
+            $this->telegram->sendCard($chatId, $this->cards->today($user), $this->cards->todayKeyboard($user));
+
+            return;
+        }
+
+        // The night's advice rides along with the morning summary instead of arriving as separate messages.
+        // advisor:run morning is scheduled first; this covers a cron that ran late or out of order.
+        $this->advisor->morning($user, now());
+        $insights = Notifier::unsent($user, now())->take(3);
+        $this->telegram->sendCard($chatId, $this->cards->today($user, morning: true, insights: $insights), $this->cards->todayKeyboard($user));
+        Notifier::markSent($insights);
     }
 
     /** Same as «Оплачено» in the app (RecurringPaymentController::pay): the expense, then the next due date. */

@@ -4,6 +4,7 @@ namespace App\Telegram;
 
 use App\Models\User;
 use App\Telegram\Handlers\Commands;
+use App\Telegram\Handlers\InsightFlow;
 use App\Telegram\Handlers\LoginFlow;
 use App\Telegram\Handlers\RecordFlow;
 
@@ -18,6 +19,7 @@ class UpdateHandler
         private LoginFlow $login,
         private RecordFlow $records,
         private Commands $commands,
+        private InsightFlow $insights,
     ) {}
 
     public function handle(array $update): void
@@ -83,6 +85,8 @@ class UpdateHandler
 
         match (true) {
             str_starts_with($data, 'tx:') => $this->records->onCallback($query, $user),
+            str_starts_with($data, 'buy:') => $this->records->onBuy($query, $user),
+            str_starts_with($data, 'ins:') => $this->insights->onCallback($query, $user),
             str_starts_with($data, 'pay:') => $this->commands->onPay($query, $user),
             default => $this->telegram->answerCallbackQuery($query['id']),
         };

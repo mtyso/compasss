@@ -3,7 +3,9 @@
 namespace App\Telegram\Views;
 
 use App\Advisor\DailyLimit;
+use App\Advisor\PurchaseVerdict;
 use App\Models\Category;
+use App\Models\Insight;
 use App\Models\RecurringPayment;
 use App\Models\Transaction;
 use App\Models\User;
@@ -54,7 +56,8 @@ class Cards
 
     // --- Operations -------------------------------------------------------------
 
-    public function transaction(Transaction $tx, User $user, ?Carbon $now = null): Card
+    /** @param  iterable<Insight>  $insights  what the advisor found about this operation */
+    public function transaction(Transaction $tx, User $user, ?Carbon $now = null, iterable $insights = []): Card
     {
         $l = $user->locale;
         $now ??= now();
@@ -65,7 +68,11 @@ class Cards
         $card = Card::make()
             ->heading(__('bot.record.title', ['amount' => Fmt::money($tx->amount, $tx->currency, $l, $sign), 'what' => $what], $l), 2);
 
-        $details = Card::e(Fmt::categoryLabel($category, $l).'  ·  '.Fmt::accountLabel($tx->account));
+        $details = Card::e(implode('  ·  ', array_filter([
+            Fmt::categoryLabel($category, $l),
+            Fmt::accountLabel($tx->account),
+            $tx->is_one_off ? __('bot.record.one_off', [], $l) : null,
+        ])));
 
         if ($tx->trashed()) {
             return $card
@@ -78,8 +85,9 @@ class Cards
             $card->paragraph('<i>'.Card::e(__('bot.record.converted', ['uzs' => Fmt::uzs($tx->amount_uzs, $l)], $l)).'</i>');
         }
 
-        return $card
-            ->quote($this->limitNote($user, $tx->type, $now))
+        $card->quote($this->limitNote($user, $tx->type, $now));
+
+        return $this->withInsights($card, $insights, $l)
             ->footer(Card::e(__('bot.record.source', [], $l).' · '.Fmt::when($tx->occurred_at, $l, $now)));
     }
 
@@ -92,6 +100,7 @@ class Cards
         }
 
         return Keyboard::make()
+            ->row([$this->awaitsOneOff($tx, $user) ? Keyboard::callback('☝️ '.__('bot.buttons.one_off', [], $l), "tx:oneoff:{$tx->id}", 'primary') : null])
             ->row([
                 Keyboard::callback('🗂 '.__('bot.buttons.category', [], $l), "tx:cats:{$tx->id}"),
                 Keyboard::callback('💳 '.__('bot.buttons.account', [], $l), "tx:accs:{$tx->id}"),
@@ -100,6 +109,16 @@ class Cards
                 Keyboard::callback('✖️ '.__('bot.buttons.undo', [], $l), "tx:del:{$tx->id}", 'danger'),
                 Keyboard::webApp('🧭 '.__('bot.buttons.open_app', [], $l), '/money'),
             ]);
+    }
+
+    /** The advisor called it a large expense and nobody has answered yet (Insight::action). */
+    private function awaitsOneOff(Transaction $tx, User $user): bool
+    {
+        return ! $tx->is_one_off && $user->insights()
+            ->where('rule', 'large_spend')
+            ->whereIn('status', ['new', 'seen'])
+            ->where('payload->transaction_id', $tx->id)
+            ->exists();
     }
 
     /** Main categories of the operation's kind; one with subcategories opens them. */
@@ -178,25 +197,92 @@ class Cards
             : __('bot.record.until', ['date' => Fmt::date($limit->nextIncome, $l), 'days' => $days], $l);
     }
 
-    // --- «Можно ли купить?» until the advisor (step 1.5) answers it -------------
+    // --- «Можно ли купить?» (App\Advisor\CanAfford) ---------------------------
 
-    public function question(User $user, ParsedPhrase $phrase, ?Carbon $now = null): Card
+    private const VERDICT_EMOJI = ['yes' => '🟢', 'yes_but' => '🟡', 'wait' => '🟠', 'no' => '🔴'];
+
+    public function verdict(User $user, ParsedPhrase $phrase, PurchaseVerdict $verdict): Card
     {
         $l = $user->locale;
-        $limit = $this->plan->limit($user, $now ?? now());
+        $answer = $verdict->toApi($l);
         $amount = Fmt::money($phrase->amount, $phrase->currency, $l);
+        if ($phrase->currency !== 'UZS') {
+            $amount .= ' ≈ '.Fmt::uzs($verdict->amountUzs, $l);
+        }
 
         return Card::make()
-            ->heading($phrase->note !== ''
-                ? __('bot.question.title', ['what' => $phrase->note, 'amount' => $amount], $l)
-                : __('bot.question.title_plain', ['amount' => $amount], $l), 2)
-            ->quote(__('bot.question.numbers', ['left' => Card::e(Fmt::uzs(max(0, $limit->leftTodayUzs), $l)), 'free' => Card::e(Fmt::uzs(max(0, $limit->freeUzs), $l))], $l))
-            ->footer(Card::e(__('bot.question.soon', [], $l)));
+            ->heading(self::VERDICT_EMOJI[$verdict->verdict].' '.$answer['title'], 2)
+            ->paragraph(Card::e($phrase->note !== ''
+                ? __('bot.question.what', ['what' => $phrase->note, 'amount' => $amount], $l)
+                : __('bot.question.what_plain', ['amount' => $amount], $l)))
+            ->list(array_map(fn (string $reason) => Card::e($reason), $answer['reasons']))
+            ->footer(Card::e(__('bot.question.footer', [], $l)));
+    }
+
+    /** «Купил — записать» keeps the phrase for two days under $key (RecordFlow::onBuy). */
+    public function verdictKeyboard(User $user, PurchaseVerdict $verdict, ?string $key): Keyboard
+    {
+        $l = $user->locale;
+
+        return Keyboard::make()
+            ->row([$key ? Keyboard::callback('✅ '.__('bot.buttons.bought', [], $l), "buy:{$key}", in_array($verdict->verdict, ['yes', 'yes_but'], true) ? 'success' : null) : null])
+            ->row([Keyboard::webApp('🧭 '.__('bot.buttons.open_app', [], $l), '/')]);
+    }
+
+    // --- The advisor's insights ----------------------------------------------------
+
+    private const SEVERITY_EMOJI = ['alert' => '🔴', 'warn' => '🟠', 'good' => '🟢', 'info' => '💡'];
+
+    /** One insight on its own (App\Telegram\Notifier). */
+    public function insight(Insight $insight, User $user): Card
+    {
+        $l = $user->locale;
+        ['title' => $title, 'body' => $body] = $insight->text($l);
+
+        $card = Card::make()
+            ->heading(self::SEVERITY_EMOJI[$insight->severity].' '.$title, 3)
+            ->paragraph(Card::e($body));
+
+        if ($insight->rule === 'forgot_to_record') {
+            // In the chat the answer is one phrase away.
+            $card->paragraph(__('bot.insight.record_hint', [], $l));
+        }
+
+        return $card;
+    }
+
+    public function insightKeyboard(Insight $insight, User $user, bool $answered = false): Keyboard
+    {
+        $l = $user->locale;
+        $keyboard = Keyboard::make();
+
+        if (! $answered) {
+            $keyboard
+                ->row([$insight->action() === 'mark_one_off' ? Keyboard::callback('☝️ '.__('bot.buttons.one_off', [], $l), "ins:oneoff:{$insight->id}", 'primary') : null])
+                ->row([
+                    Keyboard::callback('👍 '.__('bot.buttons.useful', [], $l), "ins:useful:{$insight->id}"),
+                    Keyboard::callback('🔕 '.__('bot.buttons.mute', [], $l), "ins:mute:{$insight->id}"),
+                ]);
+        }
+
+        return $keyboard->row([Keyboard::webApp('🧭 '.__('bot.buttons.open_app', [], $l), '/')]);
+    }
+
+    /** @param  iterable<Insight>  $insights */
+    private function withInsights(Card $card, iterable $insights, string $l): Card
+    {
+        foreach ($insights as $insight) {
+            ['title' => $title, 'body' => $body] = $insight->text($l);
+            $card->heading(self::SEVERITY_EMOJI[$insight->severity].' '.$title, 4)->paragraph(Card::e($body));
+        }
+
+        return $card;
     }
 
     // --- /today and the morning digest -------------------------------------------
 
-    public function today(User $user, ?Carbon $now = null, bool $morning = false): Card
+    /** @param  iterable<Insight>  $insights  the morning summary carries the night's advice */
+    public function today(User $user, ?Carbon $now = null, bool $morning = false, iterable $insights = []): Card
     {
         $l = $user->locale;
         $now ??= now();
@@ -235,7 +321,7 @@ class Cards
             $card->quote(Card::e(__('bot.today.no_paydays', [], $l)));
         }
 
-        return $card->footer(Card::e(Fmt::longDate($today, $l)));
+        return $this->withInsights($card, $insights, $l)->footer(Card::e(Fmt::longDate($today, $l)));
     }
 
     /** «Оплачено» for what is due today or overdue, then the app. */
@@ -310,15 +396,6 @@ class Cards
     }
 
     // --- Digests -----------------------------------------------------------------
-
-    public function evening(User $user): Card
-    {
-        $l = $user->locale;
-
-        return Card::make()
-            ->heading(__('bot.digest.evening_title', [], $l), 3)
-            ->paragraph(__('bot.digest.evening_text', [], $l));
-    }
 
     /** The last seven days against the seven before them. Null when both weeks are empty. */
     public function weekly(User $user, ?Carbon $now = null): ?Card

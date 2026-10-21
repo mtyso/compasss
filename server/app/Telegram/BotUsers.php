@@ -3,6 +3,7 @@
 namespace App\Telegram;
 
 use App\Models\User;
+use Illuminate\Support\Collection;
 
 /** Who may talk to the bot and in which language it answers. */
 final class BotUsers
@@ -10,6 +11,16 @@ final class BotUsers
     public static function isAllowed(int|string $telegramId): bool
     {
         return in_array((string) $telegramId, config('telegram.allowed_ids'), true);
+    }
+
+    /**
+     * Who the bot writes to on its own (summaries, advice): linked to Telegram and still allowed.
+     *
+     * @return Collection<int, User>
+     */
+    public static function reachable(): Collection
+    {
+        return User::whereNotNull('telegram_id')->get()->filter(fn (User $u) => self::isAllowed($u->telegram_id))->values();
     }
 
     /** The account's language once it exists, otherwise a guess from the Telegram app's language. */

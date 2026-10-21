@@ -4,13 +4,13 @@ namespace App\Telegram\Views;
 
 use App\Models\Account;
 use App\Models\Category;
-use App\Support\Money;
+use App\Support\Format;
 use Illuminate\Support\Carbon;
 
 /**
  * Numbers, dates and names the way the app shows them (app/src/lib/format.ts):
- * «32 000 сум», «$12,50», «21 октября» / «21-oktabr». Uzbek dates are spelled out here:
- * Carbon's «uz» locale is Cyrillic.
+ * «32 000 сум», «$12,50», «21 октября» / «21-oktabr». Sums and dates come from App\Support\Format,
+ * shared with the advisor texts; Carbon's «uz» locale is Cyrillic, so dates are never left to it.
  */
 final class Fmt
 {
@@ -52,20 +52,12 @@ final class Fmt
         return preg_replace('/\B(?=(\d{3})+(?!\d))/', self::NARROW_NBSP, (string) $value);
     }
 
-    /** «32 000 сум», «$12,50»; with $sign «−32 000 сум» / «+500 000 сум». */
+    /** «32 000 сум», «$12,50» (App\Support\Format); with $sign «−32 000 сум» / «+500 000 сум». */
     public static function money(int $minor, string $currency, string $locale, string $sign = ''): string
     {
-        $decimals = Money::decimals($currency);
-        $abs = abs($minor);
-        $units = intdiv($abs, 10 ** $decimals);
-        $fraction = $decimals > 0 ? ','.str_pad((string) ($abs % 10 ** $decimals), $decimals, '0', STR_PAD_LEFT) : '';
-        $sign = $sign !== '' ? $sign : ($minor < 0 ? '−' : '');
-
-        if ($currency === 'USD') {
-            return $sign.'$'.self::number($units).($fraction === ',00' ? '' : $fraction);
-        }
-
-        return $sign.self::number($units).' '.__('bot.currency_uzs', [], $locale);
+        return $sign === ''
+            ? Format::money($minor, $currency, $locale)
+            : $sign.Format::money(abs($minor), $currency, $locale);
     }
 
     public static function uzs(int $amount, string $locale, string $sign = ''): string
@@ -76,9 +68,7 @@ final class Fmt
     /** «21 октября» / «21-oktabr». */
     public static function date(Carbon $date, string $locale): string
     {
-        $month = __('bot.months', [], $locale)[$date->month - 1];
-
-        return $locale === 'uz' ? "{$date->day}-{$month}" : "{$date->day} {$month}";
+        return Format::dayMonth($date, $locale);
     }
 
     /** «Среда, 21 октября». */
@@ -87,10 +77,12 @@ final class Fmt
         return __('bot.weekdays', [], $locale)[$date->dayOfWeek].', '.self::date($date, $locale);
     }
 
-    /** «Октябрь». */
+    /** «Октябрь», «Oktabr». */
     public static function monthName(Carbon $date, string $locale): string
     {
-        return __('bot.month_names', [], $locale)[$date->month - 1];
+        $month = Format::month($date->format('Y-m'), $locale);
+
+        return mb_strtoupper(mb_substr($month, 0, 1)).mb_substr($month, 1);
     }
 
     /** «сегодня, 14:20», «вчера, 09:05», «18 октября, 20:10». */

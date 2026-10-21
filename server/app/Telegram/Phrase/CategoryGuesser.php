@@ -79,10 +79,20 @@ final class CategoryGuesser
     /** @param  'expense'|'income'  $kind */
     public function guess(string $note, string $kind): Category
     {
-        return $this->fromHistory($note, $kind)
-            ?? $this->bySystemKey(self::keyFor($note, $kind))
+        return $this->find($note, $kind)
             ?? $this->bySystemKey($kind === 'income' ? 'other_income' : 'other_expense')
             ?? $this->user->categories()->where('kind', $kind)->whereNull('archived_at')->orderBy('sort')->firstOrFail();
+    }
+
+    /**
+     * Only a real match, no «Прочее»: «можно купить наушники?» is checked against a category budget
+     * only when the words say which one.
+     *
+     * @param  'expense'|'income'  $kind
+     */
+    public function find(string $note, string $kind): ?Category
+    {
+        return $this->fromHistory($note, $kind) ?? $this->bySystemKey(self::keyFor($note, $kind));
     }
 
     /** The category of the latest operation with the same note, if it still exists. */
