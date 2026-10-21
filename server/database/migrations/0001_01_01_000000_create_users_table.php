@@ -6,25 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
+        // Sign-in is through the Telegram bot only (docs/PLAN.md, D7), so there is no email or password.
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('telegram_id')->unique();
+            $table->string('telegram_username')->nullable();
             $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
+            $table->string('locale', 2)->default('ru');
+            $table->string('timezone')->default('Asia/Tashkent');
+            $table->string('base_currency', 3)->default('UZS');
+            $table->json('settings')->nullable();
             $table->timestamps();
-        });
-
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
-            $table->string('token');
-            $table->timestamp('created_at')->nullable();
         });
 
         Schema::create('sessions', function (Blueprint $table) {
@@ -37,13 +31,9 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
     }
 };
