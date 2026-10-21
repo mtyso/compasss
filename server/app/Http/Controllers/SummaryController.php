@@ -31,7 +31,8 @@ class SummaryController extends Controller
         $byCategory = (clone $month)
             ->join('categories', 'categories.id', '=', 'transactions.category_id')
             ->selectRaw('transactions.type, COALESCE(categories.parent_id, categories.id) AS category_id, SUM(transactions.amount_uzs) AS total, COUNT(*) AS count')
-            ->groupBy('transactions.type', 'category_id')
+            // The whole expression, not its alias: MariaDB's ONLY_FULL_GROUP_BY rejects the alias.
+            ->groupByRaw('transactions.type, COALESCE(categories.parent_id, categories.id)')
             ->orderByDesc('total')
             ->toBase()
             ->get()
