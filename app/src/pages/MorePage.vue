@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarClock, HandCoins, KeyRound, LayoutGrid, LogOut, PieChart, Wallet } from 'lucide-vue-next'
+import { CalendarClock, HandCoins, KeyRound, LayoutGrid, Lightbulb, LogOut, PieChart, Wallet } from 'lucide-vue-next'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiRow from '@/components/ui/UiRow.vue'
@@ -30,6 +30,7 @@ const moneyLinks = [
   { name: 'budget', label: 'more.budget', icon: PieChart },
   { name: 'income', label: 'more.income', icon: HandCoins },
   { name: 'payments', label: 'more.payments', icon: CalendarClock },
+  { name: 'advice', label: 'more.advice', icon: Lightbulb },
 ] as const
 
 // Switching the theme washes the new colours over the screen from the switch, where the browser

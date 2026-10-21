@@ -41,10 +41,9 @@ const rows = computed(() =>
   }),
 )
 
+// Empty fields go too, as zero: the server then knows the month is set and does not refill it from the last one.
 const limits = computed(() =>
-  Object.entries(texts.value)
-    .map(([id, text]) => ({ category_id: Number(id), limit_uzs: text.trim() === '' ? 0 : (parseAmount(text, 'UZS') ?? -1) }))
-    .filter((item) => item.limit_uzs !== 0),
+  Object.entries(texts.value).map(([id, text]) => ({ category_id: Number(id), limit_uzs: text.trim() === '' ? 0 : (parseAmount(text, 'UZS') ?? -1) })),
 )
 const invalid = computed(() => limits.value.some((item) => item.limit_uzs < 0))
 const totalLimit = computed(() => limits.value.reduce((sum, item) => sum + Math.max(0, item.limit_uzs), 0))

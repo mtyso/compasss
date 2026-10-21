@@ -86,6 +86,9 @@ it('says no when the money set aside or the cushion would have to pay for it', f
         ->assertJsonPath('title', 'Не стоит')
         ->assertJsonPath('reasons.0', "До дохода не хватает 1\u{202F}000\u{202F}000 сум: придётся взять из денег, отложенных на платежи, или из запаса.")
         ->assertJsonPath('reasons.1', 'Если взять из подушки, её хватит на 0,8 мес.');
+    canAfford($this, 20_000_000)
+        ->assertJsonPath('verdict', 'no')
+        ->assertJsonPath('reasons.1', 'Даже всей подушки на это не хватит.');
 });
 
 it('answers in Uzbek when asked in Uzbek', function () {

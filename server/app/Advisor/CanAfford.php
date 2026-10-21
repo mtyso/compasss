@@ -27,8 +27,11 @@ class CanAfford
             $shortfall = $amountUzs - $free;
             $reasons[] = ['key' => 'short', 'params' => ['shortfall_uzs' => $shortfall]];
             $typical = $context->typicalMonthly();
-            if ($context->cushionUzs() > 0 && $typical) {
-                $reasons[] = ['key' => 'cushion_after', 'params' => ['cushion_months' => round(max(0, $context->cushionUzs() - $shortfall) / $typical, 1)]];
+            $cushionLeft = $context->cushionUzs() - $shortfall;
+            if ($context->cushionUzs() > 0 && $cushionLeft <= 0) {
+                $reasons[] = ['key' => 'cushion_short', 'params' => []];
+            } elseif ($context->cushionUzs() > 0 && $typical) {
+                $reasons[] = ['key' => 'cushion_after', 'params' => ['cushion_months' => round($cushionLeft / $typical, 1)]];
             }
 
             return new PurchaseVerdict('no', $amountUzs, $limit->limitUzs, 0, $limit->daysLeft, $reasons);

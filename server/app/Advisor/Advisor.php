@@ -13,6 +13,7 @@ use App\Advisor\Rules\OverspendForecast;
 use App\Advisor\Rules\Rule;
 use App\Advisor\Rules\SavingsRate;
 use App\Advisor\Rules\SmallThings;
+use App\Advisor\Rules\Withdraws;
 use App\Models\Insight;
 use App\Models\Transaction;
 use App\Models\User;
@@ -44,7 +45,8 @@ class Advisor
             if (! in_array($event, $rule->events(), true) || in_array($rule->key(), $muted, true)) {
                 continue;
             }
-            foreach ($rule->evaluate($context) as $finding) {
+            $findings = $rule->evaluate($context);
+            foreach ($findings as $finding) {
                 $insight = $user->insights()->firstOrCreate(
                     ['rule' => $finding->rule, 'period_key' => $finding->periodKey, 'subject' => $finding->subject],
                     ['severity' => $finding->severity, 'payload' => $finding->payload],
@@ -56,9 +58,30 @@ class Advisor
                     $insight->update(['severity' => $finding->severity, 'payload' => $finding->payload]);
                 }
             }
+            if ($rule instanceof Withdraws) {
+                $this->withdraw($user, $rule, $context, $findings);
+            }
         }
 
         return $added;
+    }
+
+    /**
+     * Removes what the rule checked and no longer finds, as long as nobody has read it or been sent it.
+     *
+     * @param  list<Finding>  $findings
+     */
+    private function withdraw(User $user, Rule&Withdraws $rule, AdvisorContext $context, array $findings): void
+    {
+        $still = array_map(fn (Finding $f) => "{$f->periodKey}|{$f->subject}", $findings);
+        foreach ($rule->checked($context) as [$periodKey, $subject]) {
+            if (! in_array("{$periodKey}|{$subject}", $still, true)) {
+                $user->insights()
+                    ->where(['rule' => $rule->key(), 'period_key' => $periodKey, 'subject' => $subject, 'status' => 'new'])
+                    ->whereNull('sent_via')
+                    ->delete();
+            }
+        }
     }
 
     /** @return Collection<int, Insight> */

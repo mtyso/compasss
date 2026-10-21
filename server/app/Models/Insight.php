@@ -59,6 +59,29 @@ class Insight extends Model
     }
 
     /** @return array<string, mixed> */
+    /**
+     * «Не показывать такое»: the whole rule goes into the user's muted_rules and its open insights
+     * are dismissed. Shared by the «Советы» feed and the bot.
+     */
+    public function mute(): void
+    {
+        $user = $this->user;
+        $muted = array_values(array_unique([...(array) $user->setting('muted_rules', []), $this->rule]));
+        $user->update(['settings' => [...($user->settings ?? []), 'muted_rules' => $muted]]);
+        $user->insights()->where('rule', $this->rule)->whereIn('status', ['new', 'seen'])->update(['status' => 'dismissed']);
+        $this->refresh();
+    }
+
+    /** «Отметить разовой» on a large expense: the operation stops counting as everyday spending. */
+    public function markOneOff(): ?Transaction
+    {
+        $transaction = $this->user->transactions()->find($this->payload['transaction_id'] ?? 0);
+        $transaction?->update(['is_one_off' => true]);
+        $this->update(['status' => 'useful']);
+
+        return $transaction;
+    }
+
     public function toApi(?string $locale = null): array
     {
         return [

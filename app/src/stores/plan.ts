@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '@/lib/api'
 import type { Currency } from '@/lib/format'
+import type { Insight } from '@/stores/advisor'
 import { useMoney, type Transaction } from '@/stores/money'
 
 export interface DailyLimit {
@@ -48,6 +49,8 @@ export interface Today {
   has_accounts: boolean
   next_income: IncomeSchedule | null
   payments: RecurringPayment[]
+  insights: Insight[]
+  insights_new: number
 }
 
 export interface BudgetItem {

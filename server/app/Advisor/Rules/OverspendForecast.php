@@ -40,7 +40,8 @@ final class OverspendForecast extends BaseRule
             }
             $findings[] = $this->finding('warn', $context->week(), (string) $item['category_id'], [
                 'category_id' => $item['category_id'],
-                'forecast_uzs' => $item['forecast_uzs'],
+                // «около 3 400 000», not «около 3 395 238»: a forecast is not exact to the som.
+                'forecast_uzs' => (int) (round($item['forecast_uzs'] / 10_000) * 10_000),
                 'limit_uzs' => $item['limit_uzs'],
             ]);
         }

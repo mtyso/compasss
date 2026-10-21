@@ -132,7 +132,7 @@ it('forecasts an overspend in essential categories', function () {
     // 1 200 000 in 14 days is about 2 657 143 by the 31st
     $this->advisor->run($this->user, 'morning', now());
     $forecast = advisorInsights($this, 'overspend_forecast')->sole();
-    expect($forecast->payload)->toMatchArray(['category_id' => ($this->cat)('groceries')->id, 'forecast_uzs' => 2_657_143, 'limit_uzs' => 2_000_000])
+    expect($forecast->payload)->toMatchArray(['category_id' => ($this->cat)('groceries')->id, 'forecast_uzs' => 2_660_000, 'limit_uzs' => 2_000_000])
         ->and($forecast->text('ru')['title'])->toBe('Продукты: к концу месяца выйдет больше плана');
 });
 
@@ -262,14 +262,52 @@ it('celebrates a month kept within the budget', function () {
     expect(advisorInsights($this, 'good_news')->sole()->text('ru')['title'])->toBe('Бюджет за октябрь выполнен');
 });
 
-it('celebrates a flexible category below last month at the same day', function () {
+it('celebrates a regular flexible category below its usual amount by this day', function () {
+    // Usually 600 000 on cafes by the 21st (median of August and September); this October 300 000.
+    advisorExpense($this, 500_000, 'cafe', '2026-08-01 10:00', ['account' => $this->archive]);
     advisorExpense($this, 600_000, 'cafe', '2026-09-01 10:00', ['account' => $this->archive]);
     advisorExpense($this, 900_000, 'cafe', '2026-09-25 10:00', ['account' => $this->archive]);
+    advisorExpense($this, 700_000, 'cafe', '2026-08-10 10:00', ['account' => $this->archive]);
     advisorExpense($this, 300_000, 'cafe', '2026-10-10 10:00');
 
     $this->advisor->run($this->user, 'morning', now());
 
-    expect(advisorInsights($this, 'good_news')->sole()->payload)->toMatchArray(['variant' => 'spending_down', 'less_uzs' => 300_000]);
+    $praise = advisorInsights($this, 'good_news')->sole();
+    expect($praise->payload)->toMatchArray(['variant' => 'spending_down', 'less_uzs' => 600_000])
+        ->and($praise->text('ru'))->toBe(['title' => "Кафе и рестораны: на 600\u{202F}000 сум меньше", 'body' => 'Чем обычно бывает к этому дню месяца. Отличный темп.']);
+});
+
+it('does not praise a category that is not spent on every month', function () {
+    // A coat in September and nothing in August: no clothes this month is not an achievement.
+    advisorExpense($this, 30_000, 'groceries', '2026-08-01 10:00', ['account' => $this->archive]);
+    advisorExpense($this, 900_000, 'clothes', '2026-09-03 10:00', ['account' => $this->archive]);
+
+    $this->advisor->run($this->user, 'morning', now());
+
+    expect(advisorInsights($this, 'good_news'))->toBeEmpty();
+});
+
+it('withdraws unread praise once a purchase undoes it, and keeps praise already seen', function () {
+    advisorExpense($this, 600_000, 'cafe', '2026-08-01 10:00', ['account' => $this->archive]);
+    advisorExpense($this, 600_000, 'cafe', '2026-09-01 10:00', ['account' => $this->archive]);
+    $this->advisor->run($this->user, 'morning', now());
+    expect(advisorInsights($this, 'good_news')->sole()->payload['less_uzs'])->toBe(600_000);
+
+    // A smaller purchase keeps the praise and updates its number; new praise is never added after an operation.
+    $lunch = advisorExpense($this, 200_000, 'cafe', '2026-10-21 11:00');
+    $this->advisor->run($this->user, 'transaction', now(), $lunch);
+    expect(advisorInsights($this, 'good_news')->sole()->payload['less_uzs'])->toBe(400_000);
+
+    $dinner = advisorExpense($this, 350_000, 'cafe', '2026-10-21 14:00');
+    $this->advisor->run($this->user, 'transaction', now(), $dinner);
+    expect(advisorInsights($this, 'good_news'))->toBeEmpty();
+
+    // Read praise stays in the feed as it was.
+    $dinner->delete();
+    $this->advisor->run($this->user, 'morning', now()->addMinute());
+    advisorInsights($this, 'good_news')->sole()->update(['status' => 'seen']);
+    $this->advisor->run($this->user, 'transaction', now(), advisorExpense($this, 500_000, 'cafe', '2026-10-21 14:30'));
+    expect(advisorInsights($this, 'good_news')->sole()->status)->toBe('seen');
 });
 
 it('reminds in the evening when nothing was recorded today', function () {

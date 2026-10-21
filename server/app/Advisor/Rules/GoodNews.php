@@ -9,11 +9,13 @@ use App\Money\BudgetStatus;
 use Illuminate\Support\Carbon;
 
 /**
- * «Неделя без перерасхода. В кафе на 180 000 меньше, чем в прошлом месяце.»
+ * «Бюджет за октябрь выполнен», «Кафе: на 180 000 меньше обычного».
  * Two kinds: last month kept within the budget (once, early in the month), and a flexible category
- * clearly below last month at the same day (once a week).
+ * the user spends on every month clearly below its usual amount by this day (once a week). The
+ * second can stop being true after the next purchase, so it is re-checked after every operation of
+ * this month and withdrawn while still unread.
  */
-final class GoodNews extends BaseRule
+final class GoodNews extends BaseRule implements Withdraws
 {
     public function key(): string
     {
@@ -22,25 +24,35 @@ final class GoodNews extends BaseRule
 
     public function events(): array
     {
-        return [self::EVENT_MORNING];
+        return [self::EVENT_MORNING, self::EVENT_TRANSACTION];
     }
 
     public function evaluate(AdvisorContext $context): array
     {
-        $lastMonth = $context->now->copy()->subMonthNoOverflow()->format('Y-m');
-        if (! in_array($lastMonth, $context->historyMonths(), true)) {
-            return [];
+        if ($context->event === self::EVENT_TRANSACTION) {
+            // After an operation only praise already given is re-checked; new praise waits for the morning.
+            $down = $this->aboutThisMonth($context) ? $this->spendingDown($context) : null;
+            $given = $down && $context->user->insights()
+                ->where(['rule' => $this->key(), 'period_key' => $down->periodKey, 'subject' => $down->subject])->exists();
+
+            return $given ? [$down] : [];
         }
 
         return array_values(array_filter([
-            $this->budgetKept($context, $lastMonth),
+            $this->budgetKept($context),
             $this->spendingDown($context),
         ]));
     }
 
-    private function budgetKept(AdvisorContext $context, string $month): ?Finding
+    public function checked(AdvisorContext $context): array
     {
-        if ($context->now->day > 10) {
+        return $context->event === self::EVENT_MORNING || $this->aboutThisMonth($context) ? [[$context->week(), 'down']] : [];
+    }
+
+    private function budgetKept(AdvisorContext $context): ?Finding
+    {
+        $month = $context->now->copy()->subMonthNoOverflow()->format('Y-m');
+        if ($context->now->day > 10 || ! in_array($month, $context->historyMonths(), true)) {
             return null;
         }
         $items = BudgetStatus::for($context->user, $month, $context->now)->items;
@@ -53,25 +65,33 @@ final class GoodNews extends BaseRule
 
     private function spendingDown(AdvisorContext $context): ?Finding
     {
-        // Before the 8th the comparison is mostly noise.
-        if ($context->now->day < 8) {
+        // Before the 8th the comparison is mostly noise, and one month of history is not a habit yet.
+        $months = $context->historyMonths();
+        if ($context->now->day < 8 || count($months) < 2) {
             return null;
         }
-        $start = $context->now->copy()->startOfMonth();
-        $lastStart = $start->copy()->subMonthNoOverflow();
-        // The same moment of last month, or its end if this month is longer.
-        $lastNow = Carbon::createFromTimestamp(min(
-            $lastStart->copy()->addSeconds($start->diffInSeconds($context->now))->timestamp,
-            $start->timestamp,
-        ), config('app.timezone'));
+        $elapsed = (int) $context->now->copy()->startOfMonth()->diffInSeconds($context->now);
 
+        // What each category had cost by this moment of each past month (or by its end, if shorter).
+        $past = [];
+        foreach ($months as $month) {
+            $start = Carbon::createFromFormat('Y-m', $month, config('app.timezone'))->startOfMonth();
+            $end = $start->copy()->addSeconds($elapsed)->min($start->copy()->addMonth());
+            foreach ($this->byFlexibleRoot($context, $context->expensesBetween($start, $end)) as $rootId => $sum) {
+                $past[$rootId][] = $sum;
+            }
+        }
         $now = $this->byFlexibleRoot($context, $context->monthExpenses()->filter(fn (Transaction $t) => $t->occurred_at->lte($context->now)));
-        $before = $this->byFlexibleRoot($context, $context->expensesBetween($lastStart, $lastNow));
 
         $best = null;
-        foreach ($before as $rootId => $was) {
-            $less = $was - ($now[$rootId] ?? 0);
-            if ($less >= max(100_000, (int) ($was * 0.2)) && ($best === null || $less > $best['less_uzs'])) {
+        foreach ($past as $rootId => $sums) {
+            // Only categories spent on by this day every month: a coat bought last October says nothing about this one.
+            if (count($sums) < count($months)) {
+                continue;
+            }
+            $usual = AdvisorContext::median($sums);
+            $less = $usual - ($now[$rootId] ?? 0);
+            if ($less >= max(100_000, (int) ($usual * 0.2)) && ($best === null || $less > $best['less_uzs'])) {
                 $best = ['category_id' => $rootId, 'less_uzs' => $less];
             }
         }

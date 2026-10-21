@@ -86,7 +86,7 @@ return [
             ],
             'spending_down' => [
                 'title' => ':category: :less_uzs kamroq',
-                'body' => "O'tgan oyning shu kuniga nisbatan. Ajoyib sur'at.",
+                'body' => "Oyning shu kunigacha odatdagiga nisbatan. Ajoyib sur'at.",
             ],
         ],
         'forgot_to_record' => [
@@ -111,6 +111,7 @@ return [
             'budget_over' => '«:category» byudjeti :over_uzs ga oshib ketadi.',
             'short' => "Daromadgacha :shortfall_uzs yetmaydi: to'lovlarga ajratilgan puldan yoki zaxiradan olishga to'g'ri keladi.",
             'cushion_after' => 'Yostiqdan olinsa, u :cushion_months oyga yetadi.',
+            'cushion_short' => 'Bunga hatto butun yostiq ham yetmaydi.',
             'until_income' => 'Daromad tushgandan keyin (:date_on) bemalol yetadi.',
             'until_month' => ':date_on dan yangi byudjet boshlanadi.',
         ],
