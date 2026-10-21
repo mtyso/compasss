@@ -22,7 +22,11 @@ const { t } = useI18n()
 
 const titleEl = ref<HTMLElement | null>(null)
 const collapsed = ref(false)
-const inTelegram = typeof window !== 'undefined' && !!window.Telegram?.WebApp && !!(window.Telegram.WebApp as { initData?: string }).initData
+// Telegram draws its own «Back» in the header, so ours would be a second one. lib/telegram marks the
+// page with .in-telegram; launch data is the fallback before that lands.
+const inTelegram =
+  document.documentElement.classList.contains('in-telegram') ||
+  !!(window.Telegram?.WebApp as { initData?: string } | undefined)?.initData
 const showBack = computed(() => props.back !== false && !inTelegram)
 
 function goBack(): void {
