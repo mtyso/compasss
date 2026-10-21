@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Loader2, Plus, Trash2 } from 'lucide-vue-next'
+import { Plus, Trash2 } from 'lucide-vue-next'
 import AmountField from '@/components/AmountField.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
+import MoneyAmount from '@/components/ui/MoneyAmount.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiRow from '@/components/ui/UiRow.vue'
+import UiSegmented from '@/components/ui/UiSegmented.vue'
+import { haptics } from '@/lib/haptics'
 import { ApiError } from '@/lib/api'
 import { isoDate } from '@/lib/dates'
-import { formatMoney, type Currency } from '@/lib/format'
+import type { Currency } from '@/lib/format'
 import { CURRENCIES, toUzs } from '@/lib/money'
 import { useMoney } from '@/stores/money'
 import { usePlan, type RecurringPayment } from '@/stores/plan'
@@ -30,8 +35,14 @@ const day = ref(1)
 const nextDue = ref('')
 const saving = ref(false)
 const error = ref<string | null>(null)
+const loaded = ref(false)
 
-onMounted(() => Promise.all([plan.loadPayments(), money.ensureLoaded()]))
+onMounted(async () => {
+  await Promise.all([plan.loadPayments(), money.ensureLoaded()]).catch(() => {})
+  loaded.value = true
+})
+
+const currencyOptions = computed(() => CURRENCIES.map((value) => ({ value, label: value === 'UZS' ? t('accounts.som') : t('accounts.dollar') })))
 
 const monthlyUzs = computed(() =>
   plan.payments
@@ -57,6 +68,7 @@ function open(payment: RecurringPayment | null): void {
 }
 
 function pickAccount(id: number): void {
+  haptics.selection()
   accountId.value = id
   // A payment usually goes out in its account's currency.
   if (!editing.value) currency.value = money.accountById.get(id)?.currency ?? currency.value
@@ -81,7 +93,9 @@ async function save(): Promise<void> {
       editing.value?.id,
     )
     sheetOpen.value = false
+    haptics.notify('success')
   } catch (e) {
+    haptics.notify('error')
     error.value = e instanceof ApiError ? (Object.values(e.errors)[0]?.[0] ?? e.message) : t('quickAdd.failed')
   } finally {
     saving.value = false
@@ -96,54 +110,68 @@ async function remove(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="page">
     <PageHeader :title="$t('payments.title')" />
-    <p class="px-1 text-sm text-ink-2">{{ $t('payments.intro') }}</p>
 
-    <article v-if="plan.payments.length" class="flex items-baseline justify-between rounded-3xl bg-surface px-5 py-4 shadow-sm">
-      <span class="text-sm text-ink-2">{{ $t('payments.monthly') }}</span>
-      <span class="num font-display text-xl font-bold">{{ formatMoney(monthlyUzs, 'UZS', settings.locale) }}</span>
-    </article>
+    <template v-if="!loaded">
+      <div class="skeleton h-20 rounded-card" />
+      <div class="skeleton h-40 rounded-card" />
+    </template>
 
-    <div class="flex flex-col divide-y divide-line overflow-hidden rounded-3xl bg-surface shadow-sm">
-      <PaymentRow
-        v-for="payment in plan.payments"
-        :key="payment.id"
-        :payment="payment"
-        :class="{ 'opacity-50': !payment.active }"
-        @open="open(payment)"
-        @edit="open(payment)"
-      />
-      <button type="button" class="flex items-center gap-3 px-4 py-3 text-ink-2 active:bg-bg" @click="open(null)">
-        <Plus class="size-5" />
-        {{ $t('payments.add') }}
-      </button>
-    </div>
+    <template v-else>
+      <article v-if="plan.payments.length" class="card flex flex-col gap-1.5 p-5">
+        <span class="text-sm font-medium text-ink-2">{{ $t('payments.monthly') }}</span>
+        <MoneyAmount :amount="monthlyUzs" animate class="font-display text-[2.125rem] leading-none font-bold tracking-[-0.03em]" />
+      </article>
+
+      <section class="flex flex-col gap-2.5">
+        <p class="px-1 text-caption text-ink-3">{{ $t('payments.intro') }}</p>
+        <div class="group">
+          <PaymentRow
+            v-for="payment in plan.payments"
+            :key="payment.id"
+            :payment="payment"
+            :class="{ 'opacity-50': !payment.active }"
+            @open="open(payment)"
+            @edit="open(payment)"
+          />
+          <UiRow :title="$t('payments.add')" tone="muted" :chevron="false" @click="open(null)">
+            <template #leading>
+              <span class="grid size-9 place-items-center rounded-xl border border-dashed border-ink/20"><Plus class="size-[18px]" /></span>
+            </template>
+          </UiRow>
+        </div>
+      </section>
+    </template>
 
     <BottomSheet v-model:open="sheetOpen" :title="editing ? editing.name : $t('payments.new')">
-      <label class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('accounts.name') }}</span>
+      <label class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('accounts.name') }}</span>
         <input v-model="name" maxlength="60" :placeholder="$t('payments.namePlaceholder')" class="field" />
       </label>
-      <section class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('payments.fromAccount') }}</span>
+      <section class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('payments.fromAccount') }}</span>
         <div class="flex flex-wrap gap-2">
-          <button v-for="item in money.activeAccounts" :key="item.id" type="button" class="chip" :class="{ 'chip-on': accountId === item.id }" @click="pickAccount(item.id)">
+          <button
+            v-for="item in money.activeAccounts"
+            :key="item.id"
+            type="button"
+            class="chip"
+            :class="{ 'chip-on': accountId === item.id }"
+            :aria-pressed="accountId === item.id"
+            @click="pickAccount(item.id)"
+          >
             {{ item.name }}
           </button>
         </div>
       </section>
-      <section class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('accounts.currency') }}</span>
-        <div class="flex gap-2">
-          <button v-for="item in CURRENCIES" :key="item" type="button" class="chip" :class="{ 'chip-on': currency === item }" @click="currency = item">
-            {{ item === 'UZS' ? $t('accounts.som') : $t('accounts.dollar') }}
-          </button>
-        </div>
+      <section class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('accounts.currency') }}</span>
+        <UiSegmented v-model="currency" :options="currencyOptions" :label="$t('accounts.currency')" />
       </section>
       <AmountField v-model="amount" :currency="currency" :label="$t('quickAdd.amount')" />
-      <label class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('quickAdd.category') }}</span>
+      <label class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('quickAdd.category') }}</span>
         <select v-model="categoryId" class="field">
           <option :value="null" disabled>{{ $t('payments.pickCategory') }}</option>
           <optgroup v-for="group in categoryGroups" :key="group.parent.id" :label="group.parent.names[settings.locale]">
@@ -152,25 +180,22 @@ async function remove(): Promise<void> {
           </optgroup>
         </select>
       </label>
-      <label class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('income.day') }}</span>
-        <input v-model.number="day" type="number" min="1" max="31" inputmode="numeric" class="field num w-28" />
+      <label class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('income.day') }}</span>
+        <input v-model.number="day" type="number" min="1" max="31" inputmode="numeric" class="field num w-28 text-lg font-semibold" />
       </label>
-      <label v-if="editing" class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('payments.nextDue') }}</span>
+      <label v-if="editing" class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('payments.nextDue') }}</span>
         <input v-model="nextDue" type="date" class="field w-48" />
-        <span class="px-1 text-xs text-ink-3">{{ $t('payments.nextDueHint') }}</span>
+        <span class="px-1 text-caption text-ink-3">{{ $t('payments.nextDueHint') }}</span>
       </label>
       <template #footer>
         <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
         <div class="flex gap-2">
-          <button v-if="editing" type="button" class="grid size-12 place-items-center rounded-2xl bg-danger-soft text-danger" :aria-label="$t('quickAdd.delete')" @click="remove">
+          <UiButton v-if="editing" variant="danger-soft" class="!w-12 !px-0" :aria-label="$t('quickAdd.delete')" @click="remove">
             <Trash2 class="size-5" />
-          </button>
-          <button type="button" class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-ink py-3 font-semibold text-surface disabled:opacity-40" :disabled="!canSave || saving" @click="save">
-            <Loader2 v-if="saving" class="size-5 animate-spin" />
-            {{ $t('accounts.save') }}
-          </button>
+          </UiButton>
+          <UiButton class="flex-1" :disabled="!canSave" :loading="saving" @click="save">{{ $t('accounts.save') }}</UiButton>
         </div>
       </template>
     </BottomSheet>

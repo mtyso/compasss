@@ -30,7 +30,6 @@ export default {
     setAside: 'Отложено',
     addIncome: 'Укажи дни дохода, и лимит станет точнее',
     payments: 'Ближайшие платежи',
-    nextIncome: 'Следующий доход: {name}, {date}, около {amount}',
     allAdvice: 'Все советы',
     allAdviceNew: 'Все советы, новых: {n}',
   },
@@ -137,6 +136,8 @@ export default {
     advice: 'Советы',
   },
   budget: {
+    total: 'Всего на месяц',
+    saved: 'Бюджет сохранён',
     title: 'Бюджет',
     ofIncome: '{percent}% от дохода {income}',
     intro: 'Лимит на месяц по каждой категории. Пустое поле значит без лимита. Следующий месяц начнётся с этих же сумм.',

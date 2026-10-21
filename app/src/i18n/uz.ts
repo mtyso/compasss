@@ -33,7 +33,6 @@ const uz: typeof ru = {
     setAside: 'Ajratilgan',
     addIncome: "Daromad kunlarini kiriting, shunda limit aniqroq bo'ladi",
     payments: "Yaqin to'lovlar",
-    nextIncome: 'Keyingi daromad: {name}, {date}, taxminan {amount}',
     allAdvice: 'Barcha maslahatlar',
     allAdviceNew: 'Barcha maslahatlar, yangi: {n}',
   },
@@ -140,6 +139,8 @@ const uz: typeof ru = {
     advice: 'Maslahatlar',
   },
   budget: {
+    total: 'Oyga jami',
+    saved: 'Byudjet saqlandi',
     title: 'Byudjet',
     ofIncome: '{income} daromadning {percent}%',
     intro: "Har bir toifa uchun oylik limit. Bo'sh maydon limitsiz degani. Keyingi oy shu summalar bilan boshlanadi.",

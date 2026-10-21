@@ -10,7 +10,7 @@ import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import LimitCard from '@/components/plan/LimitCard.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
-import { formatDayHeading, formatDayMonth, formatMoney } from '@/lib/format'
+import { formatDayHeading } from '@/lib/format'
 import { useMoney } from '@/stores/money'
 import { usePlan } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
@@ -38,7 +38,7 @@ watch(() => money.revision, load)
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="page">
     <ScreenHeader :title="$t('today.title')" :overline="heading" />
 
     <div v-if="!today && !failed" class="flex flex-col gap-6" aria-hidden="true">
@@ -64,14 +64,6 @@ watch(() => money.revision, load)
           />
         </div>
       </SectionBlock>
-
-      <p v-if="today.next_income" class="-mt-2 px-1 text-caption text-ink-2">
-        {{ $t('today.nextIncome', {
-          name: today.next_income.name,
-          date: formatDayMonth(today.next_income.next_date, settings.locale),
-          amount: formatMoney(today.next_income.expected_amount, today.next_income.currency, settings.locale),
-        }) }}
-      </p>
 
       <section class="flex flex-col gap-2.5">
         <div class="flex items-baseline justify-between gap-3">

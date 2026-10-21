@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Loader2, Plus, Trash2 } from 'lucide-vue-next'
+import { Plus, Trash2 } from 'lucide-vue-next'
 import AmountField from '@/components/AmountField.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import MoneyAmount from '@/components/ui/MoneyAmount.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiRow from '@/components/ui/UiRow.vue'
+import UiSegmented from '@/components/ui/UiSegmented.vue'
+import { showToast } from '@/components/ui/toast'
+import { haptics } from '@/lib/haptics'
 import { api, ApiError } from '@/lib/api'
-import { formatDayMonth, formatMoney, type Currency } from '@/lib/format'
+import { formatDayMonth, type Currency } from '@/lib/format'
 import { CURRENCIES } from '@/lib/money'
 import { useAuth, type User } from '@/stores/auth'
 import { useMoney } from '@/stores/money'
@@ -29,10 +35,16 @@ const accountId = ref<number | null>(null)
 const saving = ref(false)
 const error = ref<string | null>(null)
 
-const minBalance = ref<number | null>(Number(auth.user?.settings.min_balance_uzs ?? 0) || null)
-const minSaved = ref(false)
+const minBalance = ref<number | null>(Number(auth.user?.settings?.min_balance_uzs ?? 0) || null)
+const minSaving = ref(false)
+const loaded = ref(false)
 
-onMounted(() => Promise.all([plan.loadIncomes(), money.ensureLoaded()]))
+onMounted(async () => {
+  await Promise.all([plan.loadIncomes(), money.ensureLoaded()]).catch(() => {})
+  loaded.value = true
+})
+
+const currencyOptions = computed(() => CURRENCIES.map((value) => ({ value, label: value === 'UZS' ? t('accounts.som') : t('accounts.dollar') })))
 
 function open(schedule: IncomeSchedule | null): void {
   editing.value = schedule
@@ -56,7 +68,9 @@ async function save(): Promise<void> {
       editing.value?.id,
     )
     sheetOpen.value = false
+    haptics.notify('success')
   } catch (e) {
+    haptics.notify('error')
     error.value = e instanceof ApiError ? e.message : t('quickAdd.failed')
   } finally {
     saving.value = false
@@ -70,65 +84,80 @@ async function remove(): Promise<void> {
 }
 
 async function saveMinBalance(): Promise<void> {
-  const user = await api<User>('/me', { method: 'PATCH', body: JSON.stringify({ settings: { min_balance_uzs: minBalance.value ?? 0 } }) })
-  auth.setUser(user)
-  minSaved.value = true
-  window.setTimeout(() => (minSaved.value = false), 2000)
+  minSaving.value = true
+  try {
+    const user = await api<User>('/me', { method: 'PATCH', body: JSON.stringify({ settings: { min_balance_uzs: minBalance.value ?? 0 } }) })
+    auth.setUser(user)
+    haptics.notify('success')
+    showToast({ message: t('income.saved'), tone: 'success' })
+  } catch {
+    haptics.notify('error')
+    showToast({ message: t('quickAdd.failed'), tone: 'danger' })
+  } finally {
+    minSaving.value = false
+  }
 }
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="page">
     <PageHeader :title="$t('income.title')" />
-    <p class="px-1 text-sm text-ink-2">{{ $t('income.intro') }}</p>
 
-    <div class="flex flex-col divide-y divide-line overflow-hidden rounded-3xl bg-surface shadow-sm">
-      <button v-for="schedule in plan.incomes" :key="schedule.id" type="button" class="flex items-center gap-3 px-4 py-3 text-left active:bg-bg" @click="open(schedule)">
-        <span class="grid size-10 shrink-0 place-items-center rounded-2xl bg-money-soft font-display text-sm font-bold text-money">{{ schedule.day_of_month }}</span>
-        <span class="flex min-w-0 flex-1 flex-col">
-          <span class="truncate font-medium">{{ schedule.name }}</span>
-          <span class="text-xs text-ink-3">{{ $t('income.next', { date: formatDayMonth(schedule.next_date, settings.locale) }) }}</span>
-        </span>
-        <span class="num font-semibold">{{ formatMoney(schedule.expected_amount, schedule.currency, settings.locale) }}</span>
-      </button>
-      <button type="button" class="flex items-center gap-3 px-4 py-3 text-ink-2 active:bg-bg" @click="open(null)">
-        <Plus class="size-5" />
-        {{ $t('income.add') }}
-      </button>
-    </div>
+    <section class="flex flex-col gap-2.5">
+      <p class="px-1 text-caption text-ink-3">{{ $t('income.intro') }}</p>
+      <div v-if="!loaded" class="skeleton h-28 rounded-card" />
+      <div v-else class="group">
+        <UiRow v-for="schedule in plan.incomes" :key="schedule.id" :title="schedule.name" @click="open(schedule)">
+          <template #leading>
+            <span class="grid size-10 place-items-center rounded-[0.875rem] bg-money-soft font-display text-sm font-bold text-money">{{ schedule.day_of_month }}</span>
+          </template>
+          <template #subtitle>{{ $t('income.next', { date: formatDayMonth(schedule.next_date, settings.locale) }) }}</template>
+          <template #trailing>
+            <MoneyAmount :amount="schedule.expected_amount" :currency="schedule.currency" class="font-semibold" />
+          </template>
+        </UiRow>
+        <UiRow :title="$t('income.add')" tone="muted" :chevron="false" @click="open(null)">
+          <template #leading>
+            <span class="grid size-10 place-items-center rounded-[0.875rem] border border-dashed border-ink/20"><Plus class="size-[18px]" /></span>
+          </template>
+        </UiRow>
+      </div>
+    </section>
 
-    <section class="flex flex-col gap-2 rounded-3xl bg-surface p-4 shadow-sm">
+    <section class="card flex flex-col gap-3 p-4">
       <AmountField v-model="minBalance" currency="UZS" :label="$t('income.minBalance')" allow-zero />
-      <p class="px-1 text-xs text-ink-3">{{ $t('income.minBalanceHint') }}</p>
-      <button type="button" class="self-start rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-surface" @click="saveMinBalance">
-        {{ minSaved ? $t('income.saved') : $t('accounts.save') }}
-      </button>
+      <p class="px-1 text-caption text-ink-3">{{ $t('income.minBalanceHint') }}</p>
+      <UiButton variant="secondary" size="sm" class="self-start" :loading="minSaving" @click="saveMinBalance">{{ $t('accounts.save') }}</UiButton>
     </section>
 
     <BottomSheet v-model:open="sheetOpen" :title="editing ? editing.name : $t('income.new')">
-      <label class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('accounts.name') }}</span>
+      <label class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('accounts.name') }}</span>
         <input v-model="name" maxlength="60" class="field" />
       </label>
-      <label class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('income.day') }}</span>
-        <input v-model.number="day" type="number" min="1" max="31" inputmode="numeric" class="field num w-28" />
-        <span class="px-1 text-xs text-ink-3">{{ $t('income.dayHint') }}</span>
+      <label class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('income.day') }}</span>
+        <input v-model.number="day" type="number" min="1" max="31" inputmode="numeric" class="field num w-28 text-lg font-semibold" />
+        <span class="px-1 text-caption text-ink-3">{{ $t('income.dayHint') }}</span>
       </label>
-      <section class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('accounts.currency') }}</span>
-        <div class="flex gap-2">
-          <button v-for="item in CURRENCIES" :key="item" type="button" class="chip" :class="{ 'chip-on': currency === item }" @click="currency = item">
-            {{ item === 'UZS' ? $t('accounts.som') : $t('accounts.dollar') }}
-          </button>
-        </div>
+      <section class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('accounts.currency') }}</span>
+        <UiSegmented v-model="currency" :options="currencyOptions" :label="$t('accounts.currency')" />
       </section>
       <AmountField v-model="amount" :currency="currency" :label="$t('income.amount')" />
-      <section class="flex flex-col gap-1.5">
-        <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('income.account') }}</span>
+      <section class="flex flex-col gap-2">
+        <span class="section-title">{{ $t('income.account') }}</span>
         <div class="flex flex-wrap gap-2">
-          <button type="button" class="chip" :class="{ 'chip-on': accountId === null }" @click="accountId = null">{{ $t('income.anyAccount') }}</button>
-          <button v-for="item in money.activeAccounts" :key="item.id" type="button" class="chip" :class="{ 'chip-on': accountId === item.id }" @click="accountId = item.id">
+          <button type="button" class="chip" :class="{ 'chip-on': accountId === null }" :aria-pressed="accountId === null" @click="accountId = null">{{ $t('income.anyAccount') }}</button>
+          <button
+            v-for="item in money.activeAccounts"
+            :key="item.id"
+            type="button"
+            class="chip"
+            :class="{ 'chip-on': accountId === item.id }"
+            :aria-pressed="accountId === item.id"
+            @click="accountId = item.id"
+          >
             {{ item.name }}
           </button>
         </div>
@@ -136,13 +165,10 @@ async function saveMinBalance(): Promise<void> {
       <template #footer>
         <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
         <div class="flex gap-2">
-          <button v-if="editing" type="button" class="grid size-12 place-items-center rounded-2xl bg-danger-soft text-danger" :aria-label="$t('quickAdd.delete')" @click="remove">
+          <UiButton v-if="editing" variant="danger-soft" class="!w-12 !px-0" :aria-label="$t('quickAdd.delete')" @click="remove">
             <Trash2 class="size-5" />
-          </button>
-          <button type="button" class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-ink py-3 font-semibold text-surface disabled:opacity-40" :disabled="!canSave || saving" @click="save">
-            <Loader2 v-if="saving" class="size-5 animate-spin" />
-            {{ $t('accounts.save') }}
-          </button>
+          </UiButton>
+          <UiButton class="flex-1" :disabled="!canSave" :loading="saving" @click="save">{{ $t('accounts.save') }}</UiButton>
         </div>
       </template>
     </BottomSheet>
