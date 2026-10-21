@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { i18n } from '@/i18n'
 import { setApiLocale } from '@/lib/api'
+import { onTelegramThemeChange, telegramPrefersDark } from '@/lib/telegram'
 import type { Locale } from '@/lib/format'
 
 export type Theme = 'system' | 'light' | 'dark'
@@ -24,7 +25,9 @@ export const useSettings = defineStore('settings', () => {
   const media = window.matchMedia('(prefers-color-scheme: dark)')
 
   function applyTheme(): void {
-    const dark = theme.value === 'dark' || (theme.value === 'system' && media.matches)
+    // Inside Telegram «как в системе» means Telegram's own theme.
+    const systemDark = telegramPrefersDark() ?? media.matches
+    const dark = theme.value === 'dark' || (theme.value === 'system' && systemDark)
     document.documentElement.classList.toggle('dark', dark)
   }
 
@@ -35,6 +38,7 @@ export const useSettings = defineStore('settings', () => {
   }
 
   media.addEventListener('change', applyTheme)
+  onTelegramThemeChange(applyTheme)
 
   watch(
     [locale, theme],

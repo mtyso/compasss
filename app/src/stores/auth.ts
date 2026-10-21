@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api, setApiToken, setUnauthorizedHandler } from '@/lib/api'
+import { api, ApiError, setApiToken, setUnauthorizedHandler } from '@/lib/api'
 import { deviceName } from '@/lib/device'
 import { createPinRecord, verifyPin, type PinRecord } from '@/lib/pin'
 import { readJson, writeJson } from '@/lib/storage'
+import { telegramApp } from '@/lib/telegram'
 import type { Locale } from '@/lib/format'
 
 export interface User {
@@ -42,13 +43,16 @@ export const useAuth = defineStore('auth', () => {
   const user = ref<User | null>(readJson<User>(USER_KEY))
   const pin = ref<PinRecord | null>(readJson<PinRecord>(PIN_KEY))
   const pinAttempts = ref<number>(readJson<number>(ATTEMPTS_KEY) ?? 0)
-  // Memory only: every fresh start of the app asks for the PIN.
-  const unlocked = ref(false)
+  // Memory only: every fresh start of the app asks for the PIN. Inside Telegram there is
+  // no PIN: Telegram is already open on the owner's phone and vouches for the account.
+  const unlocked = ref(telegramApp() !== null)
   /** Why the last session ended, shown once on the sign-in screen. */
   const signedOutReason = ref<'pin' | 'revoked' | null>(null)
 
   const loginState = ref<LoginState>('idle')
   const loginLink = ref<string | null>(null)
+  /** The server's reason when the Mini App sign-in was refused, e.g. a foreign account. */
+  const loginError = ref<string | null>(null)
   let pending: (LoginStart & { timer: number | null }) | null = null
 
   setApiToken(token.value)
@@ -154,6 +158,30 @@ export const useAuth = defineStore('auth', () => {
     loginState.value = state
   }
 
+  /** Inside the Telegram Mini App: trade Telegram's signed launch data for a token. */
+  async function signInWithTelegram(): Promise<boolean> {
+    const app = telegramApp()
+    if (!app) return false
+
+    signedOutReason.value = null
+    loginState.value = 'starting'
+    loginError.value = null
+    try {
+      const result = await api<{ token: string; user: User }>('/auth/telegram/webapp', {
+        method: 'POST',
+        body: JSON.stringify({ init_data: app.initData, platform: app.platform }),
+      })
+      saveSession(result.token, result.user)
+      unlocked.value = true
+      loginState.value = 'idle'
+      return true
+    } catch (error) {
+      loginError.value = error instanceof ApiError && error.status < 500 ? error.message : null
+      loginState.value = 'error'
+      return false
+    }
+  }
+
   function cancelLogin(): void {
     if (pending?.timer != null) clearTimeout(pending.timer)
     pending = null
@@ -194,7 +222,7 @@ export const useAuth = defineStore('auth', () => {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       hiddenAt = Date.now()
-    } else if (hiddenAt !== null && Date.now() - hiddenAt > LOCK_AFTER_MS && pin.value) {
+    } else if (hiddenAt !== null && Date.now() - hiddenAt > LOCK_AFTER_MS && pin.value && !telegramApp()) {
       unlocked.value = false
     }
   })
@@ -209,10 +237,12 @@ export const useAuth = defineStore('auth', () => {
     pinAttemptsLeft,
     loginState,
     loginLink,
+    loginError,
     setUser,
     logout,
     forget,
     startLogin,
+    signInWithTelegram,
     pollLogin,
     cancelLogin,
     setPin,

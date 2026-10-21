@@ -339,6 +339,12 @@ const uz: typeof ru = {
       revoked: 'Seans tugadi. Qaytadan kiring.',
     },
   },
+  telegramEntry: {
+    signingIn: 'Telegram orqali kirilmoqda…',
+    failed: "Kirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring.",
+    retry: 'Qayta urinish',
+    close: 'Yopish',
+  },
   pin: {
     create: "PIN-kod o'ylab toping",
     createHint: "To'rt raqam. Kompas har safar ochilganda ularni so'raydi.",
