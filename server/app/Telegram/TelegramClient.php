@@ -15,7 +15,7 @@ use RuntimeException;
 class TelegramClient
 {
     /** @return array<string, mixed> */
-    public function call(string $method, array $params = []): array
+    public function call(string $method, array $params = [], int $timeout = 10): array
     {
         $token = (string) config('telegram.bot_token');
         if ($token === '') {
@@ -23,7 +23,7 @@ class TelegramClient
         }
 
         try {
-            $response = Http::asJson()->timeout(10)->post("https://api.telegram.org/bot{$token}/{$method}", $params);
+            $response = Http::asJson()->timeout($timeout)->post("https://api.telegram.org/bot{$token}/{$method}", $params);
         } catch (ConnectionException $e) {
             // The exception message contains the request URL, and with it the bot token.
             Log::warning("Telegram {$method} failed: ".str_replace($token, '***', $e->getMessage()));
@@ -37,6 +37,19 @@ class TelegramClient
         }
 
         return $body;
+    }
+
+    /**
+     * Long polling for local tests (telegram:poll): waits up to $wait seconds for new updates.
+     * On the server the webhook replaces it, and Telegram refuses this call while one is set.
+     */
+    public function getUpdates(int $offset, int $wait): array
+    {
+        return $this->call('getUpdates', [
+            'offset' => $offset,
+            'timeout' => $wait,
+            'allowed_updates' => ['message', 'callback_query'],
+        ], $wait + 10);
     }
 
     /** @param  list<list<array{text: string, callback_data: string}>>|null  $buttons */

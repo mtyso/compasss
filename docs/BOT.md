@@ -72,9 +72,25 @@
 
 Проверка: написать боту `/start`, потом `такси 32к`, нажать «Компас» слева от поля ввода. Если бот молчит: `php artisan telegram:setup` ещё раз и `storage/logs/laravel.log` (токен в логах заменяется на `***`).
 
+## Проверить до деплоя, на своём компьютере
+
+Без хостинга вебхук некуда поставить, поэтому бот сам спрашивает Telegram о новых сообщениях: `php artisan telegram:poll`. Отвечает тот же код, что и на сервере. Работает, пока открыто окно терминала.
+
+Нужны PHP 8.3+ (с `bcmath` и `pdo_sqlite`), Composer и Node 20+.
+
+1. `cd server`, `composer setup`.
+2. В `server/.env`: `TELEGRAM_BOT_TOKEN` и `TELEGRAM_BOT_USERNAME`. `ALLOWED_TELEGRAM_IDS` пока пустой.
+3. Терминал 1: `php artisan telegram:poll`. Написать боту `/start`: он ответит «Это личный бот», а в терминале появится строка вида `Elyor (123456789): /start`. Это число вписать в `ALLOWED_TELEGRAM_IDS` и запустить команду заново.
+4. Терминал 2: `php artisan serve`. Терминал 3: `cd app`, `npm install`, `npm run dev`, открыть http://localhost:5173. Вход через бота работает, пока идёт `telegram:poll`. В приложении завести счета и день дохода: без счетов бот просит сначала их создать.
+5. По желанию, терминал 4: `php artisan schedule:work`. Это утренняя сводка, советы сами по себе и курс ЦБ.
+
+Что проверить: `такси 32к`, `можно купить наушники 600к?`, `/today`, кнопки под карточками. Кнопки «Компас» и «Открыть Компас» локально не показываются: Mini App открывается только по https, его проверка — после деплоя.
+
+Если на бота уже поставлен вебхук (`telegram:setup` на сервере), `telegram:poll` остановится и скажет об этом: Telegram отдаёт сообщения только туда. Для опытов после деплоя нужен отдельный тестовый бот.
+
 ## Для разработки
 
 - Где что лежит: `server/app/Telegram` — разбор фраз (`Phrase`), карточки (`Views/Cards.php`), обработчики (`Handlers`), рассылка советов (`Notifier.php`); `app/src/lib/telegram.ts` — Mini App.
 - Данные кнопок (до 64 байт): `tx:<действие>:<id>` — карточка операции, `buy:<ключ>` — «Купил» после вердикта, `ins:useful|mute|oneoff:<id>` — присланный совет, `pay:<id>` — «Оплачено», `task:done:<id>` и `habit:inc:<id>` — дела и привычки, `login:approve|deny:<id>` — вход.
 - Без настоящего бота: тесты `tests/Feature/Bot*Test.php` подменяют Telegram через `Http::fake`. Вход в приложение без бота — `php artisan login:approve`.
-- Команды по расписанию вручную: `php artisan bot:digest morning|weekly`, `php artisan bot:notify`. Без токена обе ничего не делают.
+- Команды по расписанию вручную: `php artisan bot:digest morning|weekly`, `php artisan bot:notify`. Без токена обе ничего не делают. Бот без вебхука: `php artisan telegram:poll` (раздел выше).

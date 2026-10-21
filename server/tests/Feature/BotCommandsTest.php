@@ -3,6 +3,7 @@
 use App\Models\Transaction;
 use App\Models\User;
 use App\Telegram\WebAppInitData;
+use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -166,6 +167,49 @@ it('sets up the webhook, commands in both languages and the Mini App menu button
         ->and(cmdCalls('setMyCommands'))->toHaveCount(2)
         ->and(cmdCalls('setMyCommands')[1]['language_code'])->toBe('uz')
         ->and(collect(cmdCalls('setMyCommands')[0]['commands'])->pluck('command')->all())->toBe(['today', 'month', 'help']);
+});
+
+it('answers updates fetched with telegram:poll, and shows who wrote', function () {
+    Http::swap(new Factory);
+    Http::fake([
+        'api.telegram.org/*/getUpdates' => Http::response(['ok' => true, 'result' => [
+            ['update_id' => 7, 'message' => [
+                'message_id' => 1, 'text' => '/today',
+                'from' => ['id' => CMD_OWNER, 'first_name' => 'Elyor'],
+                'chat' => ['id' => CMD_OWNER, 'type' => 'private'],
+            ]],
+            ['update_id' => 8, 'message' => [
+                'message_id' => 2, 'text' => '/start',
+                'from' => ['id' => 555, 'first_name' => 'Stranger'],
+                'chat' => ['id' => 555, 'type' => 'private'],
+            ]],
+        ]]),
+        'api.telegram.org/*' => Http::response(['ok' => true, 'result' => ['message_id' => 70]]),
+    ]);
+
+    $this->artisan('telegram:poll --once')
+        ->expectsOutputToContain('Elyor (111222333): /today')
+        ->expectsOutputToContain('Stranger (555): /start  <- not in ALLOWED_TELEGRAM_IDS')
+        ->assertSuccessful();
+
+    expect(cmdCalls('getUpdates')[0])->toMatchArray(['offset' => 0, 'timeout' => 0])
+        ->and(cmdCalls('sendRichMessage')[0]['chat_id'])->toBe(CMD_OWNER)
+        ->and(cmdCalls('sendRichMessage')[0]['rich_message']['html'])->toContain('Сегодня можно')
+        ->and(cmdCalls('sendMessage')[0])->toMatchArray(['chat_id' => 555, 'text' => __('bot.private', [], 'ru')]);
+});
+
+it('stops telegram:poll when the bot has a webhook or no token', function () {
+    Http::swap(new Factory);
+    Http::fake(['api.telegram.org/*/getUpdates' => Http::response([
+        'ok' => false, 'error_code' => 409, 'description' => "Conflict: can't use getUpdates method while webhook is active",
+    ], 409)]);
+
+    $this->artisan('telegram:poll')
+        ->expectsOutputToContain('While a webhook is set')
+        ->assertFailed();
+
+    config(['telegram.bot_token' => null]);
+    $this->artisan('telegram:poll')->expectsOutputToContain('TELEGRAM_BOT_TOKEN')->assertFailed();
 });
 
 it('signs in the Mini App with launch data and replaces the token of the same Telegram app', function () {
