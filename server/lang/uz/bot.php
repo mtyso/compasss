@@ -13,6 +13,7 @@ return [
         'examples' => ['taksi 32k', 'tushlik 85 000 naqd', '$20 obuna', '+12m maosh', 'quloqchin 600k olsam bo\'ladimi?'],
         'commands' => '/today — bugungi limit, ishlar va odatlar · /month — oy xarajatlari',
         'footer' => 'Qolgan hammasi ilovada: yozish maydonining chap tomonidagi «Kompas» tugmasi.',
+        'footer_no_app' => 'Qolgan hammasi Kompas ilovasida.',
     ],
 
     'buttons' => [

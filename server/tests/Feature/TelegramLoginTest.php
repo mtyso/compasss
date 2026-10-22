@@ -173,6 +173,18 @@ it('answers a plain /start with what the bot does, in Uzbek for an Uzbek Telegra
     expect(sentTo('sendRichMessage')[0]['rich_message']['html'])->toContain(__('bot.start.title', [], 'uz'));
 });
 
+it('points to the «Компас» button in /start only when the Mini App has an https address', function () {
+    config(['telegram.webapp_url' => 'http://localhost:8000']);
+    webhook(startMessage(OWNER_ID, '/start'));
+
+    config(['telegram.webapp_url' => 'https://kompas.example.uz']);
+    webhook(startMessage(OWNER_ID, '/start'));
+
+    [$local, $hosted] = array_map(fn (array $call) => $call['rich_message']['html'], sentTo('sendRichMessage'));
+    expect($local)->toContain('<footer>Всё остальное — в приложении Компас.</footer>')->not->toContain('слева от поля')
+        ->and($hosted)->toContain('кнопка «Компас» слева от поля ввода');
+});
+
 it('rejects webhook calls without the secret header', function () {
     webhook(startMessage(OWNER_ID, '/start'), 'wrong')->assertForbidden();
     $this->postJson('/telegram/webhook', startMessage(OWNER_ID, '/start'))->assertForbidden();

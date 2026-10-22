@@ -48,12 +48,19 @@ final class Keyboard
      */
     public static function webApp(string $text, string $path = '/', ?string $style = null): ?array
     {
-        $base = rtrim((string) config('telegram.webapp_url'), '/');
-        if (! str_starts_with($base, 'https://')) {
+        if (! self::webAppAvailable()) {
             return null;
         }
 
+        $base = rtrim((string) config('telegram.webapp_url'), '/');
+
         return array_filter(['text' => $text, 'web_app' => ['url' => $base.$path], 'style' => $style]);
+    }
+
+    /** Telegram opens the Mini App only from an https address. */
+    public static function webAppAvailable(): bool
+    {
+        return str_starts_with((string) config('telegram.webapp_url'), 'https://');
     }
 
     public function isEmpty(): bool

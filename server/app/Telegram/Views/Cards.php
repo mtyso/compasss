@@ -34,7 +34,8 @@ class Cards
             ->paragraph(Card::e(__('bot.start.lead', [], $l)))
             ->list(array_map(fn (string $example) => '<code>'.Card::e($example).'</code>', __('bot.start.examples', [], $l)))
             ->paragraph(Card::e(__('bot.start.commands', [], $l)))
-            ->footer(Card::e(__('bot.start.footer', [], $l)));
+            // Without https there is no «Компас» button to point at (local tests): bot.start.footer_no_app.
+            ->footer(Card::e(__(Keyboard::webAppAvailable() ? 'bot.start.footer' : 'bot.start.footer_no_app', [], $l)));
     }
 
     public function startKeyboard(User $user): Keyboard
