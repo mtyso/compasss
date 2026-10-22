@@ -80,6 +80,7 @@ class Debts
                         'paid_off_on' => $state->forecastPlan?->toDateString(),
                         'interest' => $rate > 0 && $state->monthly > 0 ? GoalMath::interest($amount, $state->monthly, $rate) : null,
                         'due' => $state->due,
+                        'due_uzs' => $state->dueUzs,
                     ],
                 ];
             });
@@ -338,15 +339,15 @@ class Debts
         ]);
     }
 
-    /** Settled in full: reminders about it go, and an account nothing plans for leaves the lists. */
+    /**
+     * Settled in full: reminders about it go, and the account leaves the lists. A debt goal stays: archived
+     * accounts keep their balance, so it shows as reached until the user closes it or rolls its payment on.
+     */
     private function closed(User $user, Account $debt): void
     {
         $user->insights()->where('rule', 'lent_due')->where('subject', 'a'.$debt->id)
             ->where('status', 'new')->whereNull('sent_via')->delete();
-        $planned = $user->goals()->where('account_id', $debt->id)->whereNull('done_at')->whereNull('archived_at')->exists();
-        if ($debt->type === 'lent' || ! $planned) {
-            $debt->update(['archived_at' => now()]);
-        }
+        $debt->update(['archived_at' => now()]);
     }
 
     /** @return Collection<int, Account> */

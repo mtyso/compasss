@@ -148,6 +148,8 @@ class Insight extends Model
 
         return DB::transaction(function () use ($user, $next, $amount, $now) {
             $this->update(['status' => 'useful']);
+            // The paid-off debt is finished: its payment now goes to the next one.
+            $user->goals()->whereKey($this->payload['goal_id'] ?? 0)->whereNull('done_at')->update(['done_at' => $now]);
 
             return app(Debts::class)->addToPayment($user, $next, GoalMath::roundUp($amount, $next->currency), $now);
         });

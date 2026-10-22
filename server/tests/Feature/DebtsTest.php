@@ -97,6 +97,9 @@ it('borrows onto a card with a plan, or records an old debt, and reserves the pa
         ->assertJsonPath('owe.0.amount', 2_000_000)
         // 2 000 000 over 4 months
         ->assertJsonPath('owe.0.goal.monthly', 500_000)
+        // Borrowed this period: nothing is due until the next income (the app's payoff plan counts on it too).
+        ->assertJsonPath('owe.0.goal.due', 0)
+        ->assertJsonPath('owe.0.goal.due_uzs', 0)
         ->json();
     expect(balanceOf($this->card->id))->toBe(12_000_000)
         ->and(Goal::find($brother['goal_id'])->type)->toBe('debt');
@@ -154,6 +157,9 @@ it('offers a paid-off debt\'s payment to the next one and moves it there', funct
 
     $this->postJson("/api/debts/{$brother['account_id']}/settle", ['account_id' => $this->card->id], $this->auth)->assertOk()
         ->assertJsonCount(1, 'owe');
+    // Paid off: the account leaves the lists, the goal shows as reached until the payment is rolled on.
+    expect(Account::find($brother['account_id'])->archived_at)->not->toBeNull()
+        ->and(Goal::find($brother['goal_id'])->done_at)->toBeNull();
 
     $closed = $this->user->insights()->where('rule', 'goal_reached')->sole();
     expect($closed->payload)->toMatchArray(['variant' => 'debt_roll', 'payment_amount' => 300_000, 'next' => 'Кредитка'])
@@ -162,6 +168,7 @@ it('offers a paid-off debt\'s payment to the next one and moves it there', funct
     $this->postJson("/api/insights/{$closed->id}/action", [], $this->auth)->assertOk()
         ->assertJsonPath('insight.action', null);
     $this->getJson('/api/debts', $this->auth)->assertJsonPath('owe.0.goal.monthly', 700_000);
+    expect(Goal::find($brother['goal_id'])->done_at)->not->toBeNull();
     $this->postJson("/api/insights/{$closed->id}/action", [], $this->auth)->assertUnprocessable();
 });
 
