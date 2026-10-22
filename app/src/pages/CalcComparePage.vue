@@ -145,10 +145,10 @@ function toggleOwnPrice(loan: LoanTerms): void {
           <article v-for="card in cards" :key="card.kind" class="card flex flex-col gap-4 p-4" data-panel>
             <header class="flex flex-wrap items-center justify-between gap-2">
               <h3 class="text-section font-semibold">{{ $t(`calc.kindsBuy.${card.kind}`) }}</h3>
-              <div v-if="card.soonest || card.cheapest" class="flex gap-1.5">
-                <span v-if="card.soonest" class="rounded-full bg-goal-soft px-2.5 py-1 text-micro font-semibold text-goal">{{ $t('calc.soonest') }}</span>
-                <span v-if="card.cheapest" class="rounded-full bg-money-soft px-2.5 py-1 text-micro font-semibold text-money">{{ $t('calc.cheapest') }}</span>
-              </div>
+              <p v-if="card.soonest || card.cheapest" class="flex gap-3 text-caption font-medium text-money">
+                <span v-if="card.soonest">{{ $t('calc.soonest') }}</span>
+                <span v-if="card.cheapest">{{ $t('calc.cheapest') }}</span>
+              </p>
             </header>
 
             <template v-if="card.terms">
