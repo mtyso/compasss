@@ -2,6 +2,8 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Archive, ArchiveRestore, Minus, Plus, Trash2 } from 'lucide-vue-next'
+import AmountField from '@/components/AmountField.vue'
+import GoalPicker from '@/components/goals/GoalPicker.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
 import UiSheet from '@/components/ui/UiSheet.vue'
@@ -13,8 +15,11 @@ import { CATEGORY_COLORS } from '@/lib/palette'
 import { weekdayNames } from '@/lib/tasks'
 import { useHabits, type Habit, type HabitType } from '@/stores/habits'
 
-/** Create or edit a habit: name, type and target, schedule, icon and colour; archive or delete. */
-const props = defineProps<{ habit: Habit | null }>()
+/**
+ * Create or edit a habit: name, type and target, schedule, icon and colour, the goal it works towards
+ * and what a kept day saves; archive or delete. `draftGoalId` ties a new habit to a goal.
+ */
+const props = defineProps<{ habit: Habit | null; draftGoalId?: number | null }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const habits = useHabits()
@@ -29,6 +34,8 @@ const days = ref<number[]>([1, 2, 3, 4, 5, 6, 7])
 const perWeek = ref(3)
 const icon = ref('target')
 const color = ref('green')
+const goalId = ref<number | null>(null)
+const savesUzs = ref<number | null>(null)
 const saving = ref(false)
 const error = ref<string | null>(null)
 const nameInput = ref<HTMLInputElement | null>(null)
@@ -54,6 +61,8 @@ watch(open, (value) => {
   perWeek.value = habit && 'per_week' in habit.schedule ? habit.schedule.per_week : 3
   icon.value = habit?.icon ?? 'target'
   color.value = habit?.color ?? 'green'
+  goalId.value = habit ? habit.goal_id : (props.draftGoalId ?? null)
+  savesUzs.value = habit?.saves_uzs ?? null
 })
 
 /** Switching the type: a limit counts per day, and count and limit start from a sensible target. */
@@ -95,6 +104,8 @@ async function save(): Promise<void> {
         schedule: scheduleMode.value === 'days' ? { days: days.value } : { per_week: perWeek.value },
         icon: icon.value,
         color: color.value,
+        goal_id: goalId.value,
+        saves_uzs: savesUzs.value,
       },
       props.habit?.id,
     )
@@ -222,6 +233,13 @@ async function remove(): Promise<void> {
           />
         </div>
       </section>
+
+      <GoalPicker v-model="goalId" />
+
+      <div class="flex flex-col gap-2">
+        <AmountField v-model="savesUzs" currency="UZS" :label="$t('habits.savesUzs')" />
+        <p class="text-caption text-ink-3">{{ $t('habits.savesHint') }}</p>
+      </div>
 
       <div v-if="habit" class="flex flex-col items-center gap-1">
         <UiButton variant="ghost" size="sm" @click="toggleArchive">

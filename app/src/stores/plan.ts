@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { api } from '@/lib/api'
 import type { Currency } from '@/lib/format'
 import type { Insight } from '@/stores/advisor'
+import type { GoalsPlan } from '@/stores/goals'
 import { useMoney, type Transaction } from '@/stores/money'
 
 export interface DailyLimit {
@@ -51,6 +52,7 @@ export interface Today {
   payments: RecurringPayment[]
   insights: Insight[]
   insights_new: number
+  goals: GoalsPlan
 }
 
 export interface BudgetItem {

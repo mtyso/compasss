@@ -33,7 +33,7 @@ async function run(task: () => Promise<void>, done?: string): Promise<void> {
 
 function act(): void {
   haptics.impact('light')
-  run(() => advisor.act(props.insight), t('advice.markedOneOff'))
+  run(() => advisor.act(props.insight), props.insight.action === 'contribute' ? t('goals.contributed') : t('advice.markedOneOff'))
 }
 
 function rate(value: 'useful' | 'dismissed'): void {
@@ -63,6 +63,9 @@ function mute(): void {
     <div v-if="insight.action || !compact" class="flex flex-wrap items-center gap-2 pl-8">
       <UiButton v-if="insight.action === 'mark_one_off'" size="sm" variant="secondary" :loading="busy" @click="act">
         {{ $t('advice.markOneOff') }}
+      </UiButton>
+      <UiButton v-else-if="insight.action === 'contribute'" size="sm" :loading="busy" @click="act">
+        {{ $t('goals.contribute') }}
       </UiButton>
       <template v-if="!compact && insight.status !== 'dismissed'">
         <UiButton v-if="insight.status !== 'useful'" size="sm" variant="ghost" :disabled="busy" @click="rate('useful')">

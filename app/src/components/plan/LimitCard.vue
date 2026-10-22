@@ -60,7 +60,7 @@ const money = (value: number) => formatMoney(value, 'UZS', settings.locale)
       <div class="flex min-w-0 flex-col gap-0.5">
         <dt class="text-caption text-ink-3">{{ $t('today.setAside') }}</dt>
         <dd class="truncate font-semibold">
-          <MoneyAmount :amount="limit.upcoming_payments_uzs + limit.min_balance_uzs" animate />
+          <MoneyAmount :amount="limit.upcoming_payments_uzs + limit.min_balance_uzs + limit.planned_savings_uzs" animate />
         </dd>
       </div>
     </dl>

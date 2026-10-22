@@ -24,9 +24,11 @@ export interface Task {
   repeat: RepeatRule | null
   done_at: string | null
   overdue: boolean
+  /** The goal this task is a step towards (docs/PLAN.md, 2.6). */
+  goal_id: number | null
 }
 
-export type TaskInput = Partial<Pick<Task, 'title' | 'notes' | 'due_on' | 'due_time' | 'priority'>> & {
+export type TaskInput = Partial<Pick<Task, 'title' | 'notes' | 'due_on' | 'due_time' | 'priority' | 'goal_id'>> & {
   repeat?: Pick<RepeatRule, 'unit' | 'every' | 'days'> | null
 }
 

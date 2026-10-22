@@ -31,7 +31,7 @@ const saving = ref(false)
 const confirmingDelete = ref(false)
 const error = ref<string | null>(null)
 
-const types: AccountType[] = ['card', 'cash', 'savings', 'deposit', 'other']
+const types: AccountType[] = ['card', 'cash', 'savings', 'deposit', 'debt', 'other']
 const currencyOptions = computed(() => CURRENCIES.map((value) => ({ value, label: value === 'UZS' ? t('accounts.som') : t('accounts.dollar') })))
 /** «Деньги на жизнь» is off and locked while the account is the safety cushion. */
 const spendableShown = computed({

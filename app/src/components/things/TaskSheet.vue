@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Trash2, X } from 'lucide-vue-next'
+import GoalPicker from '@/components/goals/GoalPicker.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
 import UiSheet from '@/components/ui/UiSheet.vue'
@@ -29,6 +30,7 @@ const notes = ref('')
 const dueOn = ref<string | null>(null)
 const dueTime = ref<string | null>(null)
 const priority = ref<Priority>(0)
+const goalId = ref<number | null>(null)
 const repeatChoice = ref<RepeatChoice>('none')
 const every = ref(2)
 const unit = ref<RepeatUnit>('day')
@@ -61,6 +63,7 @@ watch(open, (value) => {
   dueOn.value = task ? task.due_on : (draft.due_on ?? null)
   dueTime.value = task?.due_time ?? draft.due_time ?? null
   priority.value = task?.priority ?? draft.priority ?? 0
+  goalId.value = task ? task.goal_id : (draft.goal_id ?? null)
   const rule = task?.repeat ?? null
   const simple = rule && rule.every === 1 && !(rule.days?.length)
   repeatChoice.value = !rule ? 'none' : simple ? rule.unit : 'custom'
@@ -109,7 +112,7 @@ async function save(): Promise<void> {
   error.value = null
   try {
     await tasks.save(
-      { title: title.value.trim(), notes: notes.value.trim() || null, due_on: dueOn.value, due_time: dueOn.value ? dueTime.value || null : null, priority: priority.value, repeat: repeat.value },
+      { title: title.value.trim(), notes: notes.value.trim() || null, due_on: dueOn.value, due_time: dueOn.value ? dueTime.value || null : null, priority: priority.value, repeat: repeat.value, goal_id: goalId.value },
       props.task?.id,
     )
     haptics.notify('success')
@@ -218,6 +221,8 @@ async function remove(): Promise<void> {
           </div>
         </Transition>
       </section>
+
+      <GoalPicker v-model="goalId" />
     </div>
 
     <template #footer>
