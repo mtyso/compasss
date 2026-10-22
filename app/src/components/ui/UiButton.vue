@@ -23,6 +23,8 @@ const props = withDefaults(
 )
 
 const tag = computed(() => (props.to ? RouterLink : props.href ? 'a' : 'button'))
+// RouterLink writes its own href: an empty one passed down would replace it and leave a link
+// without an address (not focusable, not a link to screen readers), so it is passed only when set.
 
 const variants = {
   primary: 'bg-money text-on-money hover:brightness-105',
@@ -44,7 +46,7 @@ const sizes = {
   <component
     :is="tag"
     :to="to"
-    :href="href"
+    v-bind="href ? { href } : {}"
     :type="tag === 'button' ? type : undefined"
     :disabled="tag === 'button' ? disabled || loading : undefined"
     :aria-disabled="disabled || loading || undefined"
