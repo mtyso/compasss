@@ -54,7 +54,7 @@ function unmute(rule: string): void {
     <div class="group">
       <UiRow :to="{ name: 'can-afford' }" :title="$t('advice.canAfford')" :subtitle="$t('advice.canAffordHint')">
         <template #leading>
-          <span class="grid size-9 place-items-center rounded-xl bg-money-soft text-money"><Scale class="size-5" :stroke-width="2" /></span>
+          <span class="grid size-10 place-items-center rounded-full bg-money text-on-money"><Scale class="size-5" :stroke-width="2" /></span>
         </template>
       </UiRow>
     </div>
@@ -87,14 +87,14 @@ function unmute(rule: string): void {
       <h2 class="section-title">{{ $t('advice.settings') }}</h2>
       <div class="flex flex-col gap-2">
         <UiSegmented :model-value="advisor.strictness" :options="strictnessOptions" :label="$t('advice.strictnessLabel')" @update:model-value="save({ advisor_strictness: $event })" />
-        <p class="px-1 text-caption text-ink-3">{{ $t(`advice.strictnessHint.${advisor.strictness}`) }}</p>
+        <p class="text-caption text-ink-3">{{ $t(`advice.strictnessHint.${advisor.strictness}`) }}</p>
       </div>
       <div class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('advice.alertAt') }}</span>
+        <span class="field-label">{{ $t('advice.alertAt') }}</span>
         <UiSegmented :model-value="advisor.alertPercent" :options="alertOptions" :label="$t('advice.alertAt')" size="sm" @update:model-value="save({ budget_alert_percent: $event })" />
       </div>
       <div class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('advice.cushionTarget') }}</span>
+        <span class="field-label">{{ $t('advice.cushionTarget') }}</span>
         <UiSegmented :model-value="advisor.cushionMonths" :options="cushionOptions" :label="$t('advice.cushionTarget')" size="sm" @update:model-value="save({ cushion_target_months: $event })" />
       </div>
     </section>

@@ -59,7 +59,7 @@ onMounted(async () => {
     <div class="flex flex-1 flex-col items-center justify-center gap-5 pb-8">
       <CompassMark ref="mark" :size="56" swing />
       <div class="flex flex-col gap-1.5">
-        <h1 class="font-display text-headline font-bold">{{ $t('pin.enter') }}</h1>
+        <h1 class="text-headline font-semibold">{{ $t('pin.enter') }}</h1>
         <p class="min-h-5 text-sm" :class="auth.pinAttemptsLeft < MAX_PIN_ATTEMPTS ? 'text-danger' : 'text-ink-2'">
           <template v-if="auth.pinAttemptsLeft < MAX_PIN_ATTEMPTS">
             {{ $t('pin.wrong', { n: auth.pinAttemptsLeft }) }}

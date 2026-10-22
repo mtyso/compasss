@@ -52,7 +52,7 @@ function create(parent: Category | null): void {
 
     <UiSegmented v-model="kind" :options="kindOptions" :label="$t('categories.title')" />
 
-    <p v-if="kind === 'expense'" class="-mt-1 px-1 text-caption text-ink-3">{{ $t('categories.intro') }}</p>
+    <p v-if="kind === 'expense'" class="-mt-1 text-caption text-ink-3">{{ $t('categories.intro') }}</p>
 
     <Transition name="fade" mode="out-in">
       <div :key="kind" class="flex flex-col gap-3">
@@ -87,7 +87,7 @@ function create(parent: Category | null): void {
       </div>
     </Transition>
 
-    <button type="button" class="press flex items-center justify-center gap-2 rounded-card border border-dashed border-ink/20 py-3.5 text-sm font-medium text-ink-2" @click="create(null)">
+    <button type="button" class="press flex items-center justify-center gap-2 rounded-control bg-surface-2 py-3.5 text-sm font-medium text-ink" @click="create(null)">
       <Plus class="size-[18px]" />
       {{ $t('categories.new') }}
     </button>

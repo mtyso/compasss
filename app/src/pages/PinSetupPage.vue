@@ -68,11 +68,11 @@ async function enableBiometric(): Promise<void> {
       <CompassMark :size="56" />
       <Transition name="fade" mode="out-in">
         <div v-if="offerBiometric" key="biometric" class="flex flex-col gap-1.5">
-          <h1 class="font-display text-headline font-bold">{{ $t('pin.biometricOffer') }}</h1>
+          <h1 class="text-headline font-semibold">{{ $t('pin.biometricOffer') }}</h1>
           <p class="max-w-72 text-sm text-balance text-ink-2">{{ $t('pin.biometricOfferHint') }}</p>
         </div>
         <div v-else :key="first === null ? 'create' : 'repeat'" class="flex flex-col gap-1.5">
-          <h1 class="font-display text-headline font-bold">
+          <h1 class="text-headline font-semibold">
             {{ first === null ? $t('pin.create') : $t('pin.repeat') }}
           </h1>
           <p class="max-w-72 text-sm text-balance" :class="mismatch ? 'text-danger' : 'text-ink-2'">

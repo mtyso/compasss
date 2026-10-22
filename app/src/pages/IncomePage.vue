@@ -104,12 +104,12 @@ async function saveMinBalance(): Promise<void> {
     <PageHeader :title="$t('income.title')" />
 
     <section class="flex flex-col gap-2.5">
-      <p class="px-1 text-caption text-ink-3">{{ $t('income.intro') }}</p>
+      <p class="text-caption text-ink-3">{{ $t('income.intro') }}</p>
       <div v-if="!loaded" class="skeleton h-28 rounded-card" />
       <div v-else class="group">
         <UiRow v-for="schedule in plan.incomes" :key="schedule.id" :title="schedule.name" @click="open(schedule)">
           <template #leading>
-            <span class="grid size-10 place-items-center rounded-[0.875rem] bg-money-soft font-display text-sm font-bold text-money">{{ schedule.day_of_month }}</span>
+            <span class="num grid size-10 place-items-center rounded-full bg-surface-2 text-[0.9375rem] font-semibold text-ink">{{ schedule.day_of_month }}</span>
           </template>
           <template #subtitle>{{ $t('income.next', { date: formatDayMonth(schedule.next_date, settings.locale) }) }}</template>
           <template #trailing>
@@ -118,35 +118,35 @@ async function saveMinBalance(): Promise<void> {
         </UiRow>
         <UiRow :title="$t('income.add')" tone="muted" :chevron="false" @click="open(null)">
           <template #leading>
-            <span class="grid size-10 place-items-center rounded-[0.875rem] border border-dashed border-ink/20"><Plus class="size-[18px]" /></span>
+            <span class="grid size-10 place-items-center text-ink-3"><Plus class="size-5" :stroke-width="2.2" /></span>
           </template>
         </UiRow>
       </div>
     </section>
 
-    <section class="card flex flex-col gap-3 p-4">
+    <section class="flex flex-col gap-3">
       <AmountField v-model="minBalance" currency="UZS" :label="$t('income.minBalance')" allow-zero />
-      <p class="px-1 text-caption text-ink-3">{{ $t('income.minBalanceHint') }}</p>
+      <p class="text-caption text-ink-3">{{ $t('income.minBalanceHint') }}</p>
       <UiButton variant="secondary" size="sm" class="self-start" :loading="minSaving" @click="saveMinBalance">{{ $t('accounts.save') }}</UiButton>
     </section>
 
     <BottomSheet v-model:open="sheetOpen" :title="editing ? editing.name : $t('income.new')">
       <label class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('accounts.name') }}</span>
+        <span class="field-label">{{ $t('accounts.name') }}</span>
         <input v-model="name" maxlength="60" class="field" />
       </label>
       <label class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('income.day') }}</span>
+        <span class="field-label">{{ $t('income.day') }}</span>
         <input v-model.number="day" type="number" min="1" max="31" inputmode="numeric" class="field num w-28 text-lg font-semibold" />
-        <span class="px-1 text-caption text-ink-3">{{ $t('income.dayHint') }}</span>
+        <span class="text-caption text-ink-3">{{ $t('income.dayHint') }}</span>
       </label>
       <section class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('accounts.currency') }}</span>
+        <span class="field-label">{{ $t('accounts.currency') }}</span>
         <UiSegmented v-model="currency" :options="currencyOptions" :label="$t('accounts.currency')" />
       </section>
       <AmountField v-model="amount" :currency="currency" :label="$t('income.amount')" />
       <section class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('income.account') }}</span>
+        <span class="field-label">{{ $t('income.account') }}</span>
         <div class="flex flex-wrap gap-2">
           <button type="button" class="chip" :class="{ 'chip-on': accountId === null }" :aria-pressed="accountId === null" @click="accountId = null">{{ $t('income.anyAccount') }}</button>
           <button

@@ -59,25 +59,26 @@ function pick(id: number | null): void {
   categoryId.value = categoryId.value === id ? null : id
 }
 
-const LOOK: Record<Verdict, { icon: typeof CircleCheck; tone: string }> = {
-  yes: { icon: CircleCheck, tone: 'bg-money-soft text-money' },
-  yes_but: { icon: CircleAlert, tone: 'bg-task-soft text-task' },
-  wait: { icon: Hourglass, tone: 'bg-habit-soft text-habit' },
-  no: { icon: OctagonX, tone: 'bg-danger-soft text-danger' },
+// The verdict tints its panel and fills its icon, from calm green to red.
+const LOOK: Record<Verdict, { icon: typeof CircleCheck; tone: string; panel: string }> = {
+  yes: { icon: CircleCheck, tone: 'bg-money text-on-money', panel: 'bg-money-soft' },
+  yes_but: { icon: CircleAlert, tone: 'bg-task text-bg', panel: 'bg-task-soft' },
+  wait: { icon: Hourglass, tone: 'bg-habit text-bg', panel: 'bg-habit-soft' },
+  no: { icon: OctagonX, tone: 'bg-danger text-bg', panel: 'bg-danger-soft' },
 }
 </script>
 
 <template>
   <div class="page">
     <PageHeader :title="$t('canAfford.title')" back="/advice" />
-    <p class="-mt-3 px-1 text-sm text-ink-2">{{ $t('canAfford.intro') }}</p>
+    <p class="-mt-3 text-sm text-ink-2">{{ $t('canAfford.intro') }}</p>
 
     <form class="flex flex-col gap-5" @submit.prevent="check">
       <AmountField v-model="amount" :currency="currency" :label="$t('canAfford.amount')" />
       <UiSegmented v-model="currency" :options="currencies" :label="$t('accounts.currency')" size="sm" />
 
       <section class="flex flex-col gap-2.5">
-        <h2 class="section-title">{{ $t('canAfford.category') }}</h2>
+        <h2 class="field-label">{{ $t('canAfford.category') }}</h2>
         <div class="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 py-0.5">
           <button
             v-for="item in categories"
@@ -94,22 +95,22 @@ const LOOK: Record<Verdict, { icon: typeof CircleCheck; tone: string }> = {
       </section>
 
       <UiButton type="submit" size="lg" block :loading="checking" :disabled="!amount">{{ $t('canAfford.check') }}</UiButton>
-      <p v-if="error" class="px-1 text-sm text-danger" role="alert">{{ error }}</p>
+      <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
     </form>
 
     <Transition name="verdict">
-      <article v-if="result" :key="`${result.verdict}-${result.amount_uzs}`" class="card flex flex-col gap-4 p-5" aria-live="polite">
+      <article v-if="result" :key="`${result.verdict}-${result.amount_uzs}`" class="flex flex-col gap-4 rounded-hero p-5" :class="LOOK[result.verdict].panel" aria-live="polite" data-panel>
         <div class="flex items-center gap-3">
-          <span class="verdict-icon grid size-12 shrink-0 place-items-center rounded-2xl" :class="LOOK[result.verdict].tone">
+          <span class="verdict-icon grid size-12 shrink-0 place-items-center rounded-full" :class="LOOK[result.verdict].tone">
             <component :is="LOOK[result.verdict].icon" class="size-6" :stroke-width="2.2" />
           </span>
           <div class="flex min-w-0 flex-col">
-            <h2 class="font-display text-headline font-bold">{{ result.title }}</h2>
+            <h2 class="text-headline font-semibold">{{ result.title }}</h2>
             <MoneyAmount :amount="result.amount_uzs" class="text-caption text-ink-3" />
           </div>
         </div>
 
-        <div v-if="(result.verdict === 'yes_but' || result.verdict === 'wait') && result.limit_after_uzs !== result.limit_before_uzs" class="flex items-center gap-3 rounded-control bg-surface-2 px-4 py-3">
+        <div v-if="(result.verdict === 'yes_but' || result.verdict === 'wait') && result.limit_after_uzs !== result.limit_before_uzs" class="flex items-center gap-3 rounded-control bg-bg px-4 py-3">
           <div class="flex flex-col">
             <span class="text-micro text-ink-3">{{ $t('canAfford.limitNow') }}</span>
             <MoneyAmount :amount="result.limit_before_uzs" class="font-semibold" />

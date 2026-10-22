@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { Banknote, CreditCard, Landmark, PiggyBank, ShieldCheck, Wallet } from 'lucide-vue-next'
 import type { AccountType } from '@/stores/money'
 
-// Account type as a small tinted tile, in the money colour; the safety cushion gets a shield.
+// Account type as a quiet round icon; the safety cushion gets a shield in the money colour.
 const props = withDefaults(defineProps<{ type: AccountType; cushion?: boolean }>(), { cushion: false })
 
 const icon = computed(() =>
@@ -12,7 +12,7 @@ const icon = computed(() =>
 </script>
 
 <template>
-  <span class="grid size-9 shrink-0 place-items-center rounded-xl bg-money-soft text-money">
+  <span class="grid size-9 shrink-0 place-items-center rounded-full" :class="cushion ? 'bg-money-soft text-money' : 'bg-surface-2 text-ink-2'">
     <component :is="icon" class="size-[18px]" :stroke-width="2" />
   </span>
 </template>

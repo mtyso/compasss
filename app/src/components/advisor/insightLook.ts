@@ -16,9 +16,17 @@ export const RULE_ICONS: Record<string, Component> = {
   forgot_to_record: PenLine,
 }
 
+/** Icon colour by severity; an alert also tints its panel, so it is the one that stands out. */
 export const SEVERITY_TONES: Record<Severity, string> = {
-  alert: 'bg-danger-soft text-danger',
-  warn: 'bg-habit-soft text-habit',
-  good: 'bg-money-soft text-money',
-  info: 'bg-task-soft text-task',
+  alert: 'text-danger',
+  warn: 'text-habit',
+  good: 'text-money',
+  info: 'text-task',
+}
+
+export const SEVERITY_PANELS: Record<Severity, string> = {
+  alert: 'bg-danger-soft',
+  warn: 'bg-surface-2',
+  good: 'bg-surface-2',
+  info: 'bg-surface-2',
 }

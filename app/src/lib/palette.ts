@@ -1,18 +1,19 @@
-// Category colours by token name (server: App\Models\Category::COLORS). Mid-tone shades
-// that read on both the light and the dark background.
+// Category colours by token name (server: App\Models\Category::COLORS). Category icons are solid
+// circles with a white glyph, so every shade keeps at least 3:1 against white and still reads on
+// the dark background.
 export const CATEGORY_COLORS: Record<string, string> = {
-  amber: '#d4900a',
-  orange: '#e8692c',
-  blue: '#3b74e0',
-  teal: '#0f9a8a',
-  indigo: '#6a5ae0',
-  red: '#e04848',
-  purple: '#9a52d6',
-  pink: '#d9479a',
-  rose: '#e2526e',
-  green: '#2f9e57',
-  cyan: '#1597b8',
-  slate: '#64748b',
-  lime: '#6f9e1c',
-  gray: '#808a85',
+  amber: '#c47f00',
+  orange: '#e5632a',
+  blue: '#3a72e8',
+  teal: '#0f9384',
+  indigo: '#5f55d8',
+  red: '#df4646',
+  purple: '#9150cf',
+  pink: '#d23f93',
+  rose: '#dd4766',
+  green: '#2a9450',
+  cyan: '#1489ac',
+  slate: '#5f6b7d',
+  lime: '#5f9214',
+  gray: '#7d8681',
 }

@@ -419,5 +419,6 @@ export default {
     close: 'Закрыть',
     saved: 'Записано',
     updated: 'Сохранено',
+    settings: 'Настройки',
   },
 }

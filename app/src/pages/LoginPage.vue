@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-else key="idle" class="flex flex-col gap-3">
-          <p v-if="['denied', 'expired', 'error'].includes(auth.loginState)" class="px-1 text-sm text-danger" role="alert">
+          <p v-if="['denied', 'expired', 'error'].includes(auth.loginState)" class="text-sm text-danger" role="alert">
             {{ $t(`login.${auth.loginState}`) }}
           </p>
           <UiButton variant="telegram" size="lg" block :loading="auth.loginState === 'starting'" @click="signIn">
