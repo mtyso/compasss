@@ -26,7 +26,7 @@ class TelegramWebAppController extends Controller
             return response()->json(['message' => __('login.bot_not_configured')], 503);
         }
 
-        $fields = WebAppInitData::validate($data['init_data'], $token, config('telegram.webapp_max_age'));
+        $fields = WebAppInitData::validate($data['init_data'], $token, config('telegram.webapp_max_age'), now()->timestamp);
         $from = $fields ? json_decode($fields['user'], true) : null;
         if (! is_array($from) || ! isset($from['id'])) {
             return response()->json(['message' => __('login.webapp_invalid')], 401);
