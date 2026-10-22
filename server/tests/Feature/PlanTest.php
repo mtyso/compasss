@@ -126,8 +126,10 @@ it('starts a new month from the previous budget and drops zero limits', function
     // A past month without a budget stays empty.
     $this->getJson('/api/budgets?month=2026-08', $this->auth)->assertJsonPath('items', []);
 
+    // Cleared on purpose: the month stays without limits instead of being refilled from September.
     $this->putJson('/api/budgets/2026-10', ['items' => [['category_id' => $this->cafe->id, 'limit_uzs' => 0]]], $this->auth)
         ->assertJsonPath('items', []);
+    $this->getJson('/api/budgets?month=2026-10', $this->auth)->assertJsonPath('items', [])->assertJsonPath('limit_uzs', 0);
 });
 
 it('accepts budgets only for own main expense categories', function () {

@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Loader2 } from 'lucide-vue-next'
+import { Lightbulb, ListChecks, Repeat, Scale, Wallet } from 'lucide-vue-next'
+import InsightCard from '@/components/advisor/InsightCard.vue'
 import SectionBlock from '@/components/SectionBlock.vue'
+import ScreenHeader from '@/components/ui/ScreenHeader.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiEmpty from '@/components/ui/UiEmpty.vue'
+import UiRow from '@/components/ui/UiRow.vue'
 import LimitCard from '@/components/plan/LimitCard.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
-import { formatDayHeading, formatDayMonth, formatMoney } from '@/lib/format'
+import { formatDayHeading } from '@/lib/format'
 import { useMoney } from '@/stores/money'
 import { usePlan } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
@@ -33,25 +38,23 @@ watch(() => money.revision, load)
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
-    <header class="flex flex-col gap-0.5 px-1">
-      <span class="text-sm text-ink-3">{{ heading }}</span>
-      <h1 class="font-display text-2xl font-bold">{{ $t('today.title') }}</h1>
-    </header>
+  <div class="page">
+    <ScreenHeader :title="$t('today.title')" :overline="heading" />
 
-    <div v-if="!today && !failed" class="grid place-items-center py-10"><Loader2 class="size-6 animate-spin text-ink-3" /></div>
-    <p v-else-if="failed && !today" class="rounded-2xl bg-danger-soft px-4 py-3 text-sm text-danger">{{ $t('money.loadFailed') }}</p>
+    <div v-if="!today && !failed" class="flex flex-col gap-6" aria-hidden="true">
+      <div class="skeleton h-52 !rounded-hero" />
+      <div class="skeleton h-28" />
+    </div>
+    <p v-else-if="failed && !today" class="rounded-card bg-danger-soft px-4 py-3 text-sm text-danger">{{ $t('money.loadFailed') }}</p>
 
     <template v-else-if="today">
-      <article v-if="!today.has_accounts" class="flex flex-col items-start gap-3 rounded-3xl bg-surface p-5 shadow-sm">
-        <span class="text-[11px] font-semibold tracking-wider text-ink-3 uppercase">{{ $t('today.limit') }}</span>
-        <p class="text-sm text-ink-2">{{ $t('today.limitEmpty') }}</p>
-        <RouterLink :to="{ name: 'account-new' }" class="rounded-2xl bg-ink px-4 py-2.5 text-sm font-semibold text-surface">{{ $t('quickAdd.addAccount') }}</RouterLink>
-      </article>
+      <UiEmpty v-if="!today.has_accounts" :icon="Wallet" tone="money" :title="$t('today.limit')" :text="$t('today.limitEmpty')">
+        <UiButton :to="{ name: 'account-new' }" size="sm">{{ $t('quickAdd.addAccount') }}</UiButton>
+      </UiEmpty>
       <LimitCard v-else :limit="today.limit" :income-name="today.next_income?.name" />
 
       <SectionBlock v-if="today.payments.length" :title="$t('today.payments')">
-        <div class="flex flex-col divide-y divide-line overflow-hidden rounded-3xl bg-surface shadow-sm">
+        <div class="group">
           <PaymentRow
             v-for="payment in today.payments"
             :key="payment.id"
@@ -62,17 +65,52 @@ watch(() => money.revision, load)
         </div>
       </SectionBlock>
 
-      <p v-if="today.next_income" class="px-1 text-sm text-ink-2">
-        {{ $t('today.nextIncome', {
-          name: today.next_income.name,
-          date: formatDayMonth(today.next_income.next_date, settings.locale),
-          amount: formatMoney(today.next_income.expected_amount, today.next_income.currency, settings.locale),
-        }) }}
-      </p>
+      <section class="flex flex-col gap-2.5">
+        <div class="flex items-baseline justify-between gap-3">
+          <h2 class="section-title">{{ $t('today.advice') }}</h2>
+          <RouterLink :to="{ name: 'advice' }" class="press px-1 text-caption font-medium text-ink-2">
+            {{ today.insights_new > today.insights.length ? $t('today.allAdviceNew', { n: today.insights_new }) : $t('today.allAdvice') }}
+          </RouterLink>
+        </div>
+        <TransitionGroup name="list" tag="div" class="relative flex flex-col gap-3">
+          <InsightCard v-for="insight in today.insights" :key="insight.id" :insight="insight" compact />
+        </TransitionGroup>
+        <UiEmpty v-if="!today.insights.length" :icon="Lightbulb" tone="money" :text="$t('today.adviceEmpty')" />
+        <div class="group">
+          <UiRow :to="{ name: 'can-afford' }" :title="$t('advice.canAfford')" :subtitle="$t('advice.canAffordHint')">
+            <template #leading>
+              <span class="grid size-9 place-items-center rounded-xl bg-money-soft text-money"><Scale class="size-5" :stroke-width="2" /></span>
+            </template>
+          </UiRow>
+        </div>
+      </section>
     </template>
 
-    <SectionBlock :title="$t('today.advice')" :empty="$t('today.adviceEmpty')" />
-    <SectionBlock :title="$t('today.habits')" :empty="$t('today.habitsEmpty')" />
-    <SectionBlock :title="$t('today.tasks')" :empty="$t('today.tasksEmpty')" />
+    <SectionBlock :title="$t('today.habits')" :empty="$t('today.habitsEmpty')" :icon="Repeat" tone="habit" />
+    <SectionBlock :title="$t('today.tasks')" :empty="$t('today.tasksEmpty')" :icon="ListChecks" tone="task" />
   </div>
 </template>
+
+<style scoped>
+.list-move,
+.list-enter-active {
+  transition:
+    opacity var(--dur-base) var(--ease-standard),
+    transform var(--dur-spring) var(--ease-spring);
+}
+.list-leave-active {
+  position: absolute;
+  inset-inline: 0;
+  transition:
+    opacity var(--dur-fast) var(--ease-exit),
+    transform var(--dur-fast) var(--ease-exit);
+}
+.list-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(24px);
+}
+</style>

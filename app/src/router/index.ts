@@ -32,6 +32,8 @@ export const router = createRouter({
         { path: 'more/budget', name: 'budget', component: () => import('@/pages/BudgetPage.vue') },
         { path: 'more/income', name: 'income', component: () => import('@/pages/IncomePage.vue') },
         { path: 'more/payments', name: 'payments', component: () => import('@/pages/PaymentsPage.vue') },
+        { path: 'advice', name: 'advice', component: () => import('@/pages/AdvicePage.vue') },
+        { path: 'can-afford', name: 'can-afford', component: () => import('@/pages/CanAffordPage.vue') },
       ],
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },

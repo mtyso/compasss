@@ -2,6 +2,7 @@
 import { onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
+import { useAdvisor } from '@/stores/advisor'
 import { useAuth, type User } from '@/stores/auth'
 import { useMoney } from '@/stores/money'
 import { usePlan } from '@/stores/plan'
@@ -19,6 +20,7 @@ watch(
     if (!signedIn) {
       useMoney().reset()
       usePlan().reset()
+      useAdvisor().reset()
       router.replace({ name: 'login' })
     }
   },

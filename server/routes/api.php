@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AdvisorController;
 use App\Http\Controllers\Auth\TelegramLoginController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\IncomeScheduleController;
+use App\Http\Controllers\InsightController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\RateController;
 use App\Http\Controllers\RecurringPaymentController;
@@ -42,4 +44,10 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::apiResource('recurring-payments', RecurringPaymentController::class)->except('show')->parameters(['recurring-payments' => 'id']);
     Route::post('/recurring-payments/{id}/pay', [RecurringPaymentController::class, 'pay']);
     Route::get('/today', TodayController::class);
+
+    Route::post('/advisor/can-afford', [AdvisorController::class, 'canAfford']);
+    Route::get('/insights', [InsightController::class, 'index']);
+    Route::post('/insights/seen', [InsightController::class, 'seen']);
+    Route::post('/insights/{id}/feedback', [InsightController::class, 'feedback']);
+    Route::post('/insights/{id}/action', [InsightController::class, 'act']);
 });

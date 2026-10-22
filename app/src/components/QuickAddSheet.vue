@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ArrowDown, Trash2, X } from 'lucide-vue-next'
 import CategoryIcon from '@/components/CategoryIcon.vue'
+import QuickAddHint from '@/components/advisor/QuickAddHint.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
 import UiSheet from '@/components/ui/UiSheet.vue'
@@ -403,6 +404,13 @@ function addAccount(): void {
     </div>
 
     <template v-if="!loading && money.activeAccounts.length" #footer>
+      <!-- What this expense does to today's limit and the category budget, right above the button that commits it. -->
+      <QuickAddHint
+        v-if="type === 'expense' && !quick.editing && day === isoDate() && account?.spendable && !account.is_cushion"
+        :amount-uzs="currency === 'UZS' ? amount : approxUzs"
+        :category-id="categoryId"
+        :one-off="oneOff"
+      />
       <p v-if="error" class="pb-2 text-sm text-danger" role="alert">{{ error }}</p>
       <div class="flex gap-2">
         <UiButton v-if="quick.editing" variant="danger-soft" class="!w-12 !px-0" :aria-label="$t('quickAdd.delete')" :disabled="saving" @click="remove">
