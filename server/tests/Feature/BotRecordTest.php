@@ -210,6 +210,25 @@ it('undoes and restores from the buttons', function () {
     expect(Transaction::count())->toBe(1);
 });
 
+it('counts «интернет 150к» as the internet payment due, and undo makes it due again', function () {
+    $payment = $this->user->recurringPayments()->create([
+        'name' => 'Интернет', 'amount' => 150_000, 'currency' => 'UZS',
+        'category_id' => $this->user->categories()->firstWhere('system_key', 'home_internet')->id,
+        'account_id' => $this->card->id, 'day_of_month' => 21, 'next_due_on' => '2026-10-21', 'active' => true,
+    ]);
+
+    botSay('интернет 150к');
+    $tx = Transaction::sole();
+    expect($tx->recurring_payment_id)->toBe($payment->id)
+        ->and(botLastCard()['rich_message']['html'])->toContain('✅ Засчитано как платёж «Интернет». Следующий — 21 ноября.')
+        ->and($payment->fresh()->next_due_on)->toBe('2026-11-21');
+
+    botTap("tx:del:{$tx->id}");
+    expect($payment->fresh()->next_due_on)->toBe('2026-10-21');
+    botTap("tx:restore:{$tx->id}");
+    expect($payment->fresh()->next_due_on)->toBe('2026-11-21');
+});
+
 it('asks for an account first when there is none', function () {
     $this->user->accounts()->delete();
 

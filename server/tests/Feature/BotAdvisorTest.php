@@ -306,3 +306,57 @@ it('offers «Отложить» under a pushed income split and answers it like 
         ->and($split->fresh()->status)->toBe('useful')
         ->and(advButtons(collect(advCalls('editMessageReplyMarkup'))->last()))->toBe(['https://kompas.example.uz/advice']);
 });
+
+// --- Payment reminders ---------------------------------------------------------------
+
+it('pushes a payment reminder the evening before and pays it once from its button', function () {
+    $internet = $this->user->categories()->firstWhere('system_key', 'home_internet');
+    $payment = $this->user->recurringPayments()->create([
+        'name' => 'Интернет', 'amount' => 150_000, 'currency' => 'UZS', 'category_id' => $internet->id,
+        'account_id' => $this->card->id, 'day_of_month' => 22, 'next_due_on' => '2026-10-22', 'active' => true,
+    ]);
+    $this->travelTo(Carbon::parse('2026-10-21 21:00', 'Asia/Tashkent'));
+    $this->artisan('advisor:run evening')->assertSuccessful();
+    $this->artisan('bot:notify')->assertSuccessful();
+    $reminder = $this->user->insights()->where('rule', 'payment_due')->sole();
+
+    $sent = collect(advCalls('sendRichMessage'))->first(fn ($m) => str_contains($m['rich_message']['html'], 'Интернет'));
+    expect($sent['rich_message']['html'])->toContain(advNb('Завтра платёж: Интернет, 150 000 сум'))
+        ->and(advButtons($sent))->toBe(["ins:pay:{$reminder->id}", "ins:useful:{$reminder->id}", "ins:mute:{$reminder->id}", 'https://kompas.example.uz/advice']);
+
+    advTap("ins:pay:{$reminder->id}");
+    expect(advToast())->toBe(advNb('Оплачено: Интернет, 150 000 сум'))
+        ->and(Transaction::where('recurring_payment_id', $payment->id)->count())->toBe(1)
+        ->and($payment->fresh()->next_due_on)->toBe('2026-11-22')
+        ->and($reminder->fresh()->status)->toBe('useful')
+        // The reminder's text stays; only its buttons change.
+        ->and(advCalls('editMessageText'))->toBeEmpty()
+        ->and(advButtons(collect(advCalls('editMessageReplyMarkup'))->last()))->toBe(['https://kompas.example.uz/advice']);
+
+    advTap("ins:pay:{$reminder->id}");
+    expect(advToast())->toBe('Уже отмечен как оплаченный.')
+        ->and(Transaction::where('recurring_payment_id', $payment->id)->count())->toBe(1);
+});
+
+it('keeps payment reminders out of the morning summary unless money is missing', function () {
+    $home = $this->user->categories()->firstWhere('system_key', 'home');
+    $make = fn (string $name, int $amount) => $this->user->recurringPayments()->create([
+        'name' => $name, 'amount' => $amount, 'currency' => 'UZS', 'category_id' => $home->id,
+        'account_id' => $this->card->id, 'day_of_month' => 22, 'next_due_on' => '2026-10-22', 'active' => true,
+    ]);
+    $make('Интернет', 150_000);
+    $make('Аренда', 3_400_000);   // 3 500 000 on the card: 50 000 short after the internet
+
+    $this->travelTo(Carbon::parse('2026-10-22 08:00', 'Asia/Tashkent'));
+    $this->artisan('bot:digest morning')->assertSuccessful();
+
+    $html = advLastHtml();
+    expect($html)->toContain('Доброе утро!')
+        ->and($html)->toContain(advNb('Сегодня Аренда: на «Humo» не хватает 50 000 сум'))
+        ->and($html)->not->toContain('Сегодня платёж: Интернет')
+        ->and(Insight::where('rule', 'payment_due')->get()->every(fn (Insight $i) => in_array('telegram', (array) $i->sent_via, true)))->toBeTrue();
+
+    // Already in the summary: nothing comes on its own afterwards.
+    $this->artisan('bot:notify')->assertSuccessful();
+    expect(advCalls('sendRichMessage'))->toHaveCount(1);
+});

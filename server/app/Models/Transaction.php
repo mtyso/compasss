@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Money\PaymentMatcher;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -18,6 +19,13 @@ class Transaction extends Model
         'type', 'account_id', 'to_account_id', 'amount', 'currency', 'to_amount', 'rate', 'amount_uzs',
         'category_id', 'note', 'occurred_at', 'is_one_off', 'source', 'recurring_payment_id',
     ];
+
+    protected static function booted(): void
+    {
+        // An undone payment makes its recurring payment due again; bringing it back settles it again.
+        static::deleted(fn (Transaction $t) => PaymentMatcher::released($t));
+        static::restored(fn (Transaction $t) => PaymentMatcher::restored($t));
+    }
 
     protected function casts(): array
     {
@@ -69,6 +77,7 @@ class Transaction extends Model
             'occurred_at' => $this->occurred_at->toIso8601String(),
             'is_one_off' => $this->is_one_off,
             'source' => $this->source,
+            'recurring_payment_id' => $this->recurring_payment_id,
         ];
     }
 }

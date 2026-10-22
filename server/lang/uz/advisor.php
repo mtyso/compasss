@@ -151,6 +151,34 @@ return [
                 'body' => "Xarajatlar bo'ldimi? Esingizdaligida yozib qo'ying: shunda limit va maslahatlar aniq qoladi.",
             ],
         ],
+        'payment_due' => [
+            'tomorrow' => [
+                'title' => "Ertaga to'lov: :name, :amount",
+                'body' => "Uning puli limitdan ajratib qo'yilgan. To'laganingizda «To'landi» tugmasini bosing.",
+            ],
+            'tomorrow_short' => [
+                'title' => 'Ertaga :name: «:account» hisobida :short_amount yetmaydi',
+                'body' => "To'lov :amount, hisobda esa kamroq. To'lov o'tishi uchun pulni oldindan o'tkazing.",
+            ],
+            'today' => [
+                'title' => "Bugun to'lov: :name, :amount",
+                'body' => "Uning puli limitdan ajratib qo'yilgan. To'laganingizda «To'landi» tugmasini bosing.",
+            ],
+            'today_short' => [
+                'title' => 'Bugun :name: «:account» hisobida :short_amount yetmaydi',
+                'body' => "To'lov :amount, hisobda esa kamroq. To'lov o'tishi uchun hisobni to'ldiring.",
+            ],
+            'late' => [
+                'title' => "«:name» to'langan deb belgilanmagan",
+                'body' => "To'lov :amount, sanasi :due_on edi. Agar to'lagan bo'lsangiz, «To'landi» tugmasini bosing: limit unga pul ajratishni to'xtatadi.",
+            ],
+        ],
+        'subscription_found' => [
+            'default' => [
+                'title' => "«:name» doimiy to'lovga o'xshaydi",
+                'body' => "Ketma-ket :count oy, har safar :amount. Uni to'lovlarga qo'shing: limit unga pulni oldindan ajratadi, bot esa bir kun oldin eslatadi.",
+            ],
+        ],
     ],
 
     'can_afford' => [
