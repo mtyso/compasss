@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Trash2, X } from 'lucide-vue-next'
+import GoalPicker from '@/components/goals/GoalPicker.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
 import UiSheet from '@/components/ui/UiSheet.vue'
@@ -29,6 +30,7 @@ const notes = ref('')
 const dueOn = ref<string | null>(null)
 const dueTime = ref<string | null>(null)
 const priority = ref<Priority>(0)
+const goalId = ref<number | null>(null)
 const repeatChoice = ref<RepeatChoice>('none')
 const every = ref(2)
 const unit = ref<RepeatUnit>('day')
@@ -61,6 +63,7 @@ watch(open, (value) => {
   dueOn.value = task ? task.due_on : (draft.due_on ?? null)
   dueTime.value = task?.due_time ?? draft.due_time ?? null
   priority.value = task?.priority ?? draft.priority ?? 0
+  goalId.value = task ? task.goal_id : (draft.goal_id ?? null)
   const rule = task?.repeat ?? null
   const simple = rule && rule.every === 1 && !(rule.days?.length)
   repeatChoice.value = !rule ? 'none' : simple ? rule.unit : 'custom'
@@ -109,7 +112,7 @@ async function save(): Promise<void> {
   error.value = null
   try {
     await tasks.save(
-      { title: title.value.trim(), notes: notes.value.trim() || null, due_on: dueOn.value, due_time: dueOn.value ? dueTime.value || null : null, priority: priority.value, repeat: repeat.value },
+      { title: title.value.trim(), notes: notes.value.trim() || null, due_on: dueOn.value, due_time: dueOn.value ? dueTime.value || null : null, priority: priority.value, repeat: repeat.value, goal_id: goalId.value },
       props.task?.id,
     )
     haptics.notify('success')
@@ -148,7 +151,7 @@ async function remove(): Promise<void> {
       </div>
 
       <section class="flex flex-col gap-2">
-        <h3 class="section-title">{{ $t('tasks.date') }}</h3>
+        <h3 class="field-label">{{ $t('tasks.date') }}</h3>
         <div class="flex flex-wrap gap-2">
           <button type="button" class="chip" :class="{ 'chip-on': dueOn === today }" :aria-pressed="dueOn === today" @click="pickDate(today)">{{ $t('things.today') }}</button>
           <button type="button" class="chip" :class="{ 'chip-on': dueOn === tomorrow }" :aria-pressed="dueOn === tomorrow" @click="pickDate(tomorrow)">{{ $t('things.tomorrow') }}</button>
@@ -176,12 +179,12 @@ async function remove(): Promise<void> {
       </section>
 
       <section class="flex flex-col gap-2">
-        <h3 class="section-title">{{ $t('tasks.priority') }}</h3>
+        <h3 class="field-label">{{ $t('tasks.priority') }}</h3>
         <UiSegmented v-model="priority" :options="priorityOptions" :label="$t('tasks.priority')" />
       </section>
 
       <section class="flex flex-col gap-2">
-        <h3 class="section-title">{{ $t('tasks.repeat') }}</h3>
+        <h3 class="field-label">{{ $t('tasks.repeat') }}</h3>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="choice in repeatChoices"
@@ -196,7 +199,7 @@ async function remove(): Promise<void> {
           </button>
         </div>
         <Transition name="fade">
-          <div v-if="repeatChoice === 'custom'" class="card flex flex-col gap-3 p-3">
+          <div v-if="repeatChoice === 'custom'" class="flex flex-col gap-3">
             <div class="flex items-center gap-2">
               <span class="text-sm text-ink-2">{{ $t('tasks.every') }}</span>
               <input v-model.number="every" type="number" min="1" max="365" inputmode="numeric" class="field num w-20 !py-2 text-center font-semibold" />
@@ -218,6 +221,8 @@ async function remove(): Promise<void> {
           </div>
         </Transition>
       </section>
+
+      <GoalPicker v-model="goalId" />
     </div>
 
     <template #footer>

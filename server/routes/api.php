@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\TelegramLoginController;
 use App\Http\Controllers\Auth\TelegramWebAppController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\GoalController;
 use App\Http\Controllers\HabitController;
 use App\Http\Controllers\IncomeScheduleController;
 use App\Http\Controllers\InsightController;
@@ -56,6 +57,16 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::apiResource('habits', HabitController::class)->except('show')->parameters(['habits' => 'id']);
     Route::post('/habits/{id}/restore', [HabitController::class, 'restore']);
     Route::put('/habits/{id}/logs/{date}', [HabitController::class, 'log']);
+
+    Route::get('/goals', [GoalController::class, 'index']);
+    Route::post('/goals', [GoalController::class, 'store']);
+    Route::put('/goals/order', [GoalController::class, 'order']);
+    Route::post('/goals/contribute', [GoalController::class, 'contribute']);
+    Route::get('/goals/{id}', [GoalController::class, 'show'])->whereNumber('id');
+    Route::patch('/goals/{id}', [GoalController::class, 'update'])->whereNumber('id');
+    Route::delete('/goals/{id}', [GoalController::class, 'destroy'])->whereNumber('id');
+    Route::post('/goals/{id}/buy', [GoalController::class, 'buy'])->whereNumber('id');
+    Route::put('/goals/{id}/checkins/{date}', [GoalController::class, 'checkin'])->whereNumber('id');
 
     Route::post('/advisor/can-afford', [AdvisorController::class, 'canAfford']);
     Route::get('/insights', [InsightController::class, 'index']);

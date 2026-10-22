@@ -42,7 +42,8 @@ function measure(): void {
   const title = titleEl.value
   if (!title || !scroller) return
   const top = scroller.getBoundingClientRect().top + parseFloat(getComputedStyle(scroller).paddingTop)
-  collapsed.value = title.getBoundingClientRect().bottom < top + 44
+  // At the top of the screen the large title is always shown in full, however high it sits.
+  collapsed.value = scroller.scrollTop > 0 && title.getBoundingClientRect().bottom < top + 44
 }
 
 function onScroll(): void {
@@ -88,12 +89,12 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <header class="flex items-end gap-3 px-1" :class="showBack ? '' : 'pt-2'">
+    <header class="flex items-end gap-3" :class="showBack ? '' : 'pt-2'">
       <div class="flex min-w-0 flex-1 flex-col gap-1">
         <span v-if="overline || $slots.overline" class="text-caption font-medium text-ink-3">
           <slot name="overline">{{ overline }}</slot>
         </span>
-        <h1 ref="titleEl" class="font-display text-title font-bold text-balance">{{ title }}</h1>
+        <h1 ref="titleEl" class="text-title font-bold text-balance md:text-[2rem]">{{ title }}</h1>
       </div>
       <div v-if="$slots.trailing" class="flex shrink-0 items-center pb-0.5"><slot name="trailing" /></div>
     </header>

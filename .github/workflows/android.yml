@@ -1,0 +1,70 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'app/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+jobs:
+  apk:
+    name: Android APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    env:
+      # The production host, e.g. https://kompas.example.uz. Set it under Settings → Secrets and
+      # variables → Actions → Variables. The web build does not need it (same origin).
+      VITE_API_URL: ${{ vars.API_URL }}
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Check the server address
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "::warning::The API_URL variable is not set, so this APK cannot reach a server. It is still useful to check that the build works."
+          fi
+      - run: npm run build
+      - run: npx cap sync android
+
+      - name: Build a signed release APK
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: app/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > app/release.keystore
+          ./gradlew assembleRelease --no-daemon
+          mv app/build/outputs/apk/release/app-release.apk kompas.apk
+
+      # Without the signing key: a debug build. Each one is signed with a new throwaway key, so
+      # installing it over an earlier one needs the old app removed first.
+      - name: Build a debug APK
+        if: env.HAS_KEYSTORE != 'true'
+        working-directory: app/android
+        run: |
+          ./gradlew assembleDebug --no-daemon
+          mv app/build/outputs/apk/debug/app-debug.apk kompas.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kompas-apk-${{ github.run_number }}
+          path: app/android/kompas.apk
+          retention-days: 30

@@ -26,7 +26,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
-# The Vue app build is copied here by deploy/publish-release.ps1, never committed on main
+# The Vue app build is copied here by deploy/build-release.sh (branch `release`), never committed on main
 /public/index.html
 /public/assets
 /public/favicon.svg

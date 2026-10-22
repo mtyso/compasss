@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { api } from '@/lib/api'
 import type { Currency, Locale } from '@/lib/format'
 
-export type AccountType = 'card' | 'cash' | 'savings' | 'deposit' | 'other'
+export type AccountType = 'card' | 'cash' | 'savings' | 'deposit' | 'debt' | 'other'
 export type TransactionType = 'expense' | 'income' | 'transfer'
 export type CategoryKind = 'expense' | 'income'
 export type Necessity = 'essential' | 'flexible'
@@ -193,6 +193,7 @@ export const useMoney = defineStore('money', () => {
     saveAccount,
     deleteAccount,
     saveCategory,
+    changed,
     reset,
   }
 })

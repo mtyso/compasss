@@ -31,7 +31,7 @@ const saving = ref(false)
 const confirmingDelete = ref(false)
 const error = ref<string | null>(null)
 
-const types: AccountType[] = ['card', 'cash', 'savings', 'deposit', 'other']
+const types: AccountType[] = ['card', 'cash', 'savings', 'deposit', 'debt', 'other']
 const currencyOptions = computed(() => CURRENCIES.map((value) => ({ value, label: value === 'UZS' ? t('accounts.som') : t('accounts.dollar') })))
 /** «Деньги на жизнь» is off and locked while the account is the safety cushion. */
 const spendableShown = computed({
@@ -109,12 +109,12 @@ async function remove(): Promise<void> {
     <PageHeader :title="existing ? existing.name : $t('accounts.new')" back="/more/accounts" />
 
     <label class="flex flex-col gap-2">
-      <span class="section-title">{{ $t('accounts.name') }}</span>
+      <span class="field-label">{{ $t('accounts.name') }}</span>
       <input v-model="name" maxlength="60" :placeholder="$t('accounts.namePlaceholder')" class="field" />
     </label>
 
     <section class="flex flex-col gap-2">
-      <span class="section-title">{{ $t('accounts.type') }}</span>
+      <span class="field-label">{{ $t('accounts.type') }}</span>
       <div class="flex flex-wrap gap-2">
         <button
           v-for="item in types"
@@ -132,21 +132,21 @@ async function remove(): Promise<void> {
     </section>
 
     <section class="flex flex-col gap-2">
-      <span class="section-title">{{ $t('accounts.currency') }}</span>
+      <span class="field-label">{{ $t('accounts.currency') }}</span>
       <UiSegmented v-if="!existing" v-model="currency" :options="currencyOptions" :label="$t('accounts.currency')" />
       <template v-else>
         <span class="field text-ink-2">{{ currency === 'UZS' ? $t('accounts.som') : $t('accounts.dollar') }}</span>
-        <span class="px-1 text-caption text-ink-3">{{ $t('accounts.currencyFixed') }}</span>
+        <span class="text-caption text-ink-3">{{ $t('accounts.currencyFixed') }}</span>
       </template>
     </section>
 
     <label class="flex flex-col gap-2">
-      <span class="section-title">{{ existing ? $t('accounts.opening') : $t('accounts.balanceNow') }}</span>
+      <span class="field-label">{{ existing ? $t('accounts.opening') : $t('accounts.balanceNow') }}</span>
       <span class="field flex items-baseline gap-2 focus-within:shadow-[inset_0_0_0_1.5px_var(--c-ink-3)]">
         <input :value="openingText" inputmode="decimal" autocomplete="off" placeholder="0" class="num min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:font-normal placeholder:text-ink-3" @input="groupInput($event, (value) => (openingText = value))" />
         <span class="text-sm font-medium text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
       </span>
-      <span class="px-1 text-caption text-ink-3">{{ $t('accounts.openingHint') }}</span>
+      <span class="text-caption text-ink-3">{{ $t('accounts.openingHint') }}</span>
     </label>
 
     <div class="group">
@@ -168,7 +168,7 @@ async function remove(): Promise<void> {
           <div v-else class="card flex w-full flex-col gap-3 p-4 text-center">
             <span class="text-sm text-ink-2">{{ $t('accounts.deleteConfirm') }}</span>
             <div class="flex gap-2">
-              <UiButton variant="secondary" size="sm" class="flex-1" @click="confirmingDelete = false">{{ $t('more.cancel') }}</UiButton>
+              <UiButton variant="secondary" size="sm" class="flex-1 !bg-bg" @click="confirmingDelete = false">{{ $t('more.cancel') }}</UiButton>
               <UiButton variant="danger" size="sm" class="flex-1" @click="remove">{{ $t('accounts.delete') }}</UiButton>
             </div>
           </div>

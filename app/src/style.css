@@ -3,84 +3,87 @@
 @import '@fontsource/onest/500.css';
 @import '@fontsource/onest/600.css';
 @import '@fontsource/onest/700.css';
-@import '@fontsource/unbounded/600.css';
-@import '@fontsource/unbounded/700.css';
 
 /* Dark theme follows the `dark` class on <html>, set from settings (system / light / dark). */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Design tokens. Each module keeps its colour from the concept page (money green, habits amber,
- * tasks blue, goals plum); the compass needle is money green over ink. Text colours meet WCAG AA
- * on both `bg` and `surface` in both themes.
+ * Design tokens. The page is plain paper (white, or near-black in the dark theme); lists sit right
+ * on it, separated by hairlines, not boxed into cards. Colour is kept for meaning: green is money
+ * and the main action, amber habits and pace warnings, blue tasks, plum goals, red over the limit.
+ * Text colours meet WCAG AA on `bg`, `surface-2` and `raised` in both themes.
  *
- * Surfaces, from back to front: bg → surface-2 (sunken tracks, inputs) → surface (cards, lists)
- * → hero (the one inverse card a screen may have) → raised (sheets, toasts).
+ * Surfaces: bg = surface (the page and its lists) → surface-2 (fields, chips, tracks, the rare
+ * panel) → raised (sheets, dialogs). `chrome` is the navigation: bottom bar and desktop sidebar.
  */
 :root {
-  --c-bg: #f0f3ef;
+  --c-bg: #ffffff;
   --c-surface: #ffffff;
-  --c-surface-2: #e7ebe6;
+  --c-surface-2: #f2f3f2;
   --c-raised: #ffffff;
   --c-control: #ffffff;
-  --c-hero: #13201a;
-  --c-on-hero: #f3f7f4;
-  --c-on-hero-2: #a8b6ae;
-  --c-hero-accent: #5fd6a8;
-  --c-hero-danger: #ff8f86;
-  --c-ink: #13201a;
-  --c-ink-2: #46524c;
-  --c-ink-3: #646f6a;
-  --c-line: #dde2dc;
-  --c-scrim: rgb(10 20 15 / 0.42);
-  --c-money: #0e7656;
-  --c-money-soft: #dbeee5;
-  --c-habit: #a65608;
-  --c-habit-soft: #f8e8d3;
-  --c-task: #2c59c8;
-  --c-task-soft: #e0e7f9;
-  --c-goal: #7a3d9e;
-  --c-goal-soft: #efe3f6;
-  --c-danger: #be3434;
-  --c-danger-soft: #f8e0dd;
-  --c-focus: #2c59c8;
+  --c-chrome: #f7f8f7;
+  --c-hero: #121514;
+  --c-on-hero: #f4f6f5;
+  --c-on-hero-2: #a9b0ad;
+  --c-hero-accent: #4fd39a;
+  --c-hero-danger: #ff8a80;
+  --c-ink: #121514;
+  --c-ink-2: #4d5451;
+  --c-ink-3: #6b716e;
+  --c-line: #e8eae9;
+  --c-scrim: rgb(9 12 11 / 0.4);
+  --c-money: #0a7a52;
+  --c-money-soft: #e3f2ea;
+  --c-on-money: #ffffff;
+  --c-habit: #a85400;
+  --c-habit-soft: #fbeedf;
+  --c-task: #2a5bd7;
+  --c-task-soft: #e7edfb;
+  --c-goal: #7d3fae;
+  --c-goal-soft: #f2e9f9;
+  --c-danger: #cc3328;
+  --c-danger-soft: #fce8e5;
+  --c-focus: #2a5bd7;
 
-  --c-shadow-card: 0 0 0 1px rgb(19 32 26 / 0.04), 0 1px 2px rgb(19 32 26 / 0.05);
-  --c-shadow-raised: 0 0 0 1px rgb(19 32 26 / 0.04), 0 2px 6px rgb(19 32 26 / 0.06), 0 16px 40px -12px rgb(19 32 26 / 0.28);
-  --c-shadow-fab: 0 1px 2px rgb(19 32 26 / 0.2), 0 6px 16px -4px rgb(19 32 26 / 0.35);
+  --c-shadow-card: 0 0 0 1px rgb(18 21 20 / 0.06), 0 1px 2px rgb(18 21 20 / 0.08);
+  --c-shadow-raised: 0 0 0 1px rgb(18 21 20 / 0.05), 0 12px 32px -8px rgb(18 21 20 / 0.22), 0 32px 64px -24px rgb(18 21 20 / 0.18);
+  --c-shadow-fab: 0 1px 2px rgb(10 122 82 / 0.3), 0 6px 14px -4px rgb(10 122 82 / 0.45);
 }
 
 .dark {
-  --c-bg: #0c110f;
-  --c-surface: #151b18;
-  --c-surface-2: #1d2521;
-  --c-raised: #1b2320;
-  --c-control: #2b3531;
-  --c-hero: #183128;
-  --c-on-hero: #eaf3ee;
-  --c-on-hero-2: #9db3a8;
-  --c-hero-accent: #5fd6a8;
-  --c-hero-danger: #ff8f86;
-  --c-ink: #e7ece9;
-  --c-ink-2: #a9b3ae;
-  --c-ink-3: #848f8a;
-  --c-line: #27302c;
-  --c-scrim: rgb(0 0 0 / 0.6);
-  --c-money: #41c495;
-  --c-money-soft: #153126;
-  --c-habit: #efa14f;
-  --c-habit-soft: #372816;
-  --c-task: #82a4ff;
-  --c-task-soft: #1b2540;
-  --c-goal: #c78dea;
-  --c-goal-soft: #2c1f37;
-  --c-danger: #ef7272;
-  --c-danger-soft: #3a1d1d;
-  --c-focus: #82a4ff;
+  --c-bg: #0f1110;
+  --c-surface: #0f1110;
+  --c-surface-2: #1f2321;
+  --c-raised: #181b1a;
+  --c-control: #343a37;
+  --c-chrome: #151817;
+  --c-hero: #181b1a;
+  --c-on-hero: #edf0ee;
+  --c-on-hero-2: #a3aaa6;
+  --c-hero-accent: #3fcf8e;
+  --c-hero-danger: #ff7a70;
+  --c-ink: #edf0ee;
+  --c-ink-2: #b0b7b3;
+  --c-ink-3: #858c88;
+  --c-line: #232725;
+  --c-scrim: rgb(0 0 0 / 0.62);
+  --c-money: #3fcf8e;
+  --c-money-soft: #15291f;
+  --c-on-money: #04170d;
+  --c-habit: #f0a34a;
+  --c-habit-soft: #2e2214;
+  --c-task: #86a8ff;
+  --c-task-soft: #1a2238;
+  --c-goal: #c894ee;
+  --c-goal-soft: #281d32;
+  --c-danger: #ff7a70;
+  --c-danger-soft: #34191a;
+  --c-focus: #86a8ff;
 
-  --c-shadow-card: inset 0 0 0 1px rgb(255 255 255 / 0.035);
-  --c-shadow-raised: inset 0 0 0 1px rgb(255 255 255 / 0.06), 0 20px 48px -12px rgb(0 0 0 / 0.7);
-  --c-shadow-fab: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 6px 16px -4px rgb(0 0 0 / 0.6);
+  --c-shadow-card: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  --c-shadow-raised: inset 0 0 0 1px rgb(255 255 255 / 0.07), 0 24px 56px -12px rgb(0 0 0 / 0.75);
+  --c-shadow-fab: 0 6px 16px -4px rgb(0 0 0 / 0.6);
   color-scheme: dark;
 }
 
@@ -90,6 +93,7 @@
   --color-surface-2: var(--c-surface-2);
   --color-raised: var(--c-raised);
   --color-control: var(--c-control);
+  --color-chrome: var(--c-chrome);
   --color-hero: var(--c-hero);
   --color-on-hero: var(--c-on-hero);
   --color-on-hero-2: var(--c-on-hero-2);
@@ -102,6 +106,7 @@
   --color-scrim: var(--c-scrim);
   --color-money: var(--c-money);
   --color-money-soft: var(--c-money-soft);
+  --color-on-money: var(--c-on-money);
   --color-habit: var(--c-habit);
   --color-habit-soft: var(--c-habit-soft);
   --color-task: var(--c-task);
@@ -118,30 +123,35 @@
 }
 
 @theme {
+  /* One family. Onest has proper Cyrillic and Uzbek Latin, and tabular figures for money. */
   --font-sans: 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Unbounded', 'Onest', system-ui, sans-serif;
+  --font-display: var(--font-sans);
 
-  /* Type scale. Unbounded only for screen titles and money; Onest for everything people read. */
-  --text-amount: 2.5rem;
+  /* Type scale: hierarchy comes from size and weight, not from extra faces or colour. */
+  --text-amount: 2.75rem;
   --text-amount--line-height: 1.05;
   --text-amount--letter-spacing: -0.035em;
-  --text-title: 1.625rem;
+  --text-title: 1.75rem;
   --text-title--line-height: 1.15;
   --text-title--letter-spacing: -0.025em;
   --text-headline: 1.25rem;
-  --text-headline--line-height: 1.2;
-  --text-headline--letter-spacing: -0.02em;
-  --text-body: 0.9375rem;
+  --text-headline--line-height: 1.25;
+  --text-headline--letter-spacing: -0.015em;
+  --text-section: 1.0625rem;
+  --text-section--line-height: 1.3;
+  --text-section--letter-spacing: -0.01em;
+  --text-body: 1rem;
   --text-body--line-height: 1.4;
   --text-caption: 0.8125rem;
   --text-caption--line-height: 1.35;
   --text-micro: 0.6875rem;
   --text-micro--line-height: 1.2;
 
-  /* Radius follows hierarchy: the hero card is the roundest, controls the tightest. */
-  --radius-hero: 1.75rem;
-  --radius-card: 1.375rem;
-  --radius-control: 1rem;
+  /* Radius follows size: panels and sheets are the roundest, controls tighter, chips are pills. */
+  --radius-hero: 1.25rem;
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+
 
   /*
    * Motion. Springs are sampled from a damped oscillator (lib/motion.ts makes the same curves for
@@ -176,10 +186,14 @@
 :root {
   /*
    * Safe areas: the phone's notch and gesture bar, and inside Telegram also its own header and
-   * buttons (telegram-web-app.js sets the --tg-* variables). Use these instead of env() directly.
+   * buttons (telegram-web-app.js sets the --tg-* variables). The Android app's WebView can report
+   * env() as 0, so Capacitor injects --safe-area-inset-*. Use these instead of env() directly.
    */
-  --safe-top: max(env(safe-area-inset-top, 0px), calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)));
-  --safe-bottom: max(env(safe-area-inset-bottom, 0px), calc(var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)));
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px), calc(var(--tg-safe-area-inset-top, 0px) + var(--tg-content-safe-area-inset-top, 0px)));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px), calc(var(--tg-safe-area-inset-bottom, 0px) + var(--tg-content-safe-area-inset-bottom, 0px)));
+
+  /* Fill of a secondary button; on a tinted panel it steps back to the page colour. */
+  --secondary-fill: var(--c-surface-2);
 
   --dur-press: 90ms;
   --dur-fast: 160ms;
@@ -277,6 +291,12 @@
 /* Touch feedback for full-width rows: a tint instead of a squeeze. Don't combine with `press`. */
 @utility press-soft {
   transition: background-color var(--dur-base) var(--ease-standard);
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled='true']) {
+      background-color: color-mix(in srgb, var(--c-ink) 4%, transparent);
+      transition-duration: var(--dur-fast);
+    }
+  }
   &:active:not(:disabled, [aria-disabled='true']) {
     background-color: color-mix(in srgb, var(--c-ink) 6%, transparent);
     transition-duration: 0ms;
@@ -284,47 +304,121 @@
 }
 
 @layer components {
-  /* A screen: one column with even spacing between its blocks. ScreenHeader reads --page-gap. */
+  /*
+   * A screen: one column with even spacing between its blocks (ScreenHeader reads --page-gap).
+   * On a phone it fills the width; on a wide screen it is a readable column in the middle, and
+   * `page-wide` with `page-columns` splits it into two columns of `page-col`.
+   */
   .page {
-    --page-gap: 1.5rem;
+    --page-gap: 1.75rem;
     display: flex;
     flex-direction: column;
     gap: var(--page-gap);
+    width: 100%;
+    margin-inline: auto;
   }
 
-  /* Surfaces. A screen has at most one hero; everything else sits on cards or lists. */
+  @media (width >= 48rem) {
+    .page {
+      --page-gap: 2rem;
+      max-width: 42rem;
+    }
+  }
+
+  .page-columns,
+  .page-col {
+    display: contents;
+  }
+
+  @media (width >= 80rem) {
+    .page-wide {
+      max-width: 76rem;
+    }
+
+    .page-columns {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+      gap: 3.5rem;
+      align-items: start;
+    }
+
+    .page-col {
+      display: flex;
+      flex-direction: column;
+      gap: var(--page-gap);
+      min-width: 0;
+    }
+  }
+
+  /* A tinted panel for the rare block that needs its own ground (a form summary, a verdict). */
   .card {
-    @apply rounded-card bg-surface shadow-card;
+    @apply rounded-card bg-surface-2;
   }
 
+  /* Controls on a tinted panel take the page colour, so they still read as controls. */
+  :is(.card, [data-panel]) {
+    --secondary-fill: var(--c-bg);
+  }
+
+  :is(.card, [data-panel]) :is(.field, .chip:not(.chip-on)) {
+    background-color: var(--c-bg);
+  }
+
+  /* The one inverse block a screen may have. */
   .hero {
     @apply rounded-hero bg-hero text-on-hero;
   }
 
+  /*
+   * A list of rows right on the page. Rows keep their own 1rem padding and the list pulls out by
+   * the same amount, so text lines up with everything else while the tap highlight reaches the edge
+   * (on a phone) or rounds off just outside the column (on a wide screen). Hairlines between rows.
+   */
   .group {
-    @apply flex flex-col overflow-hidden rounded-card bg-surface shadow-card;
+    display: flex;
+    flex-direction: column;
+    margin-inline: -1rem;
   }
 
   .group > * + * {
-    box-shadow: inset 0 1px 0 var(--c-line);
+    background-image: linear-gradient(var(--c-line), var(--c-line));
+    background-size: calc(100% - 2rem) 1px;
+    background-position: center top;
+    background-repeat: no-repeat;
   }
 
-  /* Small heading above a group, in sentence case. */
+  @media (width >= 48rem) {
+    .group > * {
+      border-radius: 0.75rem;
+    }
+  }
+
+  /* Heading of a block on a screen. */
   .section-title {
-    @apply px-1 text-caption font-semibold text-ink-2;
+    @apply text-section font-semibold text-ink;
+  }
+
+  /* Label above a field or a row of chips in a form. */
+  .field-label {
+    @apply text-caption font-medium text-ink-2;
+  }
+
+  /* Quiet text link next to a section heading («Все советы»). */
+  .section-link {
+    @apply press text-caption font-medium text-money;
   }
 
   /* Selectable pill used for accounts, subcategories and dates. */
   .chip {
-    @apply press flex shrink-0 items-center gap-2 rounded-full bg-surface px-3.5 py-2 text-sm whitespace-nowrap text-ink shadow-card;
+    @apply press flex shrink-0 items-center gap-2 rounded-full bg-surface-2 px-3.5 py-2 text-sm whitespace-nowrap text-ink;
   }
 
   .chip-on {
-    @apply bg-ink text-surface shadow-none;
+    @apply bg-ink text-bg;
   }
 
   .field {
-    @apply rounded-control bg-surface px-4 py-3 text-base text-ink shadow-card outline-none placeholder:text-ink-3;
+    @apply rounded-control bg-surface-2 px-4 py-3 text-base text-ink outline-none placeholder:text-ink-3;
     transition: box-shadow var(--dur-fast) var(--ease-standard);
   }
 
@@ -341,7 +435,7 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--c-surface) 70%, transparent), transparent);
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--c-bg) 60%, transparent), transparent);
     animation: var(--animate-shimmer);
   }
 }

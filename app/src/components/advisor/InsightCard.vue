@@ -7,7 +7,7 @@ import UiIconButton from '@/components/ui/UiIconButton.vue'
 import { showToast } from '@/components/ui/toast'
 import { haptics } from '@/lib/haptics'
 import { useAdvisor, type Insight } from '@/stores/advisor'
-import { RULE_ICONS, SEVERITY_TONES } from './insightLook'
+import { RULE_ICONS, SEVERITY_PANELS, SEVERITY_TONES } from './insightLook'
 
 /**
  * One piece of advice. `compact` (on «Сегодня») offers only its action and a way to hide it;
@@ -33,7 +33,7 @@ async function run(task: () => Promise<void>, done?: string): Promise<void> {
 
 function act(): void {
   haptics.impact('light')
-  run(() => advisor.act(props.insight), t('advice.markedOneOff'))
+  run(() => advisor.act(props.insight), props.insight.action === 'contribute' ? t('goals.contributed') : t('advice.markedOneOff'))
 }
 
 function rate(value: 'useful' | 'dismissed'): void {
@@ -48,23 +48,24 @@ function mute(): void {
 </script>
 
 <template>
-  <article class="card flex flex-col gap-3 p-4" :class="{ 'opacity-60': insight.status === 'dismissed' }">
+  <article class="flex flex-col gap-3 rounded-card p-4" :class="[SEVERITY_PANELS[insight.severity], { 'opacity-60': insight.status === 'dismissed' }]" data-panel>
     <div class="flex items-start gap-3">
-      <span class="grid size-10 shrink-0 place-items-center rounded-2xl" :class="SEVERITY_TONES[insight.severity]">
-        <component :is="RULE_ICONS[insight.rule]" class="size-5" :stroke-width="2" />
-      </span>
-      <div class="flex min-w-0 flex-1 flex-col gap-1 pt-0.5">
-        <h3 class="font-semibold leading-snug">{{ insight.title }}</h3>
-        <p class="text-sm text-ink-2">{{ insight.body }}</p>
+      <component :is="RULE_ICONS[insight.rule]" class="mt-0.5 size-5 shrink-0" :class="SEVERITY_TONES[insight.severity]" :stroke-width="2.1" />
+      <div class="flex min-w-0 flex-1 flex-col gap-1">
+        <h3 class="leading-snug font-semibold">{{ insight.title }}</h3>
+        <p class="text-[0.9375rem] text-ink-2">{{ insight.body }}</p>
       </div>
-      <UiIconButton v-if="compact" size="sm" :label="$t('advice.hide')" class="-mt-1.5 -mr-1.5" :disabled="busy" @click="rate('dismissed')">
+      <UiIconButton v-if="compact" size="sm" :label="$t('advice.hide')" class="-mt-2 -mr-2" :disabled="busy" @click="rate('dismissed')">
         <X class="size-4" />
       </UiIconButton>
     </div>
 
-    <div v-if="insight.action || !compact" class="flex flex-wrap items-center gap-2 pl-13">
+    <div v-if="insight.action || !compact" class="flex flex-wrap items-center gap-2 pl-8">
       <UiButton v-if="insight.action === 'mark_one_off'" size="sm" variant="secondary" :loading="busy" @click="act">
         {{ $t('advice.markOneOff') }}
+      </UiButton>
+      <UiButton v-else-if="insight.action === 'contribute'" size="sm" :loading="busy" @click="act">
+        {{ $t('goals.contribute') }}
       </UiButton>
       <template v-if="!compact && insight.status !== 'dismissed'">
         <UiButton v-if="insight.status !== 'useful'" size="sm" variant="ghost" :disabled="busy" @click="rate('useful')">

@@ -119,13 +119,13 @@ async function remove(): Promise<void> {
     </template>
 
     <template v-else>
-      <article v-if="plan.payments.length" class="card flex flex-col gap-1.5 p-5">
-        <span class="text-sm font-medium text-ink-2">{{ $t('payments.monthly') }}</span>
-        <MoneyAmount :amount="monthlyUzs" animate class="font-display text-[2.125rem] leading-none font-bold tracking-[-0.03em]" />
-      </article>
+      <section v-if="plan.payments.length" class="flex flex-col gap-1.5">
+        <span class="text-[0.9375rem] font-medium text-ink-2">{{ $t('payments.monthly') }}</span>
+        <MoneyAmount :amount="monthlyUzs" animate class="text-[2.25rem] leading-none font-semibold tracking-[-0.03em]" />
+      </section>
 
       <section class="flex flex-col gap-2.5">
-        <p class="px-1 text-caption text-ink-3">{{ $t('payments.intro') }}</p>
+        <p class="text-caption text-ink-3">{{ $t('payments.intro') }}</p>
         <div class="group">
           <PaymentRow
             v-for="payment in plan.payments"
@@ -137,7 +137,7 @@ async function remove(): Promise<void> {
           />
           <UiRow :title="$t('payments.add')" tone="muted" :chevron="false" @click="open(null)">
             <template #leading>
-              <span class="grid size-9 place-items-center rounded-xl border border-dashed border-ink/20"><Plus class="size-[18px]" /></span>
+              <span class="grid size-9 place-items-center text-ink-3"><Plus class="size-5" :stroke-width="2.2" /></span>
             </template>
           </UiRow>
         </div>
@@ -146,11 +146,11 @@ async function remove(): Promise<void> {
 
     <BottomSheet v-model:open="sheetOpen" :title="editing ? editing.name : $t('payments.new')">
       <label class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('accounts.name') }}</span>
+        <span class="field-label">{{ $t('accounts.name') }}</span>
         <input v-model="name" maxlength="60" :placeholder="$t('payments.namePlaceholder')" class="field" />
       </label>
       <section class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('payments.fromAccount') }}</span>
+        <span class="field-label">{{ $t('payments.fromAccount') }}</span>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="item in money.activeAccounts"
@@ -166,12 +166,12 @@ async function remove(): Promise<void> {
         </div>
       </section>
       <section class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('accounts.currency') }}</span>
+        <span class="field-label">{{ $t('accounts.currency') }}</span>
         <UiSegmented v-model="currency" :options="currencyOptions" :label="$t('accounts.currency')" />
       </section>
       <AmountField v-model="amount" :currency="currency" :label="$t('quickAdd.amount')" />
       <label class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('quickAdd.category') }}</span>
+        <span class="field-label">{{ $t('quickAdd.category') }}</span>
         <select v-model="categoryId" class="field">
           <option :value="null" disabled>{{ $t('payments.pickCategory') }}</option>
           <optgroup v-for="group in categoryGroups" :key="group.parent.id" :label="group.parent.names[settings.locale]">
@@ -181,13 +181,13 @@ async function remove(): Promise<void> {
         </select>
       </label>
       <label class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('income.day') }}</span>
+        <span class="field-label">{{ $t('income.day') }}</span>
         <input v-model.number="day" type="number" min="1" max="31" inputmode="numeric" class="field num w-28 text-lg font-semibold" />
       </label>
       <label v-if="editing" class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('payments.nextDue') }}</span>
+        <span class="field-label">{{ $t('payments.nextDue') }}</span>
         <input v-model="nextDue" type="date" class="field w-48" />
-        <span class="px-1 text-caption text-ink-3">{{ $t('payments.nextDueHint') }}</span>
+        <span class="text-caption text-ink-3">{{ $t('payments.nextDueHint') }}</span>
       </label>
       <template #footer>
         <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>

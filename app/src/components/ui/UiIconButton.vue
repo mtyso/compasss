@@ -14,7 +14,7 @@ withDefaults(defineProps<{ label: string; tone?: 'plain' | 'filled' | 'on-hero';
     class="press grid shrink-0 place-items-center rounded-full disabled:opacity-30"
     :class="[
       size === 'sm' ? 'size-9' : 'size-11',
-      tone === 'filled' ? 'bg-surface-2 text-ink' : tone === 'on-hero' ? 'bg-white/10 text-on-hero' : 'text-ink-2 active:bg-ink/8',
+      tone === 'filled' ? 'bg-surface-2 text-ink hover:bg-ink/[0.07]' : tone === 'on-hero' ? 'bg-white/10 text-on-hero' : 'text-ink-2 hover:bg-ink/5 active:bg-ink/8',
     ]"
   >
     <slot />

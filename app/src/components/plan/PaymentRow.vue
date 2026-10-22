@@ -59,7 +59,7 @@ async function pay(): Promise<void> {
 
 <template>
   <div class="flex items-center gap-1 pr-3">
-    <button type="button" class="press-soft flex min-h-15 min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 text-left" @click="emit('open')">
+    <button type="button" class="press-soft flex min-h-15 min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 text-left md:rounded-l-xl" @click="emit('open')">
       <CategoryIcon :icon="root?.icon" :color="root?.color" size="sm" />
       <span class="flex min-w-0 flex-1 flex-col gap-0.5">
         <span class="truncate font-medium">{{ payment.name }}</span>

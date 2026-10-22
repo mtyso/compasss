@@ -35,9 +35,9 @@ const buttonLabel = computed(() =>
 
 <template>
   <div class="flex items-center gap-3 pr-3">
-    <button type="button" class="press-soft flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pl-4 text-left" @click="emit('open')">
-      <span class="grid size-10 shrink-0 place-items-center rounded-[0.875rem]" :style="{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)`, color }">
-        <component :is="habitIcon(habit.icon)" class="size-5" :stroke-width="1.9" />
+    <button type="button" class="press-soft flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pl-4 text-left md:rounded-l-xl" @click="emit('open')">
+      <span class="grid size-10 shrink-0 place-items-center rounded-full text-white" :style="{ backgroundColor: color }">
+        <component :is="habitIcon(habit.icon)" class="size-5" :stroke-width="2" />
       </span>
       <span class="flex min-w-0 flex-1 flex-col gap-1">
         <span class="truncate font-medium">{{ habit.name }}</span>

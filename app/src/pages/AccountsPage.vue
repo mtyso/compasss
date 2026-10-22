@@ -21,11 +21,11 @@ const archived = computed(() => money.accounts.filter((a) => a.archived))
   <div class="page">
     <PageHeader :title="$t('accounts.title')" />
 
-    <article class="card flex flex-col gap-1.5 p-5">
-      <span class="text-sm font-medium text-ink-2">{{ $t('accounts.total') }}</span>
-      <MoneyAmount :amount="money.totalUzs" animate class="font-display text-[2.125rem] leading-none font-bold tracking-[-0.03em]" />
+    <section class="flex flex-col gap-1.5">
+      <span class="text-[0.9375rem] font-medium text-ink-2">{{ $t('accounts.total') }}</span>
+      <MoneyAmount :amount="money.totalUzs" animate class="text-[2.25rem] leading-none font-semibold tracking-[-0.03em]" />
       <span class="num pt-1 text-caption text-ink-3">{{ $t('accounts.spendable', { amount: formatMoney(money.spendableUzs, 'UZS', settings.locale) }) }}</span>
-    </article>
+    </section>
 
     <div class="group">
       <UiRow
@@ -45,7 +45,7 @@ const archived = computed(() => money.accounts.filter((a) => a.archived))
       </UiRow>
       <UiRow :to="{ name: 'account-new' }" :title="$t('accounts.add')" tone="muted" :chevron="false">
         <template #leading>
-          <span class="grid size-9 place-items-center rounded-xl border border-dashed border-ink/20"><Plus class="size-[18px]" /></span>
+          <span class="grid size-9 place-items-center text-ink-3"><Plus class="size-5" :stroke-width="2.2" /></span>
         </template>
       </UiRow>
     </div>

@@ -2,6 +2,8 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Archive, ArchiveRestore, Minus, Plus, Trash2 } from 'lucide-vue-next'
+import AmountField from '@/components/AmountField.vue'
+import GoalPicker from '@/components/goals/GoalPicker.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
 import UiSheet from '@/components/ui/UiSheet.vue'
@@ -13,8 +15,11 @@ import { CATEGORY_COLORS } from '@/lib/palette'
 import { weekdayNames } from '@/lib/tasks'
 import { useHabits, type Habit, type HabitType } from '@/stores/habits'
 
-/** Create or edit a habit: name, type and target, schedule, icon and colour; archive or delete. */
-const props = defineProps<{ habit: Habit | null }>()
+/**
+ * Create or edit a habit: name, type and target, schedule, icon and colour, the goal it works towards
+ * and what a kept day saves; archive or delete. `draftGoalId` ties a new habit to a goal.
+ */
+const props = defineProps<{ habit: Habit | null; draftGoalId?: number | null }>()
 const open = defineModel<boolean>('open', { required: true })
 
 const habits = useHabits()
@@ -29,6 +34,8 @@ const days = ref<number[]>([1, 2, 3, 4, 5, 6, 7])
 const perWeek = ref(3)
 const icon = ref('target')
 const color = ref('green')
+const goalId = ref<number | null>(null)
+const savesUzs = ref<number | null>(null)
 const saving = ref(false)
 const error = ref<string | null>(null)
 const nameInput = ref<HTMLInputElement | null>(null)
@@ -54,6 +61,8 @@ watch(open, (value) => {
   perWeek.value = habit && 'per_week' in habit.schedule ? habit.schedule.per_week : 3
   icon.value = habit?.icon ?? 'target'
   color.value = habit?.color ?? 'green'
+  goalId.value = habit ? habit.goal_id : (props.draftGoalId ?? null)
+  savesUzs.value = habit?.saves_uzs ?? null
 })
 
 /** Switching the type: a limit counts per day, and count and limit start from a sensible target. */
@@ -95,6 +104,8 @@ async function save(): Promise<void> {
         schedule: scheduleMode.value === 'days' ? { days: days.value } : { per_week: perWeek.value },
         icon: icon.value,
         color: color.value,
+        goal_id: goalId.value,
+        saves_uzs: savesUzs.value,
       },
       props.habit?.id,
     )
@@ -127,25 +138,25 @@ async function remove(): Promise<void> {
   <UiSheet v-model:open="open" :title="habit ? habit.name : $t('habits.new')" @opened="onOpened">
     <div class="flex flex-col gap-5 pt-1">
       <label class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('habits.name') }}</span>
+        <span class="field-label">{{ $t('habits.name') }}</span>
         <input ref="nameInput" v-model="name" maxlength="60" :placeholder="$t('habits.namePlaceholder')" class="field text-lg font-semibold" />
       </label>
 
       <section class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('habits.type') }}</span>
+        <span class="field-label">{{ $t('habits.type') }}</span>
         <UiSegmented :model-value="type" :options="typeOptions" :label="$t('habits.type')" @update:model-value="setType" />
         <p class="px-1 text-caption text-ink-3">{{ $t(`habits.typeHints.${type}`) }}</p>
       </section>
 
       <Transition name="fade">
         <section v-if="type !== 'check'" class="flex flex-col gap-2">
-          <span class="section-title">{{ type === 'limit' ? $t('habits.limit') : $t('habits.target') }}</span>
+          <span class="field-label">{{ type === 'limit' ? $t('habits.limit') : $t('habits.target') }}</span>
           <div class="flex items-center gap-2">
-            <button type="button" class="press grid size-12 shrink-0 place-items-center rounded-control bg-surface shadow-card" :aria-label="$t('habits.less')" @click="step(-1)">
+            <button type="button" class="press grid size-12 shrink-0 place-items-center rounded-control bg-surface-2" :aria-label="$t('habits.less')" @click="step(-1)">
               <Minus class="size-5" />
             </button>
             <input v-model.number="target" type="number" :min="type === 'limit' ? 0 : 1" max="100000" inputmode="numeric" class="field num w-24 text-center text-lg font-semibold" />
-            <button type="button" class="press grid size-12 shrink-0 place-items-center rounded-control bg-surface shadow-card" :aria-label="$t('habits.more')" @click="step(1)">
+            <button type="button" class="press grid size-12 shrink-0 place-items-center rounded-control bg-surface-2" :aria-label="$t('habits.more')" @click="step(1)">
               <Plus class="size-5" />
             </button>
             <input v-model="unit" maxlength="20" :placeholder="$t('habits.unitPlaceholder')" :aria-label="$t('habits.unit')" class="field min-w-0 flex-1" />
@@ -154,7 +165,7 @@ async function remove(): Promise<void> {
       </Transition>
 
       <section class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('habits.scheduleTitle') }}</span>
+        <span class="field-label">{{ $t('habits.scheduleTitle') }}</span>
         <UiSegmented v-if="type !== 'limit'" v-model="scheduleMode" :options="scheduleOptions" :label="$t('habits.scheduleTitle')" />
         <div v-if="scheduleMode === 'days'" class="grid grid-cols-7 gap-1">
           <button
@@ -162,7 +173,7 @@ async function remove(): Promise<void> {
             :key="day"
             type="button"
             class="press rounded-control py-2.5 text-sm font-medium"
-            :class="days.includes(index + 1) ? 'bg-ink text-surface' : 'bg-surface text-ink-2 shadow-card'"
+            :class="days.includes(index + 1) ? 'bg-ink text-surface' : 'bg-surface-2 text-ink-2'"
             :aria-pressed="days.includes(index + 1)"
             @click="toggleDay(index + 1)"
           >
@@ -175,7 +186,7 @@ async function remove(): Promise<void> {
             :key="n"
             type="button"
             class="press num rounded-control py-2.5 text-sm font-semibold"
-            :class="perWeek === n ? 'bg-ink text-surface' : 'bg-surface text-ink-2 shadow-card'"
+            :class="perWeek === n ? 'bg-ink text-surface' : 'bg-surface-2 text-ink-2'"
             :aria-pressed="perWeek === n"
             @click="haptics.selection(); perWeek = n"
           >
@@ -188,14 +199,14 @@ async function remove(): Promise<void> {
       </section>
 
       <section class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('habits.icon') }}</span>
+        <span class="field-label">{{ $t('habits.icon') }}</span>
         <div class="grid grid-cols-8 gap-1.5">
           <button
             v-for="(component, key) in HABIT_ICONS"
             :key="key"
             type="button"
             class="press grid aspect-square place-items-center rounded-control"
-            :class="icon === key ? 'text-surface' : 'bg-surface text-ink-2 shadow-card'"
+            :class="icon === key ? 'text-surface' : 'bg-surface-2 text-ink-2'"
             :style="icon === key ? { backgroundColor: CATEGORY_COLORS[color] } : undefined"
             :aria-label="String(key)"
             :aria-pressed="icon === key"
@@ -207,7 +218,7 @@ async function remove(): Promise<void> {
       </section>
 
       <section class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('habits.color') }}</span>
+        <span class="field-label">{{ $t('habits.color') }}</span>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="key in swatches"
@@ -222,6 +233,13 @@ async function remove(): Promise<void> {
           />
         </div>
       </section>
+
+      <GoalPicker v-model="goalId" />
+
+      <div class="flex flex-col gap-2">
+        <AmountField v-model="savesUzs" currency="UZS" :label="$t('habits.savesUzs')" />
+        <p class="text-caption text-ink-3">{{ $t('habits.savesHint') }}</p>
+      </div>
 
       <div v-if="habit" class="flex flex-col items-center gap-1">
         <UiButton variant="ghost" size="sm" @click="toggleArchive">

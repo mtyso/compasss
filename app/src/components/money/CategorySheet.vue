@@ -99,7 +99,7 @@ async function toggleArchive(): Promise<void> {
       <p v-if="category?.system_key" class="-mt-4 px-1 text-caption text-ink-3">{{ $t('categories.standardHint') }}</p>
 
       <section v-if="kind === 'expense'" class="flex flex-col gap-2">
-        <span class="section-title">{{ $t('categories.necessity') }}</span>
+        <span class="field-label">{{ $t('categories.necessity') }}</span>
         <UiSegmented v-model="necessity" :options="necessityOptions" :label="$t('categories.necessity')" />
         <Transition name="fade" mode="out-in">
           <p :key="necessity" class="px-1 text-caption text-ink-3">{{ $t(`categories.${necessity}Hint`) }}</p>
@@ -108,7 +108,7 @@ async function toggleArchive(): Promise<void> {
 
       <template v-if="isTop">
         <section class="flex flex-col gap-2">
-          <span class="section-title">{{ $t('categories.icon') }}</span>
+          <span class="field-label">{{ $t('categories.icon') }}</span>
           <div class="grid grid-cols-7 gap-1.5">
             <button
               v-for="item in ICONS"
@@ -124,7 +124,7 @@ async function toggleArchive(): Promise<void> {
           </div>
         </section>
         <section class="flex flex-col gap-2">
-          <span class="section-title">{{ $t('categories.color') }}</span>
+          <span class="field-label">{{ $t('categories.color') }}</span>
           <div class="flex flex-wrap gap-2.5">
             <button
               v-for="item in COLORS"

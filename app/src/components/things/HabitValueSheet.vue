@@ -47,7 +47,7 @@ function save(next = value.value): void {
           min="0"
           max="100000"
           inputmode="numeric"
-          class="num w-28 bg-transparent text-center font-display text-[3rem] leading-none font-bold outline-none"
+          class="num w-28 bg-transparent text-center text-[3rem] leading-none font-semibold outline-none"
           :class="over ? 'text-danger' : 'text-ink'"
         />
         <button type="button" class="press grid size-14 place-items-center rounded-full bg-surface-2" :aria-label="$t('habits.more')" @click="step(1)">

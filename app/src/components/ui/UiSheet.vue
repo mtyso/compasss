@@ -10,6 +10,7 @@ import { pushOverlay } from './overlays'
  * Bottom sheet. Slides up on a spring, follows the finger when pulled down (by the handle, the
  * header, or the content once it is scrolled to the top) and closes on a long or fast pull.
  * Esc, the scrim, the close button and the Android/Telegram back button close it too.
+ * On a wide screen the same content opens as a dialog in the middle, without the pull gesture.
  *
  * Slots: `header` replaces the title row, the default slot scrolls, `footer` stays pinned.
  */
@@ -53,6 +54,9 @@ onBeforeUnmount(() => removeOverlay?.())
 
 /* ---------- Enter and leave ---------- */
 
+/** Wide screen: a centred dialog instead of a sheet from the bottom edge. */
+const wide = (): boolean => window.matchMedia('(min-width: 48rem)').matches
+
 /** The scrim and the sheet, found from the transition's element: template refs are already unset by the time leave runs. */
 function parts(el: Element): { shade: HTMLElement; sheet: HTMLElement } {
   return { shade: el.children[0] as HTMLElement, sheet: el.children[1] as HTMLElement }
@@ -66,6 +70,19 @@ function onEnter(el: Element, done: () => void): void {
     return
   }
   shade.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, easing: 'cubic-bezier(0.2, 0, 0, 1)' })
+  if (wide()) {
+    sheet
+      .animate(
+        [
+          { opacity: 0, transform: 'translateY(12px) scale(0.97)' },
+          { opacity: 1, transform: 'none', offset: 0.35 },
+          { opacity: 1, transform: 'none' },
+        ],
+        { duration: springs.ui.duration, easing: easingOf(springs.ui) },
+      )
+      .finished.then(entered(done), done)
+    return
+  }
   sheet
     .animate([{ transform: 'translateY(100%)' }, { transform: 'translateY(0)' }], {
       duration: springs.ui.duration,
@@ -99,6 +116,12 @@ function onLeave(el: Element, done: () => void): void {
     return
   }
   shade.animate([{ opacity: shadeFrom }, { opacity: 0 }], { duration: 200, easing: 'linear', fill: 'forwards' })
+  if (wide()) {
+    sheet
+      .animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(0.98)' }], { duration: 140, easing: 'cubic-bezier(0.3, 0, 0.8, 0.15)', fill: 'forwards' })
+      .finished.then(finish, finish)
+    return
+  }
   sheet
     .animate([{ transform: from }, { transform: 'translateY(100%)' }], {
       duration: 220,
@@ -185,7 +208,7 @@ function end(): void {
 
 // Handle and header: pointer events (also work with a mouse on the web).
 function onPointerDown(event: PointerEvent): void {
-  if (event.button !== 0 || (event.target as HTMLElement).closest('button, input, a, [role="radio"]')) return
+  if (event.button !== 0 || wide() || (event.target as HTMLElement).closest('button, input, a, [role="radio"]')) return
   ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
   begin(event.clientX, event.clientY)
 }
@@ -200,7 +223,7 @@ function onPointerUp(): void {
 // Content: touch events, so a pull at the top can take over from scrolling (needs passive: false).
 function onTouchStart(event: TouchEvent): void {
   const touch = event.touches[0]
-  if (event.touches.length === 1 && touch) begin(touch.clientX, touch.clientY)
+  if (event.touches.length === 1 && touch && !wide()) begin(touch.clientX, touch.clientY)
 }
 function onTouchMove(event: TouchEvent): void {
   const touch = event.touches[0]
@@ -236,11 +259,11 @@ watch(open, async (value) => {
 <template>
   <Teleport to="body">
     <Transition :css="false" @enter="onEnter" @leave="onLeave">
-      <div v-if="open" class="fixed inset-0 z-40 flex items-end justify-center">
+      <div v-if="open" class="fixed inset-0 z-40 flex items-end justify-center md:items-center md:p-6">
         <div ref="scrim" class="absolute inset-0 bg-scrim" aria-hidden="true" @click="close" />
         <div
           ref="panel"
-          class="sheet relative flex w-full max-w-xl flex-col rounded-t-[1.75rem] bg-raised shadow-raised outline-none will-change-transform"
+          class="sheet relative flex w-full max-w-xl flex-col rounded-t-[1.5rem] bg-raised shadow-raised outline-none will-change-transform md:max-w-[30rem] md:rounded-[1.25rem]"
           role="dialog"
           aria-modal="true"
           :aria-labelledby="title ? titleId : undefined"
@@ -249,18 +272,18 @@ watch(open, async (value) => {
           @keydown.esc.stop="close"
         >
           <div
-            class="touch-none cursor-grab select-none active:cursor-grabbing"
+            class="touch-none cursor-grab select-none active:cursor-grabbing md:cursor-auto md:pt-3"
             @pointerdown="onPointerDown"
             @pointermove="onPointerMove"
             @pointerup="onPointerUp"
             @pointercancel="onPointerUp"
           >
-            <div class="flex justify-center pt-2.5 pb-1.5" aria-hidden="true">
+            <div class="flex justify-center pt-2.5 pb-1.5 md:hidden" aria-hidden="true">
               <span class="h-1 w-9 rounded-full bg-ink/15" />
             </div>
             <slot name="header">
               <header v-if="title || closeButton" class="flex min-h-11 items-center gap-3 pr-3 pb-2 pl-5">
-                <h2 :id="titleId" class="flex-1 truncate font-display text-headline font-bold">{{ title }}</h2>
+                <h2 :id="titleId" class="flex-1 truncate text-headline font-semibold">{{ title }}</h2>
                 <button
                   v-if="closeButton"
                   type="button"
@@ -302,5 +325,11 @@ watch(open, async (value) => {
 <style scoped>
 .sheet {
   max-height: calc(100dvh - var(--safe-top) - 0.75rem);
+}
+
+@media (width >= 48rem) {
+  .sheet {
+    max-height: min(calc(100dvh - 3rem), 52rem);
+  }
 }
 </style>

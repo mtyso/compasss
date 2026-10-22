@@ -5,6 +5,7 @@ import { Send } from 'lucide-vue-next'
 import CompassMark from '@/components/ui/CompassMark.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSpinner from '@/components/ui/UiSpinner.vue'
+import { isNative, openExternal } from '@/lib/native'
 import { useAuth } from '@/stores/auth'
 
 const auth = useAuth()
@@ -22,8 +23,15 @@ async function signIn(): Promise<void> {
   await auth.startLogin()
   if (auth.loginLink) {
     // Opening right after the tap usually passes the popup blocker; if not, the button below does it.
-    window.open(auth.loginLink, '_blank', 'noopener')
+    openExternal(auth.loginLink)
   }
+}
+
+// In the Android app a new-tab link goes nowhere, so the link is handed to the system instead.
+function openInApp(event: MouseEvent): void {
+  if (!isNative || !auth.loginLink) return
+  event.preventDefault()
+  openExternal(auth.loginLink)
 }
 
 // Coming back from Telegram: check straight away instead of waiting for the next poll.
@@ -67,7 +75,7 @@ onBeforeUnmount(() => {
             <li>{{ $t('login.step3') }}</li>
           </ol>
           <div class="flex flex-col gap-1 pt-1">
-            <UiButton variant="telegram" block :href="auth.loginLink ?? undefined" target="_blank" rel="noopener">
+            <UiButton variant="telegram" block :href="auth.loginLink ?? undefined" target="_blank" rel="noopener" @click="openInApp">
               <template #icon><Send class="size-[18px]" /></template>
               {{ $t('login.openTelegram') }}
             </UiButton>
@@ -76,7 +84,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-else key="idle" class="flex flex-col gap-3">
-          <p v-if="['denied', 'expired', 'error'].includes(auth.loginState)" class="px-1 text-sm text-danger" role="alert">
+          <p v-if="['denied', 'expired', 'error'].includes(auth.loginState)" class="text-sm text-danger" role="alert">
             {{ $t(`login.${auth.loginState}`) }}
           </p>
           <UiButton variant="telegram" size="lg" block :loading="auth.loginState === 'starting'" @click="signIn">

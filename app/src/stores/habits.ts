@@ -30,9 +30,13 @@ export interface Habit {
   week_count: number | null
   streak: { current: number; best: number; unit: 'day' | 'week' }
   days: HabitDay[]
+  /** The goal this habit works towards (docs/PLAN.md, 2.6). */
+  goal_id: number | null
+  /** A money habit: what a kept day saves, in som. */
+  saves_uzs: number | null
 }
 
-export type HabitInput = Partial<Pick<Habit, 'name' | 'type' | 'target' | 'unit' | 'schedule' | 'color' | 'icon' | 'sort' | 'archived'>>
+export type HabitInput = Partial<Pick<Habit, 'name' | 'type' | 'target' | 'unit' | 'schedule' | 'color' | 'icon' | 'sort' | 'archived' | 'goal_id' | 'saves_uzs'>>
 
 /** Habits (docs/PLAN.md, D22) with today's value, the last week and the streaks, as the server counts them. */
 export const useHabits = defineStore('habits', () => {
