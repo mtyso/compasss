@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
  * Something the user works towards (docs/PLAN.md, D24): collect a sum (`save`), collect and then
  * spend it (`buy`), pay a debt off (`debt`) or reach something without money (`other`). Money goals
  * keep their money on their own account: the jar, or the debt account with a negative balance.
+ * A purchase on installment collects only the down payment; the rest becomes a debt goal at «Купил».
  */
 class Goal extends Model
 {
@@ -20,7 +21,7 @@ class Goal extends Model
 
     protected $fillable = [
         'type', 'title', 'icon', 'target_amount', 'currency', 'account_id', 'start_amount', 'deadline',
-        'monthly_amount', 'rate', 'unit', 'start_value', 'target_value', 'sort', 'started_on', 'done_at', 'archived_at',
+        'monthly_amount', 'rate', 'price', 'down_percent', 'loan_months', 'unit', 'start_value', 'target_value', 'sort', 'started_on', 'done_at', 'archived_at',
     ];
 
     // `deadline` and `started_on` stay uncast and are always written as Y-m-d.
@@ -31,6 +32,9 @@ class Goal extends Model
             'start_amount' => 'integer',
             'monthly_amount' => 'integer',
             'rate' => 'decimal:2',
+            'price' => 'integer',
+            'down_percent' => 'integer',
+            'loan_months' => 'integer',
             'start_value' => 'decimal:2',
             'target_value' => 'decimal:2',
             'sort' => 'integer',
@@ -62,6 +66,12 @@ class Goal extends Model
     public function checkins(): HasMany
     {
         return $this->hasMany(GoalCheckin::class);
+    }
+
+    /** A purchase where only a share of the price is collected and the rest is paid in installments. */
+    public function onInstallment(): bool
+    {
+        return $this->type === 'buy' && $this->price !== null && $this->down_percent !== null;
     }
 
     public function hasMoney(): bool

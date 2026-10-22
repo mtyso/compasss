@@ -25,8 +25,13 @@ return new class extends Migration
             $table->date('deadline')->nullable();
             // Chosen contribution a month, minor units; with a deadline it only counts when it is more than the deadline needs
             $table->bigInteger('monthly_amount')->nullable();
-            // Debt: yearly interest, percent
+            // Debt: yearly interest, percent; a purchase on installment: the installment's expected interest
             $table->decimal('rate', 6, 2)->nullable();
+            // A purchase on installment: the full price, the share paid at once (the goal collects it as
+            // target_amount) and the months the rest is paid over
+            $table->bigInteger('price')->nullable();
+            $table->unsignedTinyInteger('down_percent')->nullable();
+            $table->unsignedSmallInteger('loan_months')->nullable();
             // Goals without money measured by a number: from 85 to 80 kg
             $table->string('unit', 20)->nullable();
             $table->decimal('start_value', 14, 2)->nullable();

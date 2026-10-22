@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Goals\GoalContributor;
 use App\Goals\GoalPlanner;
 use App\Goals\GoalSpeed;
+use App\Goals\Installment;
 use App\Models\Account;
 use App\Models\Goal;
 use App\Models\Habit;
@@ -164,7 +165,11 @@ class GoalController extends Controller
         ]);
     }
 
-    /** «Купил»: the purchase is paid from the jar as a one-off expense, and the goal is done. */
+    /**
+     * «Купил»: the purchase is paid from the jar as a one-off expense, and the goal is done. On installment
+     * the rest of the price is spent from a new debt account (the overpayment too, as interest), and a debt
+     * goal takes the purchase's place in the list, so the payments get their own plan.
+     */
     public function buy(Request $request, TransactionWriter $writer, int $id): JsonResponse
     {
         $user = $request->user();
@@ -175,24 +180,94 @@ class GoalController extends Controller
         $data = $request->validate([
             'amount' => ['sometimes', 'integer', 'min:1', 'max:1000000000000'],
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->where('user_id', $user->id)->where('kind', 'expense')],
+            'installment' => ['sometimes', 'boolean'],
+            'price' => ['sometimes', 'integer', 'min:1', 'max:1000000000000'],
+            'loan_months' => ['sometimes', 'integer', 'between:1,120'],
+            'rate' => ['sometimes', 'nullable', 'numeric', 'between:0,200'],
         ]);
+        $paid = $data['amount'] ?? $goal->target_amount;
+        $installment = $data['installment'] ?? $goal->onInstallment();
+        if ($installment) {
+            $price = $data['price'] ?? $goal->price;
+            $months = $data['loan_months'] ?? $goal->loan_months;
+            $rate = array_key_exists('rate', $data) ? $data['rate'] : $goal->rate;
+            if ($months === null) {
+                throw ValidationException::withMessages(['loan_months' => __('goals.loan_months_required')]);
+            }
+            if ($price === null || $price <= $paid) {
+                throw ValidationException::withMessages(['price' => __('goals.no_loan')]);
+            }
+        }
 
-        $transaction = DB::transaction(function () use ($writer, $user, $goal, $data) {
-            $transaction = $writer->save($user, new Transaction, [
+        [$transaction, $debt] = DB::transaction(function () use ($writer, $user, $goal, $data, $paid, $installment) {
+            $expense = fn (int $accountId, int $amount, int $categoryId, string $note) => $writer->save($user, new Transaction, [
                 'type' => 'expense',
-                'account_id' => $goal->account_id,
-                'amount' => $data['amount'] ?? $goal->target_amount,
-                'category_id' => $data['category_id'],
-                'note' => __('goals.purchase_note', ['goal' => $goal->title]),
+                'account_id' => $accountId,
+                'amount' => $amount,
+                'category_id' => $categoryId,
+                'note' => $note,
                 'occurred_at' => now()->toDateTimeString(),
                 'is_one_off' => true,
             ]);
+            $transaction = $expense($goal->account_id, $paid, $data['category_id'], __('goals.purchase_note', ['goal' => $goal->title]));
             $goal->update(['done_at' => now()]);
 
-            return $transaction;
+            return [$transaction, $installment ? $this->installmentDebt($user, $goal, $data, $paid, $expense) : null];
         });
 
-        return response()->json(['goal' => $this->planner->state($goal->fresh(), now())->toApi(), 'transaction' => $transaction->toApi()]);
+        return response()->json([
+            'goal' => $this->planner->state($goal->fresh(), now())->toApi(),
+            'transaction' => $transaction->toApi(),
+            'debt' => $debt ? $this->planner->state($debt, now())->toApi() : null,
+        ]);
+    }
+
+    /**
+     * The installment after a purchase: a debt account that paid the rest of the price, and a debt goal with
+     * the monthly payment as its plan. The debt holds all that is owed, interest included, so it is gone
+     * after the last payment.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  callable(int, int, int, string): Transaction  $expense
+     */
+    private function installmentDebt(User $user, Goal $goal, array $data, int $paid, callable $expense): Goal
+    {
+        $currency = $goal->currency ?? 'UZS';
+        $price = $data['price'] ?? $goal->price;
+        $months = $data['loan_months'] ?? $goal->loan_months;
+        $rate = array_key_exists('rate', $data) ? $data['rate'] : $goal->rate;
+        $loan = $price - $paid;
+        $repay = Installment::repay($loan, $months, $rate === null ? null : (float) $rate, $currency);
+        $title = __('goals.installment_name', ['goal' => $goal->title]);
+
+        $account = $user->accounts()->create([
+            'name' => mb_substr($title, 0, 60),
+            'type' => 'debt',
+            'currency' => $currency,
+            'opening_balance' => 0,
+            'spendable' => false,
+            'is_cushion' => false,
+            'sort' => (int) $user->accounts()->max('sort') + 1,
+        ]);
+        $expense($account->id, $loan, $data['category_id'], __('goals.purchase_note', ['goal' => $goal->title]));
+        if ($repay['total'] > $loan) {
+            $interest = $user->categories()->where('system_key', 'finance_interest')->value('id') ?? $data['category_id'];
+            $expense($account->id, $repay['total'] - $loan, $interest, __('goals.interest_note', ['goal' => $goal->title]));
+        }
+
+        return $user->goals()->create([
+            'type' => 'debt',
+            'title' => mb_substr($title, 0, 80),
+            'icon' => $goal->icon,
+            'target_amount' => $repay['total'],
+            'currency' => $currency,
+            'account_id' => $account->id,
+            'start_amount' => 0,
+            'deadline' => now()->addMonthsNoOverflow($months)->toDateString(),
+            'monthly_amount' => $repay['payment'],
+            'sort' => $goal->sort,
+            'started_on' => now()->toDateString(),
+        ]);
     }
 
     /** A measurement of a goal without money on a day; an empty value removes it. */
@@ -296,7 +371,10 @@ class GoalController extends Controller
             'target_amount' => $money ? ['sometimes', 'nullable', 'integer', 'min:1', 'max:1000000000000'] : ['prohibited'],
             'deadline' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'after:today'],
             'monthly_amount' => $money ? ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000000000000'] : ['prohibited'],
-            'rate' => $type === 'debt' ? ['sometimes', 'nullable', 'numeric', 'between:0,200'] : ['prohibited'],
+            'rate' => in_array($type, ['debt', 'buy'], true) ? ['sometimes', 'nullable', 'numeric', 'between:0,200'] : ['prohibited'],
+            'price' => $type === 'buy' ? ['sometimes', 'nullable', 'integer', 'min:1', 'max:1000000000000'] : ['prohibited'],
+            'down_percent' => $type === 'buy' ? ['sometimes', 'nullable', 'integer', 'between:1,90'] : ['prohibited'],
+            'loan_months' => $type === 'buy' ? ['sometimes', 'nullable', 'integer', 'between:1,120'] : ['prohibited'],
             'unit' => $money ? ['prohibited'] : ['sometimes', 'nullable', 'string', 'max:20'],
             'start_value' => $money ? ['prohibited'] : ['sometimes', 'nullable', 'numeric', 'between:-1000000000,1000000000'],
             'target_value' => $money ? ['prohibited'] : ['sometimes', 'nullable', 'numeric', 'between:-1000000000,1000000000'],
@@ -304,6 +382,19 @@ class GoalController extends Controller
             'done' => $creating ? ['prohibited'] : ['sometimes', 'boolean'],
         ]);
 
+        // On installment the goal collects the down payment: its sum follows the price and the share
+        if (array_key_exists('price', $data) || array_key_exists('down_percent', $data)) {
+            $price = array_key_exists('price', $data) ? $data['price'] : $goal?->price;
+            $percent = array_key_exists('down_percent', $data) ? $data['down_percent'] : $goal?->down_percent;
+            if ($percent !== null && $price === null) {
+                throw ValidationException::withMessages(['price' => __('goals.price_required')]);
+            }
+            if ($price !== null) {
+                $currency = $data['currency'] ?? $goal?->currency
+                    ?? (empty($data['account_id']) ? null : $request->user()->accounts()->find($data['account_id'])?->currency) ?? 'UZS';
+                $data['target_amount'] = $percent === null ? $price : Installment::downPayment($price, $percent, $currency);
+            }
+        }
         if ($creating && in_array($type, ['save', 'buy'], true) && empty($data['target_amount'])) {
             throw ValidationException::withMessages(['target_amount' => __('goals.target_required')]);
         }

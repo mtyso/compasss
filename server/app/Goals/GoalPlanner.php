@@ -40,7 +40,8 @@ class GoalPlanner
         $weights = $schedules->mapWithKeys(fn (IncomeSchedule $s) => [$s->id => $this->inUzs($s->expected_amount, $s->currency, $now)])->all();
         $period = PayPeriod::at($today, $schedules, $weights);
 
-        $goals = $user->goals()->whereNull('archived_at')->orderBy('sort')->orderBy('id')->get();
+        // Finished goals go after the ones still being worked on.
+        $goals = $user->goals()->whereNull('archived_at')->orderByRaw('done_at is not null')->orderBy('sort')->orderBy('id')->get();
         $balances = $goals->contains(fn (Goal $g) => $g->hasMoney()) ? Balances::forUser($user) : [];
         $spendable = $user->accounts()->where('spendable', true)->where('is_cushion', false)->pluck('id')->map(fn ($id) => (int) $id)->all();
 

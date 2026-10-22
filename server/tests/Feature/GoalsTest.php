@@ -236,3 +236,64 @@ it('refuses a jar that holds money for spending or belongs to another goal', fun
     $this->postJson('/api/goals', ['type' => 'save', 'title' => 'Дом', 'currency' => 'UZS'], $this->auth)
         ->assertUnprocessable()->assertJsonValidationErrors('target_amount');
 });
+
+it('collects a down payment for a purchase on installment and shows the payment and the overpayment', function () {
+    $goal = $this->postJson('/api/goals', [
+        'type' => 'buy', 'title' => 'Dongfeng 008', 'currency' => 'UZS', 'deadline' => '2027-04-01',
+        'price' => 400_000_000, 'down_percent' => 30, 'loan_months' => 36, 'rate' => 24,
+    ], $this->auth)
+        ->assertCreated()
+        // The goal collects 30% of the price: 120 mln over 6 months
+        ->assertJsonPath('target_amount', 120_000_000)
+        ->assertJsonPath('monthly_required', 20_000_000)
+        ->assertJsonPath('installment.down_amount', 120_000_000)
+        ->assertJsonPath('installment.loan', 280_000_000)
+        ->assertJsonPath('installment.payment', 10_986_000)
+        ->assertJsonPath('installment.payment_uzs', 10_986_000)
+        ->assertJsonPath('installment.overpay', 115_467_164)
+        ->assertJsonPath('installment.options.0.down_percent', 40)
+        ->assertJsonPath('installment.options.0.payment', 9_416_000)
+        ->assertJsonPath('installment.options.1.down_percent', 50)
+        ->assertJsonPath('installment.options.1.overpay', 82_476_556)
+        ->json();
+
+    // A new price moves the down payment with it.
+    $this->patchJson("/api/goals/{$goal['id']}", ['price' => 380_000_000], $this->auth)->assertOk()
+        ->assertJsonPath('target_amount', 114_000_000)
+        ->assertJsonPath('installment.loan', 266_000_000);
+
+    $this->postJson('/api/goals', ['type' => 'buy', 'title' => 'Без цены', 'currency' => 'UZS', 'down_percent' => 30], $this->auth)
+        ->assertUnprocessable()->assertJsonValidationErrors('price');
+});
+
+it('turns the rest of the price into a debt goal with its monthly payment at «Купил»', function () {
+    $savings = $this->user->accounts()->create(['name' => 'Вклад', 'type' => 'savings', 'currency' => 'UZS', 'opening_balance' => 120_000_000, 'spendable' => false]);
+    $goal = $this->postJson('/api/goals', [
+        'type' => 'buy', 'title' => 'Dongfeng 008', 'account_id' => $savings->id,
+        'price' => 400_000_000, 'down_percent' => 30, 'loan_months' => 36, 'rate' => 24,
+    ], $this->auth)->assertCreated()->assertJsonPath('status', 'reached')->json();
+
+    $transport = $this->user->categories()->firstWhere('system_key', 'transport');
+    $debt = $this->postJson("/api/goals/{$goal['id']}/buy", ['category_id' => $transport->id], $this->auth)->assertOk()
+        ->assertJsonPath('goal.status', 'done')
+        ->assertJsonPath('transaction.amount', 120_000_000)
+        ->assertJsonPath('debt.type', 'debt')
+        ->assertJsonPath('debt.title', 'Рассрочка · Dongfeng 008')
+        // All that is owed: 280 mln and the overpayment
+        ->assertJsonPath('debt.target_amount', 395_467_164)
+        ->assertJsonPath('debt.remaining', 395_467_164)
+        ->assertJsonPath('debt.monthly_amount', 10_986_000)
+        ->assertJsonPath('debt.deadline', '2029-10-10')
+        ->json('debt');
+
+    $account = Account::find($debt['account_id']);
+    expect($account->type)->toBe('debt')->and($account->spendable)->toBeFalse();
+    $spent = $this->user->transactions()->where('account_id', $account->id)->get();
+    expect($spent->pluck('amount')->all())->toEqualCanonicalizing([280_000_000, 115_467_164])
+        ->and($spent->firstWhere('amount', 115_467_164)->category_id)->toBe($this->user->categories()->firstWhere('system_key', 'finance_interest')->id);
+
+    // The installment takes the purchase's place; its payment is part of the plan from now on.
+    $this->getJson('/api/goals', $this->auth)->assertOk()
+        ->assertJsonPath('main_id', $debt['id'])
+        ->assertJsonPath('goals.0.id', $debt['id']);
+});
