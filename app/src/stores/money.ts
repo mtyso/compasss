@@ -49,6 +49,8 @@ export interface Transaction {
   occurred_at: string
   is_one_off: boolean
   source: 'app' | 'web' | 'bot'
+  /** The recurring payment it paid, set by «Оплачено» or when the server matched it to one. */
+  recurring_payment_id: number | null
 }
 
 export interface TransactionInput {

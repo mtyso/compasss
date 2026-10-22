@@ -1,33 +1,28 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check } from 'lucide-vue-next'
 import CategoryIcon from '@/components/CategoryIcon.vue'
 import MoneyAmount from '@/components/ui/MoneyAmount.vue'
 import UiSpinner from '@/components/ui/UiSpinner.vue'
-import { haptics } from '@/lib/haptics'
 import { isoDate, shiftDate } from '@/lib/dates'
 import { formatDayMonth } from '@/lib/format'
 import { useMoney } from '@/stores/money'
-import { usePlan, type RecurringPayment } from '@/stores/plan'
+import type { RecurringPayment } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
+import { usePay } from './usePay'
 
 const props = defineProps<{ payment: RecurringPayment }>()
 /** `open` is a tap on the row itself; `edit` asks for the form when one tap cannot pay. */
 const emit = defineEmits<{ paid: []; open: []; edit: [] }>()
 
 const money = useMoney()
-const plan = usePlan()
 const settings = useSettings()
 const { t } = useI18n()
-const paying = ref(false)
-const failed = ref(false)
+const { account, paying, failed, pay: payNow } = usePay(() => props.payment)
 
 const category = computed(() => money.categoryById.get(props.payment.category_id))
 const root = computed(() => (category.value ? money.rootOf(category.value) : undefined))
-const account = computed(() => (props.payment.account_id ? money.accountById.get(props.payment.account_id) : undefined))
-// One tap works when the payment knows its account and they share a currency; otherwise the form asks.
-const oneTap = computed(() => !!account.value && account.value.currency === props.payment.currency)
 
 const due = computed(() => {
   const today = isoDate()
@@ -38,22 +33,8 @@ const due = computed(() => {
 })
 
 async function pay(): Promise<void> {
-  if (!oneTap.value) {
-    emit('edit')
-    return
-  }
-  paying.value = true
-  failed.value = false
-  try {
-    await plan.pay(props.payment)
-    haptics.notify('success')
-    emit('paid')
-  } catch {
-    haptics.notify('error')
-    failed.value = true
-  } finally {
-    paying.value = false
-  }
+  if (!(await payNow())) emit('edit')
+  else if (!failed.value) emit('paid')
 }
 </script>
 

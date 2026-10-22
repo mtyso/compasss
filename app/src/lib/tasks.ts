@@ -1,5 +1,6 @@
 import { formatDayMonth, type Locale } from '@/lib/format'
 import { shiftDate } from '@/lib/dates'
+import type { RecurringPayment } from '@/stores/plan'
 import type { RepeatRule, Task } from '@/stores/tasks'
 
 export type Translate = (key: string, params?: Record<string, unknown> | number) => string
@@ -9,6 +10,7 @@ export type GroupKey = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later' | 'so
 export interface TaskGroup {
   key: GroupKey | string
   tasks: Task[]
+  payments?: RecurringPayment[]
 }
 
 /** ISO weekday of a calendar date: 1 Monday … 7 Sunday. */
@@ -21,37 +23,57 @@ export function compareTasks(a: Task, b: Task): number {
   return b.priority - a.priority || (a.due_time ?? '99').localeCompare(b.due_time ?? '99') || a.id - b.id
 }
 
+/** The section a due date belongs to in a view, or null when the view leaves it out. */
+export function dueGroup(due: string | null, view: TaskView, today: string): string | null {
+  const tomorrow = shiftDate(today, 1)
+  const weekEnd = shiftDate(today, 6)
+  if (due !== null && due < today) return 'overdue'
+  if (due === today) return 'today'
+  if (view === 'today') return null
+  if (view === 'week') return due !== null && due <= weekEnd ? due : null
+  if (due === tomorrow) return 'tomorrow'
+  if (due !== null && due <= weekEnd) return 'week'
+  return due !== null ? 'later' : 'someday'
+}
+
+function groupOrder(view: TaskView, today: string): string[] {
+  return view === 'week'
+    ? ['overdue', 'today', ...Array.from({ length: 6 }, (_, i) => shiftDate(today, i + 1))]
+    : ['overdue', 'today', 'tomorrow', 'week', 'later', 'someday']
+}
+
 /**
  * Sections for the «Дела» list. Ticked-off tasks stay in their section until the list is opened
  * again (the row animates out first), except in «Все», where they gather at the bottom.
  * `justDone` keeps rows ticked in this visit in place.
  */
 export function groupTasks(tasks: Task[], view: TaskView, today: string, justDone: Set<number> = new Set()): TaskGroup[] {
-  const tomorrow = shiftDate(today, 1)
-  const weekEnd = shiftDate(today, 6)
-  const visible = tasks.filter((t) => !t.done_at || justDone.has(t.id))
   const groups = new Map<string, Task[]>()
-  const add = (key: string, task: Task) => groups.set(key, [...(groups.get(key) ?? []), task])
-
-  for (const task of visible) {
-    const due = task.due_on
-    if (due !== null && due < today) add('overdue', task)
-    else if (due === today) add('today', task)
-    else if (view === 'today') continue
-    else if (view === 'week') {
-      if (due !== null && due <= weekEnd) add(due, task)
-    } else if (due === tomorrow) add('tomorrow', task)
-    else if (due !== null && due <= weekEnd) add('week', task)
-    else if (due !== null) add('later', task)
-    else add('someday', task)
+  for (const task of tasks.filter((t) => !t.done_at || justDone.has(t.id))) {
+    const key = dueGroup(task.due_on, view, today)
+    if (key !== null) groups.set(key, [...(groups.get(key) ?? []), task])
   }
 
-  const order = view === 'week'
-    ? ['overdue', 'today', ...Array.from({ length: 6 }, (_, i) => shiftDate(today, i + 1))]
-    : ['overdue', 'today', 'tomorrow', 'week', 'later', 'someday']
-  return order
+  return groupOrder(view, today)
     .filter((key) => groups.has(key))
     .map((key) => ({ key, tasks: groups.get(key)!.sort((a, b) => (a.due_on ?? '').localeCompare(b.due_on ?? '') || compareTasks(a, b)) }))
+}
+
+/**
+ * The tasks' sections with the recurring payments due in them, payments first: in «Дела» a payment is
+ * one more thing to do, ticked off with «Оплачено» (docs/PLAN.md, D28).
+ */
+export function withPayments(groups: TaskGroup[], payments: RecurringPayment[], view: TaskView, today: string): TaskGroup[] {
+  const byKey = new Map<string, RecurringPayment[]>()
+  for (const payment of [...payments].filter((p) => p.active).sort((a, b) => a.next_due_on.localeCompare(b.next_due_on) || a.id - b.id)) {
+    const key = dueGroup(payment.next_due_on, view, today)
+    if (key !== null) byKey.set(key, [...(byKey.get(key) ?? []), payment])
+  }
+  const tasks = new Map(groups.map((g) => [g.key, g.tasks]))
+
+  return groupOrder(view, today)
+    .filter((key) => tasks.has(key) || byKey.has(key))
+    .map((key) => ({ key, tasks: tasks.get(key) ?? [], payments: byKey.get(key) ?? [] }))
 }
 
 /** «Сегодня», «Завтра», «Вчера», «Пт, 23 октября» or nothing for a task without a date. */

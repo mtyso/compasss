@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { i18n } from '@/i18n'
+import type { RecurringPayment } from '@/stores/plan'
 import type { Task } from '@/stores/tasks'
-import { compareTasks, dueLabel, groupTasks, groupTitle, isoWeekday, repeatLabel, type Translate } from './tasks'
+import { compareTasks, dueLabel, groupTasks, groupTitle, isoWeekday, repeatLabel, withPayments, type Translate } from './tasks'
 
 const t = i18n.global.t as unknown as Translate
 const today = '2026-10-21' // a Wednesday
@@ -92,5 +93,34 @@ describe('groupTitle', () => {
     expect(groupTitle('overdue', today, t, 'ru')).toBe('Просрочено')
     expect(groupTitle('2026-10-22', today, t, 'ru')).toBe('Завтра')
     expect(groupTitle('2026-10-24', today, t, 'ru')).toBe('Сб, 24 октября')
+  })
+})
+
+describe('withPayments', () => {
+  const payment = (id: number, next_due_on: string, active = true): RecurringPayment => ({
+    id, name: 'Платёж', amount: 150_000, currency: 'UZS', category_id: 1, account_id: 1, day_of_month: 1, next_due_on, overdue: next_due_on < today, active,
+  })
+  const late = payment(1, '2026-10-15')
+  const due = payment(2, today)
+  const nextWeek = payment(3, '2026-10-25')
+  const paused = payment(4, today, false)
+  const nextMonth = payment(5, '2026-11-21')
+  const all = [nextMonth, paused, due, nextWeek, late]
+
+  it('puts payments into the tasks\' sections and adds the sections only they fill', () => {
+    const tasks = groupTasks([task()], 'today', today)
+    expect(withPayments(tasks, all, 'today', today)).toEqual([
+      { key: 'overdue', tasks: [], payments: [late] },
+      { key: 'today', tasks: tasks[0]!.tasks, payments: [due] },
+    ])
+  })
+
+  it('shows the week ahead by day and the rest on «Все»', () => {
+    expect(withPayments([], all, 'week', today).map((g) => [g.key, g.payments?.map((p) => p.id)])).toEqual([
+      ['overdue', [1]],
+      ['today', [2]],
+      ['2026-10-25', [3]],
+    ])
+    expect(withPayments([], all, 'all', today).map((g) => g.key)).toEqual(['overdue', 'today', 'week', 'later'])
   })
 })

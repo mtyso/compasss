@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { BellOff, Check, ThumbsUp, X } from 'lucide-vue-next'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import { showToast } from '@/components/ui/toast'
+import { ApiError } from '@/lib/api'
 import { haptics } from '@/lib/haptics'
 import { useAdvisor, type Insight } from '@/stores/advisor'
 import { RULE_ICONS, SEVERITY_PANELS, SEVERITY_TONES } from './insightLook'
@@ -16,6 +18,7 @@ import { RULE_ICONS, SEVERITY_PANELS, SEVERITY_TONES } from './insightLook'
 const props = defineProps<{ insight: Insight; compact?: boolean }>()
 
 const advisor = useAdvisor()
+const router = useRouter()
 const { t } = useI18n()
 const busy = ref(false)
 
@@ -34,6 +37,22 @@ async function run(task: () => Promise<void>, done?: string): Promise<void> {
 function act(): void {
   haptics.impact('light')
   run(() => advisor.act(props.insight), props.insight.action === 'contribute' ? t('goals.contributed') : t('advice.markedOneOff'))
+}
+
+/** «Оплачено» on a reminder; a payment one tap cannot pay (no account, another currency) opens its form. */
+async function pay(): Promise<void> {
+  haptics.impact('light')
+  busy.value = true
+  try {
+    await advisor.act(props.insight)
+    haptics.notify('success')
+    showToast({ message: t('payments.pay'), tone: 'success' })
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 422) void router.push({ name: 'payments', query: { pay: props.insight.ref } })
+    else showToast({ message: t('quickAdd.failed'), tone: 'danger' })
+  } finally {
+    busy.value = false
+  }
 }
 
 function rate(value: 'useful' | 'dismissed'): void {
@@ -66,6 +85,12 @@ function mute(): void {
       </UiButton>
       <UiButton v-else-if="insight.action === 'contribute'" size="sm" :loading="busy" @click="act">
         {{ $t('goals.contribute') }}
+      </UiButton>
+      <UiButton v-else-if="insight.action === 'pay'" size="sm" :loading="busy" @click="pay">
+        {{ $t('payments.pay') }}
+      </UiButton>
+      <UiButton v-else-if="insight.action === 'add_payment'" size="sm" :to="{ name: 'payments', query: { suggest: insight.ref } }">
+        {{ $t('payments.addShort') }}
       </UiButton>
       <template v-if="!compact && insight.status !== 'dismissed'">
         <UiButton v-if="insight.status !== 'useful'" size="sm" variant="ghost" :disabled="busy" @click="rate('useful')">

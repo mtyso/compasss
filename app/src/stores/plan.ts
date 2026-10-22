@@ -44,6 +44,20 @@ export interface RecurringPayment {
   active: boolean
 }
 
+/** Spending that repeats every month and is not a recurring payment yet (GET /recurring-payments/suggestions). */
+export interface PaymentSuggestion {
+  key: string
+  name: string
+  amount: number
+  currency: Currency
+  category_id: number
+  account_id: number
+  day_of_month: number
+  count: number
+  last_on: string
+  next_due_on: string
+}
+
 export interface Today {
   date: string
   limit: DailyLimit
@@ -76,6 +90,7 @@ export const usePlan = defineStore('plan', () => {
   const today = ref<Today | null>(null)
   const incomes = ref<IncomeSchedule[]>([])
   const payments = ref<RecurringPayment[]>([])
+  const suggestions = ref<PaymentSuggestion[]>([])
 
   async function loadToday(): Promise<void> {
     today.value = await api<Today>('/today')
@@ -118,28 +133,55 @@ export const usePlan = defineStore('plan', () => {
   }
 
   /** «Оплачено»: records the expense on the server and refreshes everything that depends on it. */
-  async function pay(payment: RecurringPayment, input: { account_id?: number; amount?: number } = {}): Promise<Transaction> {
+  async function pay(
+    payment: RecurringPayment,
+    input: { account_id?: number; amount?: number; occurred_at?: string } = {},
+  ): Promise<{ payment: RecurringPayment; transaction: Transaction }> {
     const result = await api<{ payment: RecurringPayment; transaction: Transaction }>(`/recurring-payments/${payment.id}/pay`, {
       method: 'POST',
       body: JSON.stringify(input),
     })
-    const index = payments.value.findIndex((p) => p.id === payment.id)
-    if (index >= 0) payments.value[index] = result.payment
+    replacePayment(result.payment)
     await useMoney().loadAccounts()
     useMoney().revision++
-    return result.transaction
+    return result
+  }
+
+  /** «Пропустить в этот раз»: the next due date without an expense. */
+  async function skip(payment: RecurringPayment): Promise<RecurringPayment> {
+    const next = await api<RecurringPayment>(`/recurring-payments/${payment.id}/skip`, { method: 'POST' })
+    replacePayment(next)
+    useMoney().revision++
+    return next
+  }
+
+  function replacePayment(next: RecurringPayment): void {
+    const index = payments.value.findIndex((p) => p.id === next.id)
+    if (index >= 0) payments.value[index] = next
+  }
+
+  async function loadSuggestions(): Promise<void> {
+    suggestions.value = await api<PaymentSuggestion[]>('/recurring-payments/suggestions')
+  }
+
+  /** «Не то»: the suggestion does not come back. */
+  async function dismissSuggestion(key: string): Promise<void> {
+    suggestions.value = suggestions.value.filter((s) => s.key !== key)
+    await api('/recurring-payments/suggestions/dismiss', { method: 'POST', body: JSON.stringify({ key }) })
   }
 
   function reset(): void {
     today.value = null
     incomes.value = []
     payments.value = []
+    suggestions.value = []
   }
 
   return {
     today,
     incomes,
     payments,
+    suggestions,
     loadToday,
     loadBudget,
     saveBudget,
@@ -150,6 +192,9 @@ export const usePlan = defineStore('plan', () => {
     savePayment,
     deletePayment,
     pay,
+    skip,
+    loadSuggestions,
+    dismissSuggestion,
     reset,
   }
 })

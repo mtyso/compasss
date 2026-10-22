@@ -19,6 +19,7 @@ import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import LimitCard from '@/components/plan/LimitCard.vue'
+import PaySheet from '@/components/plan/PaySheet.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
 import { isoDate } from '@/lib/dates'
 import { formatDayHeading, formatDayMonth } from '@/lib/format'
@@ -26,7 +27,7 @@ import { groupTasks } from '@/lib/tasks'
 import { useGoals } from '@/stores/goals'
 import { useHabits, type Habit } from '@/stores/habits'
 import { useMoney } from '@/stores/money'
-import { usePlan } from '@/stores/plan'
+import { usePlan, type RecurringPayment } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
 import { useTasks, type Task } from '@/stores/tasks'
 
@@ -35,6 +36,14 @@ const money = useMoney()
 const plan = usePlan()
 const router = useRouter()
 const failed = ref(false)
+
+// A payment's row opens «Оплачено» with the details: another sum, account or day, or «Пропустить».
+const paySheetOpen = ref(false)
+const paying = ref<RecurringPayment | null>(null)
+function openPayment(payment: RecurringPayment): void {
+  paying.value = payment
+  paySheetOpen.value = true
+}
 
 const heading = computed(() => formatDayHeading(new Date(), settings.locale))
 const today = computed(() => plan.today)
@@ -229,8 +238,8 @@ function saveValue(value: number): void {
               v-for="payment in today.payments"
               :key="payment.id"
               :payment="payment"
-              @open="router.push({ name: 'payments' })"
-              @edit="router.push({ name: 'payments' })"
+              @open="openPayment(payment)"
+              @edit="openPayment(payment)"
             />
           </div>
         </SectionBlock>
@@ -241,6 +250,7 @@ function saveValue(value: number): void {
     <HabitSheet v-model:open="habitSheetOpen" :habit="editingHabit" />
     <HabitValueSheet v-model:open="valueSheetOpen" :habit="valueHabit" @save="saveValue" />
     <ContributeSheet v-model:open="contributeOpen" />
+    <PaySheet v-model:open="paySheetOpen" :payment="paying" @edit="(p) => router.push({ name: 'payments', query: { edit: p.id } })" />
   </div>
 </template>
 
