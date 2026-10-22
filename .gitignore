@@ -1,0 +1,8 @@
+# The generated branch `release` (.github/workflows/release.yml). Do not edit by hand: the next release overwrites it.
+/.env
+/.env.*
+/bootstrap/cache/*.php
+/public/hot
+/public/storage
+/storage/logs/*.log
+/*.zip
