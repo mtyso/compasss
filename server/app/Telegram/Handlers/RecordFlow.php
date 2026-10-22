@@ -35,6 +35,7 @@ class RecordFlow
         private ExchangeRates $rates,
         private Cards $cards,
         private CanAfford $canAfford,
+        private InsightFlow $insights,
     ) {}
 
     public function onText(int $chatId, User $user, string $text): void
@@ -160,7 +161,7 @@ class RecordFlow
         $chatId = (int) ($query['message']['chat']['id'] ?? 0);
         $messageId = (int) ($query['message']['message_id'] ?? 0);
 
-        if (! preg_match('/^tx:(cats|sub|cat|accs|acc|del|restore|card|oneoff):(\d+)(?::(\d+))?$/', $query['data'] ?? '', $m)) {
+        if (! preg_match('/^tx:(cats|sub|cat|accs|acc|del|restore|card|oneoff|save):(\d+)(?::(\d+))?$/', $query['data'] ?? '', $m)) {
             $this->telegram->answerCallbackQuery($query['id']);
 
             return;
@@ -230,6 +231,13 @@ class RecordFlow
                 $insight ? $insight->markOneOff() : $tx->update(['is_one_off' => true]);
                 $this->redraw($chatId, $messageId, $tx->refresh(), $user);
                 $toast = __('bot.insight.one_off_done', [], $user->locale);
+                break;
+
+            case 'save':
+                // «Отложить» under a salary: the advisor's split of it puts this period's goal money aside.
+                $insight = $this->cards->openContribution($tx, $user);
+                $toast = $insight ? $this->insights->contribute($insight, $user) : __('bot.insight.contributed_before', [], $user->locale);
+                $this->redraw($chatId, $messageId, $tx, $user);
                 break;
         }
 

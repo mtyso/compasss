@@ -29,6 +29,7 @@ return [
         'today' => 'Bugun',
         'bought' => 'Oldim, yozish',
         'one_off' => 'Bir martalik xarid',
+        'contribute' => 'Ajratish',
         'useful' => 'Foydali',
         'mute' => 'Bunday yubormang',
     ],
@@ -66,6 +67,8 @@ return [
         'thanks' => 'Rahmat, hisobga olaman',
         'muted' => 'Bunday maslahatlar endi kelmaydi',
         'one_off_done' => 'Bir martalik deb belgilandi',
+        'contributed' => 'Maqsadlarga ajratildi: :amount',
+        'contributed_before' => 'Bu allaqachon ajratilgan',
     ],
 
     'today' => [

@@ -105,6 +105,7 @@ class Cards
 
         return Keyboard::make()
             ->row([$this->awaitsOneOff($tx, $user) ? Keyboard::callback('☝️ '.__('bot.buttons.one_off', [], $l), "tx:oneoff:{$tx->id}", 'primary') : null])
+            ->row([$this->openContribution($tx, $user) ? Keyboard::callback('🎯 '.__('bot.buttons.contribute', [], $l), "tx:save:{$tx->id}", 'success') : null])
             ->row([
                 Keyboard::callback('🗂 '.__('bot.buttons.category', [], $l), "tx:cats:{$tx->id}"),
                 Keyboard::callback('💳 '.__('bot.buttons.account', [], $l), "tx:accs:{$tx->id}"),
@@ -123,6 +124,22 @@ class Cards
             ->whereIn('status', ['new', 'seen'])
             ->where('payload->transaction_id', $tx->id)
             ->exists();
+    }
+
+    /** The advisor's split of this income with goal contributions still to make: its «Отложить» (Insight::action). */
+    public function openContribution(Transaction $tx, User $user): ?Insight
+    {
+        if ($tx->type !== 'income') {
+            return null;
+        }
+
+        $insight = $user->insights()
+            ->where('rule', 'income_split')
+            ->where('period_key', "t{$tx->id}")
+            ->whereIn('status', ['new', 'seen'])
+            ->first();
+
+        return $insight?->action() === 'contribute' ? $insight : null;
     }
 
     /** Main categories of the operation's kind; one with subcategories opens them. */
@@ -262,7 +279,11 @@ class Cards
 
         if (! $answered) {
             $keyboard
-                ->row([$insight->action() === 'mark_one_off' ? Keyboard::callback('☝️ '.__('bot.buttons.one_off', [], $l), "ins:oneoff:{$insight->id}", 'primary') : null])
+                ->row([match ($insight->action()) {
+                    'mark_one_off' => Keyboard::callback('☝️ '.__('bot.buttons.one_off', [], $l), "ins:oneoff:{$insight->id}", 'primary'),
+                    'contribute' => Keyboard::callback('🎯 '.__('bot.buttons.contribute', [], $l), "ins:save:{$insight->id}", 'success'),
+                    default => null,
+                }])
                 ->row([
                     Keyboard::callback('👍 '.__('bot.buttons.useful', [], $l), "ins:useful:{$insight->id}"),
                     Keyboard::callback('🔕 '.__('bot.buttons.mute', [], $l), "ins:mute:{$insight->id}"),

@@ -251,3 +251,58 @@ it('takes «Полезно», «Не присылать такое» and «Ра�
     advTap('ins:useful:999999');
     expect(advToast())->toBe(__('bot.record.gone'));
 });
+
+// --- Goals: «Отложить» -------------------------------------------------------------
+
+/** The salary day of tests/Feature/GoalAdvisorTest.php: 1 251 000 of «Отпуск» falls on this period. */
+function advGoal(): array
+{
+    test()->travelTo(Carbon::parse('2026-10-10 10:00', 'Asia/Tashkent'));
+    Http::fake(['cbu.uz/*' => Http::failedConnection()]);
+    $user = test()->user;
+    $user->incomeSchedules()->create(['name' => 'Зарплата', 'day_of_month' => 10, 'expected_amount' => 12_000_000, 'currency' => 'UZS', 'active' => true]);
+    $user->incomeSchedules()->create(['name' => 'Аванс', 'day_of_month' => 25, 'expected_amount' => 4_000_000, 'currency' => 'UZS', 'active' => true]);
+    test()->auth = ['Authorization' => 'Bearer '.$user->createToken('t')->plainTextToken];
+
+    return test()->postJson('/api/goals', ['type' => 'save', 'title' => 'Отпуск', 'currency' => 'UZS', 'target_amount' => 15_000_000, 'deadline' => '2027-07-01'], test()->auth)
+        ->assertCreated()->json();
+}
+
+it('puts the goals\' share of a salary aside from its card, once', function () {
+    $goal = advGoal();
+
+    advSay('+12м зарплата');
+    $income = Transaction::sole();
+    $card = collect(advCalls('sendRichMessage'))->last();
+    expect($card['rich_message']['html'])->toContain('Нажми «Отложить»')
+        ->and(advButtons($card))->toContain("tx:save:{$income->id}");
+
+    advTap("tx:save:{$income->id}");
+    $transfer = Transaction::where('type', 'transfer')->sole();
+    expect(advToast())->toBe(advNb('Отложено в цели: 1 251 000 сум'))
+        ->and($transfer->to_account_id)->toBe($goal['account_id'])
+        ->and(advButtons(collect(advCalls('editMessageText'))->last()))->not->toContain("tx:save:{$income->id}");
+
+    advTap("tx:save:{$income->id}");
+    expect(advToast())->toBe('Это уже отложено')
+        ->and(Transaction::where('type', 'transfer')->count())->toBe(1);
+});
+
+it('offers «Отложить» under a pushed income split and answers it like the app', function () {
+    advGoal();
+    $this->postJson('/api/transactions', [
+        'type' => 'income', 'account_id' => $this->card->id, 'amount' => 12_000_000,
+        'category_id' => $this->user->categories()->firstWhere('system_key', 'salary')->id, 'occurred_at' => '2026-10-10 09:30',
+    ], $this->auth)->assertCreated();
+    $split = $this->user->insights()->where('rule', 'income_split')->sole();
+
+    $this->artisan('bot:notify')->assertSuccessful();
+    expect(advButtons(advCalls('sendRichMessage')[0]))->toBe([
+        "ins:save:{$split->id}", "ins:useful:{$split->id}", "ins:mute:{$split->id}", 'https://kompas.example.uz/advice',
+    ]);
+
+    advTap("ins:save:{$split->id}");
+    expect(advToast())->toBe(advNb('Отложено в цели: 1 251 000 сум'))
+        ->and($split->fresh()->status)->toBe('useful')
+        ->and(advButtons(collect(advCalls('editMessageReplyMarkup'))->last()))->toBe(['https://kompas.example.uz/advice']);
+});
