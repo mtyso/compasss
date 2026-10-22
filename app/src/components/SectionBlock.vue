@@ -1,12 +1,16 @@
 <script setup lang="ts">
-defineProps<{ title: string; empty?: string }>()
+import type { Component } from 'vue'
+import UiEmpty from '@/components/ui/UiEmpty.vue'
+
+// A titled block on a screen. Without content it shows the empty text in the shared empty style.
+defineProps<{ title: string; empty?: string; icon?: Component; tone?: 'neutral' | 'money' | 'habit' | 'task' | 'goal' }>()
 </script>
 
 <template>
-  <section class="flex flex-col gap-2">
-    <h2 class="px-1 text-sm font-semibold">{{ title }}</h2>
+  <section class="flex flex-col gap-2.5">
+    <h2 class="section-title">{{ title }}</h2>
     <slot>
-      <p class="rounded-2xl border border-dashed border-line px-4 py-5 text-sm text-ink-3">{{ empty }}</p>
+      <UiEmpty :icon="icon" :text="empty ?? ''" :tone="tone" />
     </slot>
   </section>
 </template>

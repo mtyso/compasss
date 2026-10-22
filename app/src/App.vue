@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
 import { useAuth, type User } from '@/stores/auth'
@@ -46,8 +46,25 @@ watch(
   },
   { immediate: true },
 )
+
+// The browser's bar follows the app's theme, not just the system's: when you pick Тёмная on a light
+// phone, the bar goes dark too.
+function syncThemeColor(): void {
+  const color = getComputedStyle(document.documentElement).getPropertyValue('--c-bg').trim()
+  if (!color) return
+  for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.setAttribute('content', color)
+}
+const themeObserver = new MutationObserver(syncThemeColor)
+themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+syncThemeColor()
+onBeforeUnmount(() => themeObserver.disconnect())
 </script>
 
 <template>
-  <RouterView />
+  <!-- Sign-in, PIN and the app itself cross-fade; screens inside the app animate in AppShell. -->
+  <RouterView v-slot="{ Component, route }">
+    <Transition name="fade" mode="out-in">
+      <component :is="Component" :key="route.matched[0]?.path" />
+    </Transition>
+  </RouterView>
 </template>

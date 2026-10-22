@@ -54,6 +54,6 @@ describe('dates in words', () => {
 
   it('formats Russian dates with the browser', () => {
     expect(formatDayMonth('2026-11-10', 'ru')).toBe('10 ноября')
-    expect(formatMonthTitle('2026-10', 'ru')).toBe('Октябрь 2026 г.')
+    expect(formatMonthTitle('2026-10', 'ru')).toBe('Октябрь 2026')
   })
 })

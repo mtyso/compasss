@@ -2,10 +2,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Loader2 } from 'lucide-vue-next'
 import PageHeader from '@/components/PageHeader.vue'
+import AccountIcon from '@/components/money/AccountIcon.vue'
+import UiButton from '@/components/ui/UiButton.vue'
+import UiSegmented from '@/components/ui/UiSegmented.vue'
+import UiSwitch from '@/components/ui/UiSwitch.vue'
 import { ApiError } from '@/lib/api'
 import type { Currency } from '@/lib/format'
+import { groupDigits, groupInput } from '@/lib/digits'
 import { amountToInput, CURRENCIES, EXPONENT } from '@/lib/money'
 import { useMoney, type AccountType } from '@/stores/money'
 
@@ -28,6 +32,12 @@ const confirmingDelete = ref(false)
 const error = ref<string | null>(null)
 
 const types: AccountType[] = ['card', 'cash', 'savings', 'deposit', 'other']
+const currencyOptions = computed(() => CURRENCIES.map((value) => ({ value, label: value === 'UZS' ? t('accounts.som') : t('accounts.dollar') })))
+/** «Деньги на жизнь» is off and locked while the account is the safety cushion. */
+const spendableShown = computed({
+  get: () => spendable.value && !cushion.value,
+  set: (value: boolean) => (spendable.value = value),
+})
 
 onMounted(async () => {
   if (!money.accounts.length) await money.loadAccounts()
@@ -36,7 +46,7 @@ onMounted(async () => {
     name.value = account.name
     type.value = account.type
     currency.value = account.currency
-    openingText.value = amountToInput(account.opening_balance, account.currency)
+    openingText.value = groupDigits(amountToInput(account.opening_balance, account.currency))
     spendable.value = account.spendable
     cushion.value = account.is_cushion
   }
@@ -95,89 +105,74 @@ async function remove(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="page">
     <PageHeader :title="existing ? existing.name : $t('accounts.new')" back="/more/accounts" />
 
-    <label class="flex flex-col gap-1.5">
-      <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('accounts.name') }}</span>
+    <label class="flex flex-col gap-2">
+      <span class="section-title">{{ $t('accounts.name') }}</span>
       <input v-model="name" maxlength="60" :placeholder="$t('accounts.namePlaceholder')" class="field" />
     </label>
 
-    <section class="flex flex-col gap-1.5">
-      <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('accounts.type') }}</span>
+    <section class="flex flex-col gap-2">
+      <span class="section-title">{{ $t('accounts.type') }}</span>
       <div class="flex flex-wrap gap-2">
-        <button v-for="item in types" :key="item" type="button" class="chip" :class="{ 'chip-on': type === item }" @click="pickType(item)">
+        <button
+          v-for="item in types"
+          :key="item"
+          type="button"
+          class="chip !pl-1.5"
+          :class="{ 'chip-on': type === item }"
+          :aria-pressed="type === item"
+          @click="pickType(item)"
+        >
+          <AccountIcon :type="item" class="!size-7 !rounded-full" :class="{ '!bg-white/15 !text-surface': type === item }" />
           {{ $t(`accounts.types.${item}`) }}
         </button>
       </div>
     </section>
 
-    <section class="flex flex-col gap-1.5">
-      <span class="px-1 text-xs font-semibold text-ink-3">{{ $t('accounts.currency') }}</span>
-      <div class="flex gap-2">
-        <button
-          v-for="item in CURRENCIES"
-          :key="item"
-          type="button"
-          class="chip disabled:opacity-40"
-          :class="{ 'chip-on': currency === item }"
-          :disabled="!!existing && currency !== item"
-          @click="currency = item"
-        >
-          {{ item === 'UZS' ? $t('accounts.som') : $t('accounts.dollar') }}
-        </button>
-      </div>
-      <span v-if="existing" class="px-1 text-xs text-ink-3">{{ $t('accounts.currencyFixed') }}</span>
+    <section class="flex flex-col gap-2">
+      <span class="section-title">{{ $t('accounts.currency') }}</span>
+      <UiSegmented v-if="!existing" v-model="currency" :options="currencyOptions" :label="$t('accounts.currency')" />
+      <template v-else>
+        <span class="field text-ink-2">{{ currency === 'UZS' ? $t('accounts.som') : $t('accounts.dollar') }}</span>
+        <span class="px-1 text-caption text-ink-3">{{ $t('accounts.currencyFixed') }}</span>
+      </template>
     </section>
 
-    <label class="flex flex-col gap-1.5">
-      <span class="px-1 text-xs font-semibold text-ink-3">{{ existing ? $t('accounts.opening') : $t('accounts.balanceNow') }}</span>
-      <input v-model="openingText" inputmode="decimal" placeholder="0" class="field num" />
-      <span class="px-1 text-xs text-ink-3">{{ $t('accounts.openingHint') }}</span>
+    <label class="flex flex-col gap-2">
+      <span class="section-title">{{ existing ? $t('accounts.opening') : $t('accounts.balanceNow') }}</span>
+      <span class="field flex items-baseline gap-2 focus-within:shadow-[inset_0_0_0_1.5px_var(--c-ink-3)]">
+        <input :value="openingText" inputmode="decimal" autocomplete="off" placeholder="0" class="num min-w-0 flex-1 bg-transparent text-lg font-semibold outline-none placeholder:font-normal placeholder:text-ink-3" @input="groupInput($event, (value) => (openingText = value))" />
+        <span class="text-sm font-medium text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
+      </span>
+      <span class="px-1 text-caption text-ink-3">{{ $t('accounts.openingHint') }}</span>
     </label>
 
-    <div class="flex flex-col divide-y divide-line overflow-hidden rounded-2xl bg-surface shadow-sm">
-      <label class="flex items-start gap-3 px-4 py-3">
-        <input v-model="cushion" type="checkbox" class="mt-0.5 size-5 accent-[var(--c-ink)]" />
-        <span class="flex flex-col">
-          <span class="text-sm font-medium">{{ $t('accounts.cushion') }}</span>
-          <span class="text-xs text-ink-3">{{ $t('accounts.cushionHint') }}</span>
-        </span>
-      </label>
-      <label class="flex items-start gap-3 px-4 py-3" :class="{ 'opacity-40': cushion }">
-        <input v-model="spendable" type="checkbox" :disabled="cushion" class="mt-0.5 size-5 accent-[var(--c-ink)]" />
-        <span class="flex flex-col">
-          <span class="text-sm font-medium">{{ $t('accounts.spendableLabel') }}</span>
-          <span class="text-xs text-ink-3">{{ $t('accounts.spendableHint') }}</span>
-        </span>
-      </label>
+    <div class="group">
+      <UiSwitch v-model="cushion" :title="$t('accounts.cushion')" :hint="$t('accounts.cushionHint')" />
+      <UiSwitch v-model="spendableShown" :disabled="cushion" :title="$t('accounts.spendableLabel')" :hint="$t('accounts.spendableHint')" />
     </div>
 
     <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
 
-    <button
-      type="button"
-      class="flex items-center justify-center gap-2 rounded-2xl bg-ink py-3 font-semibold text-surface disabled:opacity-40"
-      :disabled="!canSave || saving"
-      @click="save"
-    >
-      <Loader2 v-if="saving" class="size-5 animate-spin" />
-      {{ $t('accounts.save') }}
-    </button>
+    <UiButton size="lg" block :disabled="!canSave" :loading="saving" @click="save">{{ $t('accounts.save') }}</UiButton>
 
-    <div v-if="existing" class="flex flex-col items-center gap-2">
-      <button type="button" class="py-2 text-sm text-ink-2" @click="toggleArchive">
+    <div v-if="existing" class="-mt-2 flex flex-col items-center gap-1">
+      <UiButton variant="ghost" size="sm" @click="toggleArchive">
         {{ existing.archived ? $t('accounts.unarchive') : $t('accounts.archive') }}
-      </button>
+      </UiButton>
       <template v-if="!existing.archived">
-        <button v-if="!confirmingDelete" type="button" class="py-2 text-sm text-danger" @click="confirmingDelete = true">{{ $t('accounts.delete') }}</button>
-        <div v-else class="flex flex-col items-center gap-2 text-center">
-          <span class="text-sm text-ink-2">{{ $t('accounts.deleteConfirm') }}</span>
-          <div class="flex gap-3">
-            <button type="button" class="text-sm text-ink-2" @click="confirmingDelete = false">{{ $t('more.cancel') }}</button>
-            <button type="button" class="rounded-xl bg-danger px-3 py-1.5 text-sm font-semibold text-white" @click="remove">{{ $t('accounts.delete') }}</button>
+        <Transition name="fade" mode="out-in">
+          <UiButton v-if="!confirmingDelete" variant="ghost" size="sm" class="!text-danger" @click="confirmingDelete = true">{{ $t('accounts.delete') }}</UiButton>
+          <div v-else class="card flex w-full flex-col gap-3 p-4 text-center">
+            <span class="text-sm text-ink-2">{{ $t('accounts.deleteConfirm') }}</span>
+            <div class="flex gap-2">
+              <UiButton variant="secondary" size="sm" class="flex-1" @click="confirmingDelete = false">{{ $t('more.cancel') }}</UiButton>
+              <UiButton variant="danger" size="sm" class="flex-1" @click="remove">{{ $t('accounts.delete') }}</UiButton>
+            </div>
           </div>
-        </div>
+        </Transition>
       </template>
     </div>
   </div>

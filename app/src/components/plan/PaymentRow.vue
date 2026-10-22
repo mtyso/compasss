@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Loader2 } from 'lucide-vue-next'
+import { Check } from 'lucide-vue-next'
 import CategoryIcon from '@/components/CategoryIcon.vue'
+import MoneyAmount from '@/components/ui/MoneyAmount.vue'
+import UiSpinner from '@/components/ui/UiSpinner.vue'
+import { haptics } from '@/lib/haptics'
 import { isoDate, shiftDate } from '@/lib/dates'
-import { formatDayMonth, formatMoney } from '@/lib/format'
+import { formatDayMonth } from '@/lib/format'
 import { useMoney } from '@/stores/money'
 import { usePlan, type RecurringPayment } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
@@ -43,8 +46,10 @@ async function pay(): Promise<void> {
   failed.value = false
   try {
     await plan.pay(props.payment)
+    haptics.notify('success')
     emit('paid')
   } catch {
+    haptics.notify('error')
     failed.value = true
   } finally {
     paying.value = false
@@ -53,28 +58,36 @@ async function pay(): Promise<void> {
 </script>
 
 <template>
-  <div class="flex items-center gap-3 px-4 py-2.5">
-    <button type="button" class="flex min-w-0 flex-1 items-center gap-3 text-left" @click="emit('open')">
+  <div class="flex items-center gap-1 pr-3">
+    <button type="button" class="press-soft flex min-h-15 min-w-0 flex-1 items-center gap-3 py-2.5 pl-4 text-left" @click="emit('open')">
       <CategoryIcon :icon="root?.icon" :color="root?.color" size="sm" />
-      <span class="flex min-w-0 flex-1 flex-col">
-        <span class="truncate text-sm font-medium">{{ payment.name }}</span>
-        <span class="text-xs" :class="due.danger ? 'text-danger' : 'text-ink-3'">
-          {{ due.text }}<template v-if="account"> · {{ account.name }}</template>
+      <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span class="truncate font-medium">{{ payment.name }}</span>
+        <span class="flex min-w-0 items-center gap-1 text-caption">
+          <span class="shrink-0" :class="due.danger ? 'font-medium text-danger' : 'text-ink-3'">{{ due.text }}<template v-if="account">,</template></span>
+          <span v-if="account" class="truncate text-ink-3">{{ account.name }}</span>
         </span>
       </span>
-      <span class="num text-sm font-semibold whitespace-nowrap">{{ formatMoney(payment.amount, payment.currency, settings.locale) }}</span>
+      <MoneyAmount :amount="payment.amount" :currency="payment.currency" class="pr-2 font-semibold" />
     </button>
     <button
       type="button"
-      class="grid size-9 shrink-0 place-items-center rounded-full border transition-colors"
-      :class="failed ? 'border-danger text-danger' : 'border-line text-ink-2 active:bg-money active:text-white'"
+      class="pay press grid size-10 shrink-0 place-items-center rounded-full"
+      :class="failed ? 'bg-danger-soft text-danger' : 'bg-surface-2 text-ink-2'"
       :aria-label="$t('payments.payNamed', { name: payment.name })"
       :title="$t('payments.pay')"
       :disabled="paying"
       @click="pay"
     >
-      <Loader2 v-if="paying" class="size-4 animate-spin" />
-      <Check v-else class="size-4" />
+      <UiSpinner v-if="paying" :size="16" />
+      <Check v-else class="size-[18px]" :stroke-width="2.4" />
     </button>
   </div>
 </template>
+
+<style scoped>
+.pay:active:not(:disabled) {
+  background: var(--c-money);
+  color: #fff;
+}
+</style>
