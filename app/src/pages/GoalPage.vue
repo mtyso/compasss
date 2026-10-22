@@ -281,7 +281,8 @@ function bought(debt: { id: number } | null): void {
           <template v-else-if="goal.period.planned > 0">{{ $t('goals.periodMade') }}</template>
           <template v-else>{{ $t('goals.periodNone') }}</template>
         </p>
-        <UiButton :variant="goal.period.due > 0 ? 'primary' : 'secondary'" @click="contributeOpen = true">{{ goal.type === 'debt' ? $t('goals.pay') : $t('goals.contribute') }}</UiButton>
+        <UiButton v-if="goal.period.due > 0" @click="contributeOpen = true">{{ goal.type === 'debt' ? $t('goals.pay') : $t('goals.contribute') }}</UiButton>
+        <UiButton v-else variant="secondary" size="sm" class="self-start !bg-bg" @click="contributeOpen = true">{{ goal.type === 'debt' ? $t('goals.payMore') : $t('goals.contributeMore') }}</UiButton>
       </section>
       <section v-if="goal.type === 'buy' && goal.status === 'reached' && active" class="card flex flex-col gap-3 p-4" data-panel>
         <p class="font-medium">{{ goal.installment ? $t('goals.downReached') : $t('goals.reachedBuy') }}</p>

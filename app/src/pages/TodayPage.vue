@@ -62,6 +62,8 @@ const topGoals = computed(() => {
   return list.slice(0, 2)
 })
 const contributeOpen = ref(false)
+/** The goals panel already asks to put money aside, so its reminder card would say the same thing twice. */
+const insights = computed(() => (today.value?.goals.due_uzs ? today.value.insights.filter((i) => i.rule !== 'goal_due') : (today.value?.insights ?? [])))
 
 // Habits and tasks come from their own stores, so a tick here and on «Дела» is the same tick.
 const tasks = useTasks()
@@ -168,9 +170,9 @@ function saveValue(value: number): void {
               </RouterLink>
             </div>
             <TransitionGroup name="list" tag="div" class="relative flex flex-col gap-2.5">
-              <InsightCard v-for="insight in today.insights" :key="insight.id" :insight="insight" compact />
+              <InsightCard v-for="insight in insights" :key="insight.id" :insight="insight" compact />
             </TransitionGroup>
-            <UiEmpty v-if="!today.insights.length" :icon="Lightbulb" tone="money" :text="$t('today.adviceEmpty')" />
+            <UiEmpty v-if="!insights.length" :icon="Lightbulb" tone="money" :text="$t('today.adviceEmpty')" />
             <div class="group">
               <UiRow :to="{ name: 'can-afford' }" :title="$t('advice.canAfford')" :subtitle="$t('advice.canAffordHint')">
                 <template #leading>

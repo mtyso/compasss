@@ -35,10 +35,5 @@ export function useGoalText() {
     return t(goal.forecast.fact_on ? 'goals.factOn' : 'goals.planOn', { date: dayYear(on) })
   }
 
-  /** One line under a goal in a list. */
-  function line(goal: Goal): string {
-    return [status(goal), forecast(goal)].filter(Boolean).join(' · ')
-  }
-
-  return { money, day, dayYear, status, amounts, forecast, line }
+  return { money, day, dayYear, status, amounts, forecast }
 }
