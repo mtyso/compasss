@@ -7,6 +7,7 @@ use App\Advisor\AdvisorContext;
 /**
  * «Подушки хватит на 1,4 месяца обычных расходов. Цель 3 месяца: откладывай по 800 000.»
  * Once a month, measured against the usual monthly spending. The monthly amount reaches the target within a year.
+ * A cushion that is a goal has its own plan: then only its size is reported, and the goal rules do the rest.
  */
 final class Cushion extends BaseRule
 {
@@ -37,6 +38,10 @@ final class Cushion extends BaseRule
                 'target_uzs' => $typical * $target,
                 'monthly_uzs' => self::roundUp(intdiv($typical * $target, 12)),
             ])];
+        }
+        $isGoal = $context->goals()->collecting()->contains(fn ($s) => (bool) $s->goal->account?->is_cushion);
+        if ($cushion < $typical * $target && $isGoal) {
+            return [];
         }
         if ($cushion < $typical * $target) {
             return [$this->finding($months < 1 ? 'warn' : 'info', $context->month(), '', [

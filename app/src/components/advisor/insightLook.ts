@@ -1,5 +1,7 @@
 import type { Component } from 'vue'
-import { Coffee, Gauge, HandCoins, PartyPopper, PenLine, PieChart, PiggyBank, Shield, ShoppingBag, TrendingUp } from 'lucide-vue-next'
+import {
+  CalendarClock, Coffee, Flag, Gauge, HandCoins, PartyPopper, PenLine, PieChart, PiggyBank, Shield, ShoppingBag, Target, TrendingUp, Trophy,
+} from 'lucide-vue-next'
 import type { Severity } from '@/stores/advisor'
 
 // One glyph per rule, so a glance tells what the advice is about; the colour tells how much it matters.
@@ -10,6 +12,10 @@ export const RULE_ICONS: Record<string, Component> = {
   large_spend: ShoppingBag,
   small_things: Coffee,
   income_split: HandCoins,
+  goal_due: CalendarClock,
+  goal_leftover: Target,
+  goal_pace: Flag,
+  goal_reached: Trophy,
   cushion: Shield,
   savings_rate: PiggyBank,
   good_news: PartyPopper,

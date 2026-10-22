@@ -34,6 +34,20 @@ final class Money
         return self::round(bcmul($major, $rate, 8));
     }
 
+    /** Converts whole som into minor units of $currency at $rate, rounding half away from zero. */
+    public static function fromUzs(int $amountUzs, string $currency, string $rate): int
+    {
+        if ($currency === 'UZS') {
+            return $amountUzs;
+        }
+        if (bccomp($rate, '0', 4) <= 0) {
+            return 0;
+        }
+        $major = bcdiv((string) $amountUzs, $rate, 8);
+
+        return self::round(bcmul($major, bcpow('10', (string) self::decimals($currency)), 8));
+    }
+
     private static function round(string $value): int
     {
         $negative = str_starts_with($value, '-');

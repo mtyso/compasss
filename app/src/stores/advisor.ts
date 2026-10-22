@@ -4,6 +4,8 @@ import { api } from '@/lib/api'
 import type { Currency } from '@/lib/format'
 import { isoMonth } from '@/lib/dates'
 import { useAuth } from '@/stores/auth'
+import { useGoals, type GoalsPlan } from '@/stores/goals'
+import { useMoney } from '@/stores/money'
 import { usePlan, type Budget } from '@/stores/plan'
 
 export type Severity = 'alert' | 'warn' | 'good' | 'info'
@@ -15,7 +17,7 @@ export interface Insight {
   status: 'new' | 'seen' | 'useful' | 'dismissed'
   title: string
   body: string
-  action: 'mark_one_off' | null
+  action: 'mark_one_off' | 'contribute' | null
   created_at: string
 }
 
@@ -36,7 +38,7 @@ export type Strictness = 'soft' | 'normal' | 'strict'
 
 export const RULES = [
   'budget_threshold', 'category_pace', 'overspend_forecast', 'large_spend', 'small_things',
-  'income_split', 'cushion', 'savings_rate', 'good_news', 'forgot_to_record',
+  'income_split', 'goal_due', 'goal_leftover', 'goal_pace', 'goal_reached', 'cushion', 'savings_rate', 'good_news', 'forgot_to_record',
 ] as const
 
 /** The advisor: the «Советы» feed, «Можно ли купить?» and its settings (docs/PLAN.md, section 2). */
@@ -91,9 +93,14 @@ export const useAdvisor = defineStore('advisor', () => {
     }
   }
 
+  /** The button on an insight: «Отметить разовой», or «Отложить» into goals (which moves money). */
   async function act(insight: Insight): Promise<void> {
-    const result = await api<{ insight: Insight }>(`/insights/${insight.id}/action`, { method: 'POST' })
+    const result = await api<{ insight: Insight; goals?: GoalsPlan }>(`/insights/${insight.id}/action`, { method: 'POST' })
     replace(result.insight)
+    if (result.goals) {
+      useGoals().apply(result.goals)
+      await useMoney().changed()
+    }
   }
 
   async function canAfford(input: { amount: number; currency: Currency; category_id: number | null }): Promise<PurchaseVerdict> {

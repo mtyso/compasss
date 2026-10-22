@@ -28,6 +28,19 @@ final class MonthDay
         return $candidate;
     }
 
+    /** The last occurrence of $day on or before $from. */
+    public static function previous(int $day, Carbon $from): Carbon
+    {
+        $from = $from->copy()->startOfDay();
+        $candidate = self::in($from->year, $from->month, $day);
+        if ($candidate->gt($from)) {
+            $before = $from->copy()->startOfMonth()->subMonth();
+            $candidate = self::in($before->year, $before->month, $day);
+        }
+
+        return $candidate;
+    }
+
     /** The same day of the following month, e.g. the due date after paying. */
     public static function nextMonth(Carbon $date, int $day): Carbon
     {

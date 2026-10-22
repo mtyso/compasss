@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Lightbulb, Plus, Repeat, Scale, Wallet } from 'lucide-vue-next'
+import { Lightbulb, Plus, Repeat, Scale, Settings, Target, Wallet } from 'lucide-vue-next'
 import InsightCard from '@/components/advisor/InsightCard.vue'
+import ContributeSheet from '@/components/goals/ContributeSheet.vue'
+import GoalRow from '@/components/goals/GoalRow.vue'
 import SectionBlock from '@/components/SectionBlock.vue'
 import HabitRow from '@/components/things/HabitRow.vue'
 import HabitSheet from '@/components/things/HabitSheet.vue'
@@ -10,15 +12,18 @@ import HabitValueSheet from '@/components/things/HabitValueSheet.vue'
 import TaskRow from '@/components/things/TaskRow.vue'
 import TaskSheet from '@/components/things/TaskSheet.vue'
 import { useTaskToggle, useThingActions } from '@/components/things/useThingActions'
+import MoneyAmount from '@/components/ui/MoneyAmount.vue'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
 import UiButton from '@/components/ui/UiButton.vue'
+import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import LimitCard from '@/components/plan/LimitCard.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
 import { isoDate } from '@/lib/dates'
-import { formatDayHeading } from '@/lib/format'
+import { formatDayHeading, formatDayMonth } from '@/lib/format'
 import { groupTasks } from '@/lib/tasks'
+import { useGoals } from '@/stores/goals'
 import { useHabits, type Habit } from '@/stores/habits'
 import { useMoney } from '@/stores/money'
 import { usePlan } from '@/stores/plan'
@@ -45,6 +50,20 @@ async function load(): Promise<void> {
 
 onMounted(load)
 watch(() => money.revision, load)
+
+// The goals come with «Сегодня»: the main ones here, the period's contribution and «Отложить».
+const goals = useGoals()
+watch(
+  () => plan.today?.goals,
+  (next) => next && goals.apply(next),
+)
+const topGoals = computed(() => {
+  const list = today.value?.goals.goals.filter((g) => !g.done_at) ?? []
+  return list.slice(0, 2)
+})
+const contributeOpen = ref(false)
+/** The goals panel already asks to put money aside, so its reminder card would say the same thing twice. */
+const insights = computed(() => (today.value?.goals.due_uzs ? today.value.insights.filter((i) => i.rule !== 'goal_due') : (today.value?.insights ?? [])))
 
 // Habits and tasks come from their own stores, so a tick here and on «Дела» is the same tick.
 const tasks = useTasks()
@@ -98,7 +117,13 @@ function saveValue(value: number): void {
 
 <template>
   <div class="page page-wide">
-    <ScreenHeader :title="$t('today.title')" :overline="heading" />
+    <ScreenHeader :title="$t('today.title')" :overline="heading">
+      <template #trailing>
+        <UiIconButton :label="$t('ui.settings')" class="md:hidden" @click="router.push({ name: 'more' })">
+          <Settings class="size-[22px]" :stroke-width="1.9" />
+        </UiIconButton>
+      </template>
+    </ScreenHeader>
 
     <!-- Phone: one column in this order. Wide screen: money on the left, the day's things on the right. -->
     <div class="page-columns">
@@ -119,15 +144,35 @@ function saveValue(value: number): void {
 
           <section class="flex flex-col gap-3">
             <div class="flex items-baseline justify-between gap-3">
+              <h2 class="section-title">{{ $t('today.goals') }}</h2>
+              <RouterLink v-if="today.goals.goals.length" :to="{ name: 'goals' }" class="section-link">{{ $t('today.allGoals') }}</RouterLink>
+            </div>
+            <div v-if="today.goals.due_uzs > 0" class="card flex items-center gap-3 px-4 py-3" data-panel>
+              <div class="flex min-w-0 flex-1 flex-col">
+                <span class="text-caption text-ink-2">{{ $t('goals.dueUntil', { date: formatDayMonth(today.goals.period.end, settings.locale) }) }}</span>
+                <MoneyAmount :amount="today.goals.due_uzs" animate class="text-lg font-semibold" />
+              </div>
+              <UiButton size="sm" @click="contributeOpen = true">{{ $t('goals.contribute') }}</UiButton>
+            </div>
+            <div v-if="topGoals.length" class="group">
+              <GoalRow v-for="goal in topGoals" :key="goal.id" :goal="goal" :main="goal.id === today.goals.main_id" />
+            </div>
+            <UiEmpty v-else :icon="Target" tone="goal" :text="$t('today.goalsEmpty')">
+              <UiButton size="sm" variant="secondary" :to="{ name: 'goals' }">{{ $t('goals.new') }}</UiButton>
+            </UiEmpty>
+          </section>
+
+          <section class="flex flex-col gap-3">
+            <div class="flex items-baseline justify-between gap-3">
               <h2 class="section-title">{{ $t('today.advice') }}</h2>
               <RouterLink :to="{ name: 'advice' }" class="section-link">
                 {{ today.insights_new > today.insights.length ? $t('today.allAdviceNew', { n: today.insights_new }) : $t('today.allAdvice') }}
               </RouterLink>
             </div>
             <TransitionGroup name="list" tag="div" class="relative flex flex-col gap-2.5">
-              <InsightCard v-for="insight in today.insights" :key="insight.id" :insight="insight" compact />
+              <InsightCard v-for="insight in insights" :key="insight.id" :insight="insight" compact />
             </TransitionGroup>
-            <UiEmpty v-if="!today.insights.length" :icon="Lightbulb" tone="money" :text="$t('today.adviceEmpty')" />
+            <UiEmpty v-if="!insights.length" :icon="Lightbulb" tone="money" :text="$t('today.adviceEmpty')" />
             <div class="group">
               <UiRow :to="{ name: 'can-afford' }" :title="$t('advice.canAfford')" :subtitle="$t('advice.canAffordHint')">
                 <template #leading>
@@ -195,6 +240,7 @@ function saveValue(value: number): void {
     <TaskSheet v-model:open="taskSheetOpen" :task="editingTask" :draft="{ due_on: day }" />
     <HabitSheet v-model:open="habitSheetOpen" :habit="editingHabit" />
     <HabitValueSheet v-model:open="valueSheetOpen" :habit="valueHabit" @save="saveValue" />
+    <ContributeSheet v-model:open="contributeOpen" />
   </div>
 </template>
 

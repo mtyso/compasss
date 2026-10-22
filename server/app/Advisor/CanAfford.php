@@ -2,6 +2,7 @@
 
 namespace App\Advisor;
 
+use App\Goals\GoalMath;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -13,6 +14,8 @@ use Illuminate\Support\Carbon;
  *   yes_but  fits the free money, but the daily limit for the days left goes down;
  *   wait     the limit would drop below the usual essential spending per day, or the category budget would be exceeded;
  *   no       more than the free money: it would come out of the payments set aside, the minimum balance or the cushion.
+ *
+ * With a goal being collected, every verdict also says what the sum is in days of saving for it (docs/PLAN.md, 2.6).
  */
 class CanAfford
 {
@@ -34,7 +37,7 @@ class CanAfford
                 $reasons[] = ['key' => 'cushion_after', 'params' => ['cushion_months' => round($cushionLeft / $typical, 1)]];
             }
 
-            return new PurchaseVerdict('no', $amountUzs, $limit->limitUzs, 0, $limit->daysLeft, $reasons);
+            return new PurchaseVerdict('no', $amountUzs, $limit->limitUzs, 0, $limit->daysLeft, [...$reasons, ...$this->goalDays($context, $amountUzs)]);
         }
 
         // Bought now, it is paid from the free money like a one-off: the rest is spread over the days left.
@@ -73,6 +76,18 @@ class CanAfford
                 : ['key' => 'until_month', 'params' => ['date_on' => $waitUntil->toDateString()]];
         }
 
-        return new PurchaseVerdict($verdict, $amountUzs, $limit->limitUzs, $limitAfter, $limit->daysLeft, $reasons, $waitUntil);
+        return new PurchaseVerdict($verdict, $amountUzs, $limit->limitUzs, $limitAfter, $limit->daysLeft, [...$reasons, ...$this->goalDays($context, $amountUzs)], $waitUntil);
+    }
+
+    /** @return list<array{key: string, params: array<string, mixed>}> «Это 9 дней накоплений на Dongfeng 008» */
+    private function goalDays(AdvisorContext $context, int $amountUzs): array
+    {
+        $main = $context->goals()->mainSaving();
+        if ($main === null) {
+            return [];
+        }
+        $days = (int) round($amountUzs / $main->monthlyUzs * GoalMath::MONTH_DAYS);
+
+        return $days >= 1 ? [['key' => 'goal_days', 'params' => ['days' => $days, 'goal_id' => $main->goal->id]]] : [];
     }
 }

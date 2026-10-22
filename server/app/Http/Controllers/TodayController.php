@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Advisor\Advisor;
+use App\Goals\GoalPlanner;
 use App\Models\Habit;
 use App\Models\RecurringPayment;
 use App\Money\Plan;
@@ -12,19 +13,22 @@ use Illuminate\Http\Request;
 /** Everything the «Сегодня» screen needs in one request (docs/PLAN.md, section 7). */
 class TodayController extends Controller
 {
-    public function __invoke(Request $request, Plan $plan, Advisor $advisor): JsonResponse
+    public function __invoke(Request $request, Plan $plan, Advisor $advisor, GoalPlanner $planner): JsonResponse
     {
         $user = $request->user();
         $now = now();
         $advisor->morning($user, $now);
         $today = $now->copy()->startOfDay();
-        $limit = $plan->limit($user, $now);
+        $goals = $planner->plan($user, $now);
+        $limit = $plan->limit($user, $now, $goals);
         $income = $plan->nextIncome($user, $today);
 
         return response()->json([
             'date' => $today->toDateString(),
             'limit' => $limit->toApi(),
             'has_accounts' => $user->accounts()->whereNull('archived_at')->exists(),
+            // Goals come right under the limit: they decide how much of the money is for spending (D25).
+            'goals' => $goals->toApi(),
             'next_income' => $income?->toApi($today),
             // Overdue ones and those due before the next income, i.e. the ones the limit sets aside.
             'payments' => $plan->unpaidPayments($user)

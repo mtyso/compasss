@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationNormalized } from 'vue-router'
 import {
-  CalendarCheck, CalendarClock, Ellipsis, HandCoins, LayoutGrid, Lightbulb, PieChart, Plus, Scale, Settings, Sun, Wallet, WalletCards,
+  CalendarCheck, CalendarClock, HandCoins, LayoutGrid, Lightbulb, PieChart, Plus, Scale, Settings, Sun, Target, Wallet, WalletCards,
 } from 'lucide-vue-next'
 import QuickAddSheet from '@/components/QuickAddSheet.vue'
 import CompassMark from '@/components/ui/CompassMark.vue'
@@ -25,15 +25,16 @@ const tabs = [
   { to: '/', label: 'nav.today', icon: Sun },
   { to: '/money', label: 'nav.money', icon: Wallet },
   { to: '/tasks', label: 'nav.tasks', icon: CalendarCheck },
-  { to: '/more', label: 'nav.more', icon: Ellipsis },
+  { to: '/goals', label: 'nav.goals', icon: Target },
 ] as const
 
-// On a wide screen the sidebar lists the screens a phone reaches through «Ещё» as well.
+// On a wide screen the sidebar lists the screens a phone reaches through settings as well.
 const sideLinks = [
   [
     { name: 'today', label: 'nav.today', icon: Sun },
     { name: 'money', label: 'nav.money', icon: Wallet },
     { name: 'tasks', label: 'nav.tasks', icon: CalendarCheck },
+    { name: 'goals', label: 'nav.goals', icon: Target, also: ['goal'] },
     { name: 'advice', label: 'more.advice', icon: Lightbulb },
     { name: 'can-afford', label: 'advice.canAfford', icon: Scale },
   ],
@@ -51,10 +52,10 @@ function isActive(link: { name: string; also?: readonly string[] }): boolean {
   return name === link.name || !!link.also?.includes(name)
 }
 
-/** The tab a screen belongs to: Счета and Категории live under Ещё. */
+/** The tab a screen belongs to: Счета and Категории live under settings, reached from «Сегодня». */
 function tabOf(path: string): string {
   const first = path.split('/').filter(Boolean)[0]
-  return first ? `/${first}` : '/'
+  return first && first !== 'more' ? `/${first}` : '/'
 }
 const activeTab = computed(() => tabOf(route.path))
 

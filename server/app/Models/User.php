@@ -27,6 +27,8 @@ class User extends Authenticatable
         'budget_alert_percent' => ['integer', 'min:50', 'max:100'],
         'large_spend_factor' => ['numeric', 'min:1.5', 'max:10'],
         'cushion_target_months' => ['integer', 'min:1', 'max:12'],
+        // Goals (D25): `first` sets this period's contributions aside before the daily limit, `leftover` saves what is left
+        'goal_mode' => ['string', 'in:first,leftover'],
         // «Не показывать такое»: rules switched off
         'muted_rules' => ['array', 'max:20'],
         'muted_rules.*' => ['string', 'distinct', 'in:'.Insight::RULES_LIST],
@@ -89,6 +91,11 @@ class User extends Authenticatable
     public function insights(): HasMany
     {
         return $this->hasMany(Insight::class);
+    }
+
+    public function goals(): HasMany
+    {
+        return $this->hasMany(Goal::class);
     }
 
     /** A user setting with its default (docs/PLAN.md, 2.5: thresholds are settings). */
