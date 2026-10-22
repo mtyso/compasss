@@ -89,6 +89,7 @@ class AccountController extends Controller
             'opening_balance' => ['sometimes', 'integer', 'min:-1000000000000', 'max:1000000000000'],
             'spendable' => ['sometimes', 'boolean'],
             'is_cushion' => ['sometimes', 'boolean'],
+            'due_on' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'sort' => ['sometimes', 'integer', 'min:0', 'max:1000'],
             'archived' => $creating ? ['prohibited'] : ['sometimes', 'boolean'],
         ]);

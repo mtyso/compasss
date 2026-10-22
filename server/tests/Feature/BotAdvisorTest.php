@@ -4,6 +4,7 @@ use App\Models\ExchangeRate;
 use App\Models\Insight;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Money\Debts;
 use App\Money\TransactionWriter;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Carbon;
@@ -336,6 +337,34 @@ it('pushes a payment reminder the evening before and pays it once from its butto
     advTap("ins:pay:{$reminder->id}");
     expect(advToast())->toBe('Уже отмечен как оплаченный.')
         ->and(Transaction::where('recurring_payment_id', $payment->id)->count())->toBe(1);
+});
+
+// --- Money lent ----------------------------------------------------------------------
+
+it('pushes «обещал вернуть» and records the return once from its button', function () {
+    [$lent] = app(Debts::class)->lend($this->user, $this->card, ['name' => 'Бекзод', 'amount' => 500_000, 'due_on' => '2026-10-22'], now());
+    $this->travelTo(Carbon::parse('2026-10-22 08:00', 'Asia/Tashkent'));
+    $this->artisan('advisor:run morning')->assertSuccessful();
+    $this->artisan('bot:digest morning')->assertSuccessful();
+    $this->artisan('bot:notify')->assertSuccessful();
+    $reminder = $this->user->insights()->where('rule', 'lent_due')->sole();
+
+    // Not in the summary, but right after it with its own button.
+    [$summary, $sent] = advCalls('sendRichMessage');
+    expect($summary['rich_message']['html'])->not->toContain('Бекзод')
+        ->and($sent['rich_message']['html'])->toContain(advNb('Сегодня Бекзод обещал вернуть 500 000 сум'))
+        ->and(advButtons($sent))->toBe(["ins:returned:{$reminder->id}", "ins:useful:{$reminder->id}", "ins:mute:{$reminder->id}", 'https://kompas.example.uz/advice']);
+
+    advTap("ins:returned:{$reminder->id}");
+    expect(advToast())->toBe(advNb('Записал: Бекзод вернул 500 000 сум'))
+        ->and($reminder->fresh()->status)->toBe('useful')
+        ->and($lent->fresh()->archived_at)->not->toBeNull()
+        ->and(Transaction::where('account_id', $lent->id)->where('to_account_id', $this->card->id)->count())->toBe(1)
+        ->and(advButtons(collect(advCalls('editMessageReplyMarkup'))->last()))->toBe(['https://kompas.example.uz/advice']);
+
+    advTap("ins:returned:{$reminder->id}");
+    expect(advToast())->toBe('Уже записано, что вернул.')
+        ->and(Transaction::where('account_id', $lent->id)->count())->toBe(1);
 });
 
 it('keeps payment reminders out of the morning summary unless money is missing', function () {

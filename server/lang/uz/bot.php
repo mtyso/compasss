@@ -32,6 +32,8 @@ return [
         'contribute' => 'Ajratish',
         'useful' => 'Foydali',
         'mute' => 'Bunday yubormang',
+        'returned' => 'Qaytardi',
+        'roll' => "To'lovni o'tkazish",
     ],
 
     'record' => [
@@ -122,6 +124,13 @@ return [
         'weekly_more' => "O'tgan haftadan :amount ko'p.",
         'weekly_same' => "O'tgan hafta bilan bir xil.",
         'weekly_top' => "Eng ko'p ketgan",
+    ],
+
+    'debts' => [
+        'returned' => 'Yozdim: :name :amount qaytardi',
+        'returned_before' => 'Qaytargani allaqachon yozilgan.',
+        'rolled' => "«:name» bo'yicha to'lov endi oyiga :amount",
+        'rolled_before' => "To'lov allaqachon o'tkazilgan.",
     ],
 
     'pay' => [

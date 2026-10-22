@@ -49,8 +49,10 @@ class Commands
         // advisor:run morning is scheduled first; this covers a cron that ran late or out of order.
         $this->advisor->morning($user, now());
         // A payment reminder repeats the summary's own payments block, with «Оплачено» under it:
-        // only one that says money is missing adds something.
+        // only one that says money is missing adds something. «Обещал вернуть» needs its «Вернул», so it
+        // stays unsent and bot:notify brings it right after the summary as a message of its own.
         [$repeats, $insights] = Notifier::unsent($user, now())
+            ->reject(fn (Insight $i) => $i->rule === 'lent_due')
             ->partition(fn (Insight $i) => $i->rule === 'payment_due' && ($i->payload['short_amount'] ?? 0) <= 0);
         $insights = $insights->take(3);
         $this->telegram->sendCard($chatId, $this->cards->today($user, morning: true, insights: $insights), $this->cards->todayKeyboard($user));

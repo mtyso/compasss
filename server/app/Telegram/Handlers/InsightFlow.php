@@ -12,7 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * The buttons under an insight the bot sent on its own (App\Telegram\Notifier): «Полезно»,
- * «Не присылать такое», «Разовая покупка», «Отложить» and «Оплачено», the same answers the «Советы» feed takes.
+ * «Не присылать такое», «Разовая покупка», «Отложить», «Оплачено», «Вернул» and «Перенести платёж», the same
+ * answers the «Советы» feed takes.
  */
 class InsightFlow
 {
@@ -24,7 +25,7 @@ class InsightFlow
         $chatId = (int) ($query['message']['chat']['id'] ?? 0);
         $messageId = (int) ($query['message']['message_id'] ?? 0);
 
-        $insight = preg_match('/^ins:(useful|mute|oneoff|save|pay):(\d+)$/', $query['data'] ?? '', $m)
+        $insight = preg_match('/^ins:(useful|mute|oneoff|save|pay|returned|roll):(\d+)$/', $query['data'] ?? '', $m)
             ? $user->insights()->find((int) $m[2])
             : null;
         if (! $insight) {
@@ -52,6 +53,14 @@ class InsightFlow
                 $toast = $this->pay($insight, $user);
                 break;
 
+            case 'returned':
+                $toast = $this->returned($insight, $user);
+                break;
+
+            case 'roll':
+                $toast = $this->roll($insight, $user);
+                break;
+
             default: // oneoff
                 if ($insight->action() === 'mark_one_off') {
                     $insight->markOneOff();
@@ -60,8 +69,9 @@ class InsightFlow
         }
 
         $this->telegram->answerCallbackQuery($query['id'], $toast);
-        // Answered: only «Открыть Компас» stays under the text. A refused «Отложить» or «Оплачено» keeps its buttons.
-        $this->telegram->editKeyboard($chatId, $messageId, $this->cards->insightKeyboard($insight, $user, answered: ! in_array($insight->action(), ['contribute', 'pay'], true)));
+        // Answered: only «Открыть Компас» stays under the text. A refused «Отложить», «Оплачено», «Вернул» or
+        // «Перенести платёж» keeps its buttons.
+        $this->telegram->editKeyboard($chatId, $messageId, $this->cards->insightKeyboard($insight, $user, answered: ! in_array($insight->action(), ['contribute', 'pay', 'returned', 'roll'], true)));
     }
 
     /** «Оплачено» under a payment reminder, as under the day's summary (Commands::pay). */
@@ -77,6 +87,38 @@ class InsightFlow
         }
 
         return $toast;
+    }
+
+    /** «Вернул» under «Бекзод обещал вернуть»: the money back on the account it was lent from (Insight::returned). */
+    public function returned(Insight $insight, User $user): string
+    {
+        $l = $user->locale;
+        if ($insight->action() !== 'returned') {
+            return __('bot.debts.returned_before', [], $l);
+        }
+        try {
+            $transaction = $insight->returned(now(), 'bot');
+        } catch (ValidationException $e) {
+            return (string) collect($e->errors())->flatten()->first();
+        }
+
+        return __('bot.debts.returned', ['name' => $insight->payload['name'] ?? '', 'amount' => Fmt::money((int) $transaction->amount, $transaction->currency, $l)], $l);
+    }
+
+    /** «Перенести платёж» under a paid-off debt: its payment on top of the next debt's (Insight::roll). */
+    public function roll(Insight $insight, User $user): string
+    {
+        $l = $user->locale;
+        if ($insight->action() !== 'roll') {
+            return __('bot.debts.rolled_before', [], $l);
+        }
+        try {
+            $goal = $insight->roll(now());
+        } catch (ValidationException $e) {
+            return (string) collect($e->errors())->flatten()->first();
+        }
+
+        return __('bot.debts.rolled', ['name' => $insight->payload['next'] ?? $goal->title, 'amount' => Fmt::money((int) $goal->monthly_amount, $goal->currency ?? 'UZS', $l)], $l);
     }
 
     /**
