@@ -3,6 +3,8 @@
 namespace App\Money;
 
 use App\Advisor\DailyLimit;
+use App\Goals\GoalPlanner;
+use App\Goals\GoalsPlan;
 use App\Models\Account;
 use App\Models\IncomeSchedule;
 use App\Models\RecurringPayment;
@@ -14,9 +16,10 @@ use Illuminate\Support\Collection;
 /** Gathers what the daily limit needs from the database and hands it to App\Advisor\DailyLimit. */
 class Plan
 {
-    public function __construct(private ExchangeRates $rates) {}
+    public function __construct(private ExchangeRates $rates, private GoalPlanner $goals) {}
 
-    public function limit(User $user, Carbon $now): DailyLimit
+    /** @param  GoalsPlan|null  $goals  the goals' plan when the caller already has it */
+    public function limit(User $user, Carbon $now, ?GoalsPlan $goals = null): DailyLimit
     {
         $today = $now->copy()->startOfDay();
         $spendable = $this->spendableAccounts($user);
@@ -39,6 +42,8 @@ class Plan
                 ->all(),
             nextIncome: $this->nextIncome($user, $today)?->nextDate($today),
             minBalanceUzs: (int) $user->setting('min_balance_uzs', 0),
+            // This period's contributions to goals come first (docs/PLAN.md, D25).
+            plannedSavingsUzs: ($goals ?? $this->goals->plan($user, $now))->reservedUzs(),
         );
     }
 

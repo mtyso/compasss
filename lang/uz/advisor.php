@@ -38,6 +38,10 @@ return [
             ],
         ],
         'income_split' => [
+            'goals' => [
+                'title' => 'Daromad tushdi: :amount_uzs',
+                'body' => "Keyingi daromadgacha majburiy to'lovlar :payments_uzs, reja bo'yicha maqsadlarga :goals_uzs. Yashash uchun :left_uzs qoladi, bu kuniga :per_day_uzs. «Ajratish»ni bosing, pul jamg'armalarga o'tadi.",
+            ],
             'cushion' => [
                 'title' => 'Daromad tushdi: :amount_uzs',
                 'body' => "Keyingi daromadgacha majburiy to'lovlar :payments_uzs, yostiqqa :cushion_uzs ajratishni maslahat beraman. Yashash uchun :left_uzs qoladi, bu kuniga :per_day_uzs.",
@@ -49,6 +53,58 @@ return [
             'plain' => [
                 'title' => 'Daromad tushdi: :amount_uzs',
                 'body' => "Keyingi daromadgacha majburiy to'lovlar :payments_uzs. Yashash uchun :left_uzs qoladi, bu kuniga :per_day_uzs.",
+            ],
+        ],
+        'goal_due' => [
+            'first' => [
+                'title' => 'Maqsadlarga hali :goals_uzs ajratilmagan',
+                'body' => "Keyingi daromadgacha kunlar: :days. Bu pul kunlik limitga kirmaydi: tasodifan sarflab qo'ymaslik uchun ajratib qo'ying.",
+            ],
+            'leftover' => [
+                'title' => 'Maqsadlarga hali :goals_uzs ajratilmagan',
+                'body' => "Keyingi daromadgacha kunlar: :days. Pul qolgan bo'lsa, hozir ajrating, aks holda maqsadlar rejasi suriladi.",
+            ],
+        ],
+        'goal_leftover' => [
+            'days' => [
+                'title' => 'Daromadgacha :left_uzs qoldi',
+                'body' => '«:goal» maqsadiga :amount ajrating: maqsad taxminan :days kun yaqinlashadi.',
+            ],
+            'plain' => [
+                'title' => 'Daromadgacha :left_uzs qoldi',
+                'body' => 'Pul tarqab ketmasidan «:goal» maqsadiga :amount ajrating.',
+            ],
+        ],
+        'goal_pace' => [
+            'behind' => [
+                'title' => '«:goal» jadvaldan :behind_amount ortda',
+                'body' => "Ulgurish uchun (:deadline_on) oyiga :monthly_amount ajrating. Maqsad ekranida «Qanday tezlashtirish»ni ko'ring.",
+            ],
+            'late' => [
+                'title' => '«:goal» maqsadining muddati o\'tdi',
+                'body' => "Yana :remaining_amount yig'ish kerak. Yangi muddat qo'ying, reja qayta hisoblanadi.",
+            ],
+            'ahead' => [
+                'title' => '«:goal»: rejadan tezroq ketyapsiz',
+                'body' => "Shu sur'atda :fact_on gacha yig'asiz, muddatdan (:deadline_on) oldin.",
+            ],
+        ],
+        'goal_reached' => [
+            'save' => [
+                'title' => '«:goal» maqsadi yig\'ildi!',
+                'body' => ":target_amount joyida. Pul o'zingiz o'tkazmaguningizcha jamg'armada turadi.",
+            ],
+            'buy' => [
+                'title' => '«:goal» uchun yig\'ildi!',
+                'body' => "Sotib olish mumkin. Sotib olgach, maqsad ekranida «Sotib oldim»ni bosing, xaridni yozib qo'yaman.",
+            ],
+            'installment' => [
+                'title' => '«:goal» uchun boshlang\'ich to\'lov yig\'ildi!',
+                'body' => ":target_amount joyida. Sotib olgach, «Sotib oldim»ni bosing: qolgani oyiga :payment_amount to'lovli muddatli to'lovga aylanadi.",
+            ],
+            'debt' => [
+                'title' => '«:goal» qarzi yopildi!',
+                'body' => "To'lovlarga ketayotgan pulni endi keyingi maqsadga yo'naltirish mumkin.",
             ],
         ],
         'cushion' => [
@@ -114,6 +170,7 @@ return [
             'cushion_short' => 'Bunga hatto butun yostiq ham yetmaydi.',
             'until_income' => 'Daromad tushgandan keyin (:date_on) bemalol yetadi.',
             'until_month' => ':date_on dan yangi byudjet boshlanadi.',
+            'goal_days' => "Bu «:goal» uchun :days kunlik jamg'arma.",
         ],
     ],
 ];

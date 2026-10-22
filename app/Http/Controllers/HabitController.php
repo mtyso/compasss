@@ -91,6 +91,9 @@ class HabitController extends Controller
             'type' => [$required, Rule::in(Habit::TYPES)],
             'target' => ['sometimes', 'integer', 'min:0', 'max:100000'],
             'unit' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'goal_id' => ['sometimes', 'nullable', 'integer', Rule::exists('goals', 'id')->where('user_id', $request->user()->id)],
+            // A money habit: what a kept day saves, in som
+            'saves_uzs' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000000000'],
             'schedule' => [$required, 'array'],
             'schedule.days' => [Rule::requiredIf($request->has('schedule') && ! $request->has('schedule.per_week')), 'array', 'min:1', 'max:7'],
             'schedule.days.*' => ['integer', 'between:1,7', 'distinct'],

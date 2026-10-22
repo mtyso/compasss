@@ -19,13 +19,14 @@ class Habit extends Model
 
     public const TYPES = ['check', 'count', 'limit'];
 
-    protected $fillable = ['name', 'type', 'target', 'unit', 'schedule', 'color', 'icon', 'sort', 'started_on', 'archived_at'];
+    protected $fillable = ['goal_id', 'name', 'type', 'target', 'unit', 'saves_uzs', 'schedule', 'color', 'icon', 'sort', 'started_on', 'archived_at'];
 
     // `started_on` stays uncast and is always written as Y-m-d.
     protected function casts(): array
     {
         return [
             'target' => 'integer',
+            'saves_uzs' => 'integer',
             'schedule' => 'array',
             'sort' => 'integer',
             'archived_at' => 'datetime',
@@ -70,10 +71,12 @@ class Habit extends Model
 
         return [
             'id' => $this->id,
+            'goal_id' => $this->goal_id,
             'name' => $this->name,
             'type' => $this->type,
             'target' => $this->target,
             'unit' => $this->unit,
+            'saves_uzs' => $this->saves_uzs,
             'schedule' => $this->schedule,
             'color' => $this->color,
             'icon' => $this->icon,
