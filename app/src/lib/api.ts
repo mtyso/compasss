@@ -14,14 +14,26 @@ export class ApiError extends Error {
 }
 
 let token: string | null = null
+let locale = 'ru'
+let onUnauthorized: (() => void) | null = null
 
 export function setApiToken(value: string | null): void {
   token = value
 }
 
+export function setApiLocale(value: string): void {
+  locale = value
+}
+
+/** Called when the server rejects the token, so the app can sign out. */
+export function setUnauthorizedHandler(handler: () => void): void {
+  onUnauthorized = handler
+}
+
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
+  headers.set('Accept-Language', locale)
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
@@ -34,6 +46,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const body = isJson ? await response.json() : null
 
   if (!response.ok) {
+    if (response.status === 401 && token) {
+      onUnauthorized?.()
+    }
     throw new ApiError(response.status, body?.message ?? response.statusText, body?.errors ?? {})
   }
   return body as T

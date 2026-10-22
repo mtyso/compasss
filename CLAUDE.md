@@ -21,6 +21,7 @@ Server (from `server/`):
 composer setup          # first run: install, .env, key, sqlite file, migrations
 php artisan serve       # API and built SPA on http://127.0.0.1:8000
 vendor/bin/pest         # tests (sqlite in memory; CI runs them on MariaDB 11.4)
+php artisan login:approve   # confirm a pending app sign-in without the bot (needs ALLOWED_TELEGRAM_IDS)
 ```
 
 App (from `app/`):
