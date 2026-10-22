@@ -1,0 +1,97 @@
+@import 'tailwindcss';
+@import '@fontsource/onest/400.css';
+@import '@fontsource/onest/500.css';
+@import '@fontsource/onest/600.css';
+@import '@fontsource/onest/700.css';
+@import '@fontsource/unbounded/700.css';
+
+/* Dark theme follows the `dark` class on <html>, set from settings (system / light / dark). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Palette from the concept page: each module has its own colour (money green, habits amber, tasks blue, goals plum). */
+:root {
+  --c-bg: #f1f3f0;
+  --c-surface: #ffffff;
+  --c-ink: #15201b;
+  --c-ink-2: #46524c;
+  --c-ink-3: #77837d;
+  --c-line: #d9ded9;
+  --c-money: #0e7656;
+  --c-money-soft: #dbeee5;
+  --c-habit: #b45f0e;
+  --c-habit-soft: #f9e9d5;
+  --c-task: #2c59c8;
+  --c-task-soft: #dfe6f9;
+  --c-goal: #7a3d9e;
+  --c-goal-soft: #eee2f5;
+  --c-danger: #be3434;
+  --c-danger-soft: #f7dfdc;
+}
+
+.dark {
+  --c-bg: #0f1412;
+  --c-surface: #171d1a;
+  --c-ink: #e6ebe8;
+  --c-ink-2: #a7b1ac;
+  --c-ink-3: #7b8681;
+  --c-line: #2a332f;
+  --c-money: #41c495;
+  --c-money-soft: #153126;
+  --c-habit: #efa14f;
+  --c-habit-soft: #372816;
+  --c-task: #82a4ff;
+  --c-task-soft: #1b2540;
+  --c-goal: #c78dea;
+  --c-goal-soft: #2c1f37;
+  --c-danger: #ef7272;
+  --c-danger-soft: #3a1d1d;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-ink: var(--c-ink);
+  --color-ink-2: var(--c-ink-2);
+  --color-ink-3: var(--c-ink-3);
+  --color-line: var(--c-line);
+  --color-money: var(--c-money);
+  --color-money-soft: var(--c-money-soft);
+  --color-habit: var(--c-habit);
+  --color-habit-soft: var(--c-habit-soft);
+  --color-task: var(--c-task);
+  --color-task-soft: var(--c-task-soft);
+  --color-goal: var(--c-goal);
+  --color-goal-soft: var(--c-goal-soft);
+  --color-danger: var(--c-danger);
+  --color-danger-soft: var(--c-danger-soft);
+  --font-sans: 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Unbounded', 'Onest', system-ui, sans-serif;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

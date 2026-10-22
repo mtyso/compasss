@@ -13,6 +13,28 @@ When the plan and the code disagree, fix whichever is wrong and update the decis
 - `deploy/` — release build and server update scripts (same model as `mtyso/emerich-dealers`, `docs/ops/DEPLOY_CPANEL.md` there).
 - `docs/` — plan and decisions.
 
+## Local commands
+
+Server (from `server/`):
+
+```sh
+composer setup          # first run: install, .env, key, sqlite file, migrations
+php artisan serve       # API and built SPA on http://127.0.0.1:8000
+vendor/bin/pest         # tests (sqlite in memory; CI runs them on MariaDB 11.4)
+```
+
+App (from `app/`):
+
+```sh
+npm install
+npm run dev             # Vite on http://localhost:5173, proxies /api to 127.0.0.1:8000
+npm run typecheck
+npm test                # vitest
+npm run build           # app/dist; deploy copies it into server/public
+```
+
+Production runs PHP 8.4; `composer.json` still allows 8.3 so the sandbox and older local PHP can install.
+
 ## Hosting constraints (AHost) that shape the code
 
 - No root, no composer, no node, no long-running processes. One cron per minute runs `schedule:run`; the database queue is drained from the schedule with `--stop-when-empty`.
