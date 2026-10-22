@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Plus, ReceiptText } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import { ChevronLeft, ChevronRight, Handshake, Plus, ReceiptText } from 'lucide-vue-next'
 import CategoryIcon from '@/components/CategoryIcon.vue'
 import AccountIcon from '@/components/money/AccountIcon.vue'
 import TransactionRow from '@/components/money/TransactionRow.vue'
@@ -14,6 +15,7 @@ import UiRow from '@/components/ui/UiRow.vue'
 import { api } from '@/lib/api'
 import { dateAtNoon, isoDate, isoMonth, shiftMonth } from '@/lib/dates'
 import { formatDayHeading, formatMoney, formatMonthTitle, formatNumber } from '@/lib/format'
+import { toUzs } from '@/lib/money'
 import { useMoney, useQuickAdd, type Transaction } from '@/stores/money'
 import { usePlan, type Budget } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
@@ -29,6 +31,7 @@ const money = useMoney()
 const plan = usePlan()
 const quick = useQuickAdd()
 const settings = useSettings()
+const { t } = useI18n()
 
 const month = ref(isoMonth())
 const summary = ref<Summary | null>(null)
@@ -42,6 +45,21 @@ const failed = ref(false)
 const shownMonth = ref<string | null>(null)
 
 const monthTitle = computed(() => formatMonthTitle(month.value, settings.locale))
+
+/** «Я должен 5 000 000 сум» and «Мне должны 500 000 сум», a line each, or what the screen is for. */
+const debtsLines = computed(() => {
+  const sum = (type: 'debt' | 'lent') =>
+    money.activeAccounts
+      .filter((a) => a.type === type)
+      .reduce((total, a) => total + toUzs(Math.abs(a.balance), a.currency, money.rates[a.currency] ?? (a.currency === 'UZS' ? 1 : 0)), 0)
+  const owe = sum('debt')
+  const owed = sum('lent')
+  if (!owe && !owed) return [t('debts.lineEmpty')]
+  return [
+    owe ? `${t('debts.iOwe')} ${formatMoney(owe, 'UZS', settings.locale)}` : null,
+    owed ? `${t('debts.owedToMe')} ${formatMoney(owed, 'UZS', settings.locale)}` : null,
+  ].filter((line): line is string => !!line)
+})
 const isCurrentMonth = computed(() => month.value === isoMonth())
 
 /**
@@ -239,6 +257,12 @@ watch([month, () => money.revision], load)
                 </UiRow>
                 <UiRow :to="{ name: 'account-new' }" :title="$t('accounts.add')" tone="muted" :chevron="false">
                   <template #leading><span class="grid size-9 place-items-center text-ink-3"><Plus class="size-5" :stroke-width="2.2" /></span></template>
+                </UiRow>
+              </div>
+              <div class="group">
+                <UiRow :to="{ name: 'debts' }" :title="$t('debts.title')">
+                  <template #subtitle><span v-for="line in debtsLines" :key="line" class="block truncate">{{ line }}</span></template>
+                  <template #leading><span class="grid size-9 place-items-center rounded-full bg-surface-2 text-ink-2"><Handshake class="size-[18px]" :stroke-width="2" /></span></template>
                 </UiRow>
               </div>
             </section>

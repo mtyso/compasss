@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDayHeading, formatDayMonth, formatMoney, formatMonthTitle, formatNumber } from './format'
+import { formatDate, formatDayHeading, formatDayMonth, formatMoney, formatMonthTitle, formatMonthUntil, formatNumber } from './format'
 
 describe('formatMoney', () => {
   it('formats sums without fractions and groups thousands', () => {
@@ -55,5 +55,12 @@ describe('dates in words', () => {
   it('formats Russian dates with the browser', () => {
     expect(formatDayMonth('2026-11-10', 'ru')).toBe('10 ноября')
     expect(formatMonthTitle('2026-10', 'ru')).toBe('Октябрь 2026')
+  })
+})
+
+describe('formatMonthUntil', () => {
+  it('reads after «до» in Russian and as a title in Uzbek', () => {
+    expect(formatMonthUntil('2027-05')).toBe('мая 2027')
+    expect(formatMonthUntil('2026-11', 'uz')).toBe('Noyabr 2026')
   })
 })

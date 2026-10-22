@@ -27,11 +27,13 @@ const currency = ref<Currency>('UZS')
 const openingText = ref('')
 const spendable = ref(true)
 const cushion = ref(false)
+/** Money lent: the day it was promised back (docs/PLAN.md, D29). */
+const dueOn = ref('')
 const saving = ref(false)
 const confirmingDelete = ref(false)
 const error = ref<string | null>(null)
 
-const types: AccountType[] = ['card', 'cash', 'savings', 'deposit', 'debt', 'other']
+const types: AccountType[] = ['card', 'cash', 'savings', 'deposit', 'debt', 'lent', 'other']
 const currencyOptions = computed(() => CURRENCIES.map((value) => ({ value, label: value === 'UZS' ? t('accounts.som') : t('accounts.dollar') })))
 /** «Деньги на жизнь» is off and locked while the account is the safety cushion. */
 const spendableShown = computed({
@@ -49,6 +51,7 @@ onMounted(async () => {
     openingText.value = groupDigits(amountToInput(account.opening_balance, account.currency))
     spendable.value = account.spendable
     cushion.value = account.is_cushion
+    dueOn.value = account.due_on ?? ''
   }
 })
 
@@ -56,6 +59,7 @@ function pickType(next: AccountType): void {
   type.value = next
   // Savings and deposits are kept out of everyday money by default; a card or cash is in it.
   if (!existing.value) spendable.value = next === 'card' || next === 'cash' || next === 'other'
+  if (next === 'debt' || next === 'lent') cushion.value = false
 }
 
 /** Opening balance may be negative (a credit card already in debt), unlike an operation amount. */
@@ -80,6 +84,7 @@ async function save(): Promise<void> {
         opening_balance: opening.value!,
         spendable: spendable.value && !cushion.value,
         is_cushion: cushion.value,
+        due_on: type.value === 'lent' ? dueOn.value || null : null,
       },
       existing.value?.id,
     )
@@ -149,7 +154,13 @@ async function remove(): Promise<void> {
       <span class="text-caption text-ink-3">{{ $t('accounts.openingHint') }}</span>
     </label>
 
-    <div class="group">
+    <label v-if="type === 'lent'" class="flex flex-col gap-2">
+      <span class="field-label">{{ $t('accounts.dueOn') }}</span>
+      <input v-model="dueOn" type="date" class="field w-48" />
+      <span class="text-caption text-ink-3">{{ $t('debts.dueOnHint') }}</span>
+    </label>
+
+    <div v-if="type !== 'debt' && type !== 'lent'" class="group">
       <UiSwitch v-model="cushion" :title="$t('accounts.cushion')" :hint="$t('accounts.cushionHint')" />
       <UiSwitch v-model="spendableShown" :disabled="cushion" :title="$t('accounts.spendableLabel')" :hint="$t('accounts.spendableHint')" />
     </div>

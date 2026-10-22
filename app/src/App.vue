@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { api } from '@/lib/api'
 import { useAdvisor } from '@/stores/advisor'
 import { useAuth, type User } from '@/stores/auth'
+import { useDebts } from '@/stores/debts'
 import { useGoals } from '@/stores/goals'
 import { useHabits } from '@/stores/habits'
 import { useMoney } from '@/stores/money'
@@ -27,6 +28,7 @@ watch(
       useTasks().reset()
       useHabits().reset()
       useGoals().reset()
+      useDebts().reset()
       router.replace({ name: 'login' })
     }
   },

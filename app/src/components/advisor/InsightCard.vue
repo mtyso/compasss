@@ -55,6 +55,23 @@ async function pay(): Promise<void> {
   }
 }
 
+/** «Вернул» on money promised back, «Перенести платёж» on a paid-off debt. If it cannot be done here, the debts screen. */
+async function settle(): Promise<void> {
+  haptics.impact('light')
+  busy.value = true
+  const returned = props.insight.action === 'returned'
+  try {
+    await advisor.act(props.insight)
+    haptics.notify('success')
+    showToast({ message: returned ? t('debts.returned') : t('debts.rolledToast'), tone: 'success' })
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 422) void router.push({ name: 'debts', query: returned ? { settle: props.insight.ref } : {} })
+    else showToast({ message: t('quickAdd.failed'), tone: 'danger' })
+  } finally {
+    busy.value = false
+  }
+}
+
 function rate(value: 'useful' | 'dismissed'): void {
   haptics.selection()
   run(() => advisor.feedback(props.insight, value))
@@ -91,6 +108,9 @@ function mute(): void {
       </UiButton>
       <UiButton v-else-if="insight.action === 'add_payment'" size="sm" :to="{ name: 'payments', query: { suggest: insight.ref } }">
         {{ $t('payments.addShort') }}
+      </UiButton>
+      <UiButton v-else-if="insight.action === 'returned' || insight.action === 'roll'" size="sm" :loading="busy" @click="settle">
+        {{ insight.action === 'returned' ? $t('debts.returned') : $t('debts.roll') }}
       </UiButton>
       <template v-if="!compact && insight.status !== 'dismissed'">
         <UiButton v-if="insight.status !== 'useful'" size="sm" variant="ghost" :disabled="busy" @click="rate('useful')">

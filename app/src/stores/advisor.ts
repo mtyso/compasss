@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import type { Currency } from '@/lib/format'
 import { isoMonth } from '@/lib/dates'
 import { useAuth } from '@/stores/auth'
+import { useDebts } from '@/stores/debts'
 import { useGoals, type GoalsPlan } from '@/stores/goals'
 import { useMoney } from '@/stores/money'
 import { usePlan, type Budget } from '@/stores/plan'
@@ -17,8 +18,8 @@ export interface Insight {
   status: 'new' | 'seen' | 'useful' | 'dismissed'
   title: string
   body: string
-  action: 'mark_one_off' | 'contribute' | 'pay' | 'add_payment' | null
-  /** What the action works on: the payment to pay, or the suggestion to add as one. */
+  action: 'mark_one_off' | 'contribute' | 'pay' | 'add_payment' | 'returned' | 'roll' | null
+  /** What the action works on: the payment to pay, the suggestion to add as one, or the money lent. */
   ref: number | string | null
   created_at: string
 }
@@ -41,7 +42,7 @@ export type Strictness = 'soft' | 'normal' | 'strict'
 export const RULES = [
   'budget_threshold', 'category_pace', 'overspend_forecast', 'large_spend', 'small_things',
   'income_split', 'goal_due', 'goal_leftover', 'goal_pace', 'goal_reached', 'cushion', 'savings_rate', 'good_news', 'forgot_to_record',
-  'payment_due', 'subscription_found',
+  'payment_due', 'subscription_found', 'lent_due',
 ] as const
 
 /** The advisor: the «Советы» feed, «Можно ли купить?» and its settings (docs/PLAN.md, section 2). */
@@ -96,14 +97,20 @@ export const useAdvisor = defineStore('advisor', () => {
     }
   }
 
-  /** The button on an insight: «Отметить разовой», «Отложить» into goals or «Оплачено» (both move money). */
+  /**
+   * The button on an insight: «Отметить разовой», «Отложить» into goals, «Оплачено», «Вернул» (these move
+   * money) or «Перенести платёж» (a debt's plan).
+   */
   async function act(insight: Insight): Promise<void> {
     const result = await api<{ insight: Insight; goals?: GoalsPlan; transaction?: unknown }>(`/insights/${insight.id}/action`, { method: 'POST' })
     replace(result.insight)
     if (result.goals) useGoals().apply(result.goals)
-    if (result.goals || insight.action === 'pay') {
+    if (result.goals || insight.action === 'pay' || insight.action === 'returned') {
       await useMoney().changed()
       if (insight.action === 'pay') await plan.loadPayments().catch(() => {})
+    }
+    if (insight.action === 'returned' || insight.action === 'roll') {
+      await Promise.all([useDebts().overview ? useDebts().load() : undefined, useGoals().loaded ? useGoals().load() : undefined, plan.loadToday().catch(() => undefined)])
     }
   }
 
