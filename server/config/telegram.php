@@ -14,4 +14,21 @@ return [
         explode(',', (string) env('ALLOWED_TELEGRAM_IDS', '')),
     ))),
 
+    // The address the Mini App opens: the same SPA the browser gets. Must be https.
+    'webapp_url' => env('TELEGRAM_WEBAPP_URL', env('APP_URL')),
+
+    // Cards go out as Bot API rich messages (10.1+). Off: plain HTML messages, same content.
+    'rich_messages' => (bool) env('TELEGRAM_RICH_MESSAGES', true),
+
+    // How old the Mini App launch data may be when it is exchanged for an API token.
+    'webapp_max_age' => (int) env('TELEGRAM_WEBAPP_MAX_AGE', 86400),
+
+    // Bot messages of its own, Asia/Tashkent time (docs/BOT.md). From quiet_from until the morning
+    // summary the advisor's insights wait, and the summary then carries them.
+    'digest' => [
+        'morning_at' => env('TELEGRAM_MORNING_AT', '08:00'),
+        'weekly_at' => env('TELEGRAM_WEEKLY_AT', '20:00'),
+        'quiet_from' => env('TELEGRAM_QUIET_FROM', '22:00'),
+    ],
+
 ];

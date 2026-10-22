@@ -21,8 +21,8 @@ interface TelegramHaptics {
 
 declare global {
   interface Window {
+    // window.Telegram is declared with the rest of the Mini App API in lib/telegram.
     Capacitor?: { isNativePlatform?: () => boolean; Plugins?: { Haptics?: CapacitorHaptics } }
-    Telegram?: { WebApp?: { HapticFeedback?: TelegramHaptics } }
   }
 }
 

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AppShell from '@/layouts/AppShell.vue'
+import { inTelegram } from '@/lib/telegram'
 import { useAuth } from '@/stores/auth'
 
 declare module 'vue-router' {
@@ -15,6 +16,7 @@ export const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', name: 'login', component: () => import('@/pages/LoginPage.vue'), meta: { public: true } },
+    { path: '/telegram', name: 'telegram', component: () => import('@/pages/TelegramEntryPage.vue'), meta: { public: true } },
     { path: '/pin', name: 'pin-setup', component: () => import('@/pages/PinSetupPage.vue'), meta: { gate: true } },
     { path: '/lock', name: 'lock', component: () => import('@/pages/LockPage.vue'), meta: { gate: true } },
     {
@@ -46,7 +48,16 @@ router.beforeEach((to) => {
   const auth = useAuth()
 
   if (!auth.signedIn) {
-    return to.meta.public ? true : { name: 'login' }
+    if (inTelegram()) {
+      // The Mini App signs in by itself, then comes back to the screen a bot button opened.
+      // Without the hash: it holds Telegram's launch data (already read by the SDK), not an anchor.
+      const next = to.fullPath.replace(/#.*$/, '')
+      return to.name === 'telegram' ? true : { name: 'telegram', query: to.meta.public ? {} : { next } }
+    }
+    return to.meta.public && to.name !== 'telegram' ? true : { name: 'login' }
+  }
+  if (inTelegram()) {
+    return to.meta.public || to.meta.gate ? { name: 'today' } : true
   }
   if (!auth.pin) {
     // Signed in on this device for the first time: choose a PIN before anything else.
