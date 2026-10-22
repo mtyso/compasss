@@ -20,4 +20,5 @@ return [
     'price_required' => "Boshlang'ich to'lovni hisoblash uchun narxni kiriting.",
     'loan_months_required' => "Muddatli to'lov muddatini oylarda kiriting.",
     'no_loan' => "Muddatli to'lovga hech narsa qolmaydi: boshlang'ich to'lov butun narxni qoplaydi.",
+    'no_account' => "Ajratish uchun hisob yo'q.",
 ];

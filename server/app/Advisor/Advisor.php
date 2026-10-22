@@ -6,6 +6,10 @@ use App\Advisor\Rules\BudgetThreshold;
 use App\Advisor\Rules\CategoryPace;
 use App\Advisor\Rules\Cushion;
 use App\Advisor\Rules\ForgotToRecord;
+use App\Advisor\Rules\GoalDue;
+use App\Advisor\Rules\GoalLeftover;
+use App\Advisor\Rules\GoalPace;
+use App\Advisor\Rules\GoalReached;
 use App\Advisor\Rules\GoodNews;
 use App\Advisor\Rules\IncomeSplit;
 use App\Advisor\Rules\LargeSpend;
@@ -30,7 +34,7 @@ class Advisor
     /** @var list<class-string<Rule>> */
     public const RULES = [
         BudgetThreshold::class, CategoryPace::class, OverspendForecast::class, LargeSpend::class, SmallThings::class,
-        IncomeSplit::class, Cushion::class, SavingsRate::class, GoodNews::class, ForgotToRecord::class,
+        IncomeSplit::class, GoalDue::class, GoalLeftover::class, GoalPace::class, GoalReached::class, Cushion::class, SavingsRate::class, GoodNews::class, ForgotToRecord::class,
     ];
 
     /** @return Collection<int, Insight> the insights this run added */

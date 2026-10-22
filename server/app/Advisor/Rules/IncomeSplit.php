@@ -6,7 +6,8 @@ use App\Advisor\AdvisorContext;
 
 /**
  * «Пришла зарплата 12 млн. Обязательные платежи 4,2 млн, в подушку советую 1,2 млн, на жизнь остаётся 6,6 млн,
- * это 220 000 в день.» When a sizeable income arrives today.
+ * это 220 000 в день.» When a sizeable income arrives today. With goals the split names this period's
+ * contributions instead, and «Отложить» on the insight makes them (docs/PLAN.md, 2.6).
  */
 final class IncomeSplit extends BaseRule
 {
@@ -37,6 +38,23 @@ final class IncomeSplit extends BaseRule
         }
 
         $limit = $context->limit();
+        $goals = $context->goals();
+        if ($goals->dueUzs() > 0) {
+            // «Сначала цели» already keeps them out of the money for each day; «из остатка» does it here.
+            $left = max(0, $limit->freeUzs - ($goals->mode === 'first' ? 0 : $goals->dueUzs()));
+
+            return [$this->finding('good', 't'.$income->id, '', [
+                'variant' => 'goals',
+                'amount_uzs' => $income->amount_uzs,
+                'payments_uzs' => $limit->upcomingUzs,
+                'goals_uzs' => $goals->dueUzs(),
+                'goal_id' => $goals->mainSaving()?->goal->id,
+                'left_uzs' => $left,
+                'per_day_uzs' => intdiv($left, $limit->daysLeft),
+                'days' => $limit->daysLeft,
+                'account_id' => $income->account_id,
+            ])];
+        }
         $typical = $context->typicalMonthly();
         $target = (int) $context->setting('cushion_target_months', 3);
         $belowTarget = $typical === null || $typical === 0 || $context->cushionUzs() < $typical * $target;

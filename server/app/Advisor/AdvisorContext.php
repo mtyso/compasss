@@ -2,6 +2,8 @@
 
 namespace App\Advisor;
 
+use App\Goals\GoalPlanner;
+use App\Goals\GoalsPlan;
 use App\Models\Account;
 use App\Models\Category;
 use App\Models\Transaction;
@@ -68,7 +70,13 @@ final class AdvisorContext
 
     public function limit(): DailyLimit
     {
-        return $this->memo['limit'] ??= app(Plan::class)->limit($this->user, $this->now);
+        return $this->memo['limit'] ??= app(Plan::class)->limit($this->user, $this->now, $this->goals());
+    }
+
+    /** The goals and their plan for the current pay period (docs/PLAN.md, 2.6). */
+    public function goals(): GoalsPlan
+    {
+        return $this->memo['goals'] ??= app(GoalPlanner::class)->plan($this->user, $this->now);
     }
 
     public function budget(): BudgetStatus
