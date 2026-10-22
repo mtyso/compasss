@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api, setApiToken, setUnauthorizedHandler } from '@/lib/api'
+import { confirmBiometric, type BiometricPrompt } from '@/lib/biometric'
 import { deviceName } from '@/lib/device'
 import { createPinRecord, verifyPin, type PinRecord } from '@/lib/pin'
+import { readSecret, writeSecret } from '@/lib/secure'
 import { readJson, writeJson } from '@/lib/storage'
 import type { Locale } from '@/lib/format'
 
@@ -31,6 +33,10 @@ const TOKEN_KEY = 'kompas.token'
 const USER_KEY = 'kompas.user'
 const PIN_KEY = 'kompas.pin'
 const ATTEMPTS_KEY = 'kompas.pinAttempts'
+const BIOMETRIC_KEY = 'kompas.biometric'
+
+/** Kept in the Android keystore on the phone (lib/secure.ts); main.ts loads them before the app starts. */
+export const SECRET_KEYS = [TOKEN_KEY, PIN_KEY] as const
 
 export const MAX_PIN_ATTEMPTS = 5
 const POLL_MS = 2000
@@ -38,10 +44,12 @@ const POLL_MS = 2000
 const LOCK_AFTER_MS = 60_000
 
 export const useAuth = defineStore('auth', () => {
-  const token = ref<string | null>(readJson<string>(TOKEN_KEY))
+  const token = ref<string | null>(readSecret<string>(TOKEN_KEY))
   const user = ref<User | null>(readJson<User>(USER_KEY))
-  const pin = ref<PinRecord | null>(readJson<PinRecord>(PIN_KEY))
+  const pin = ref<PinRecord | null>(readSecret<PinRecord>(PIN_KEY))
   const pinAttempts = ref<number>(readJson<number>(ATTEMPTS_KEY) ?? 0)
+  /** Unlock with a fingerprint on this phone; the PIN still works. */
+  const biometric = ref<boolean>(readJson<boolean>(BIOMETRIC_KEY) ?? false)
   // Memory only: every fresh start of the app asks for the PIN.
   const unlocked = ref(false)
   /** Why the last session ended, shown once on the sign-in screen. */
@@ -61,7 +69,7 @@ export const useAuth = defineStore('auth', () => {
     token.value = newToken
     user.value = newUser
     setApiToken(newToken)
-    writeJson(TOKEN_KEY, newToken)
+    writeSecret(TOKEN_KEY, newToken)
     writeJson(USER_KEY, newUser)
   }
 
@@ -79,10 +87,11 @@ export const useAuth = defineStore('auth', () => {
     unlocked.value = false
     signedOutReason.value = reason
     setApiToken(null)
-    writeJson(TOKEN_KEY, null)
+    writeSecret(TOKEN_KEY, null)
     writeJson(USER_KEY, null)
-    writeJson(PIN_KEY, null)
+    writeSecret(PIN_KEY, null)
     setPinAttempts(0)
+    setBiometric(false)
   }
 
   async function logout(reason: 'pin' | null = null): Promise<void> {
@@ -170,7 +179,7 @@ export const useAuth = defineStore('auth', () => {
 
   async function setPin(value: string): Promise<void> {
     pin.value = await createPinRecord(value)
-    writeJson(PIN_KEY, pin.value)
+    writeSecret(PIN_KEY, pin.value)
     setPinAttempts(0)
     unlocked.value = true
   }
@@ -190,6 +199,19 @@ export const useAuth = defineStore('auth', () => {
     return false
   }
 
+  function setBiometric(on: boolean): void {
+    biometric.value = on
+    writeJson(BIOMETRIC_KEY, on || null)
+  }
+
+  /** The system fingerprint prompt instead of the PIN; a cancel leaves the PIN pad as it was. */
+  async function unlockWithBiometric(prompt: BiometricPrompt): Promise<boolean> {
+    if (!biometric.value || !pin.value || !(await confirmBiometric(prompt))) return false
+    setPinAttempts(0)
+    unlocked.value = true
+    return true
+  }
+
   let hiddenAt: number | null = null
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
@@ -207,6 +229,7 @@ export const useAuth = defineStore('auth', () => {
     signedIn,
     signedOutReason,
     pinAttemptsLeft,
+    biometric,
     loginState,
     loginLink,
     setUser,
@@ -217,5 +240,7 @@ export const useAuth = defineStore('auth', () => {
     cancelLogin,
     setPin,
     unlock,
+    setBiometric,
+    unlockWithBiometric,
   }
 })

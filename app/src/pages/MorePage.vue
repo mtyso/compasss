@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarClock, HandCoins, KeyRound, LayoutGrid, Lightbulb, LogOut, PieChart, Wallet } from 'lucide-vue-next'
+import { CalendarClock, FingerprintPattern, HandCoins, KeyRound, LayoutGrid, Lightbulb, LogOut, PieChart, Wallet } from 'lucide-vue-next'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
+import UiSwitch from '@/components/ui/UiSwitch.vue'
 import { prefersReducedMotion } from '@/lib/motion'
 import { api } from '@/lib/api'
+import { biometricAvailable, confirmBiometric } from '@/lib/biometric'
 import { useAuth } from '@/stores/auth'
 import { useSettings, type Theme } from '@/stores/settings'
 import type { Locale } from '@/lib/format'
@@ -16,6 +18,8 @@ const settings = useSettings()
 const auth = useAuth()
 const serverOk = ref<boolean | null>(null)
 const confirmingLogout = ref(false)
+/** Shown only in the Android app on a phone with a fingerprint enrolled. */
+const canBiometric = ref(false)
 
 const locales: { value: Locale; label: string }[] = [
   { value: 'ru', label: 'Русский' },
@@ -57,7 +61,17 @@ function setTheme(next: Theme): void {
   })
 }
 
+// Turning it on asks for one real scan, so it is never on for a finger the phone does not know.
+const biometric = computed({
+  get: () => auth.biometric,
+  set: async (on: boolean) => {
+    if (on && !(await confirmBiometric({ title: t('pin.biometricTitle'), subtitle: t('pin.biometricSubtitle'), cancel: t('more.cancel') }))) return
+    auth.setBiometric(on)
+  },
+})
+
 onMounted(async () => {
+  canBiometric.value = Boolean(auth.pin) && (await biometricAvailable())
   try {
     await api<{ status: string }>('/health')
     serverOk.value = true
@@ -110,6 +124,9 @@ onMounted(async () => {
         <UiRow :to="{ name: 'pin-setup', query: { from: 'more' } }" :title="$t('more.changePin')">
           <template #leading><KeyRound class="size-5" /></template>
         </UiRow>
+        <UiSwitch v-if="canBiometric" v-model="biometric" :title="$t('more.biometric')" :hint="$t('more.biometricHint')">
+          <template #leading><FingerprintPattern class="size-5" /></template>
+        </UiSwitch>
         <UiRow v-if="!confirmingLogout" :title="$t('more.logout')" tone="danger" @click="confirmingLogout = true">
           <template #leading><LogOut class="size-5" /></template>
         </UiRow>

@@ -1,6 +1,6 @@
 // Small wrapper over localStorage: it can be missing or throw (private mode, blocked
 // site data), and then the app keeps working for the current session only.
-// The Android build swaps the token over to secure storage in step 1.8.
+// Secrets (the session token, the PIN hash) go through lib/secure.ts instead.
 
 export function readJson<T>(key: string): T | null {
   try {

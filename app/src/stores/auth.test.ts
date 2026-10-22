@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { confirmBiometric } from '@/lib/biometric'
 import { MAX_PIN_ATTEMPTS, useAuth } from './auth'
+
+vi.mock('@/lib/biometric', () => ({ biometricAvailable: vi.fn(async () => true), confirmBiometric: vi.fn(async () => true) }))
 
 const user = { id: 1, name: 'Elyor', telegram_username: 'elyor', locale: 'ru', timezone: 'Asia/Tashkent', base_currency: 'UZS', settings: {} }
 
@@ -82,5 +85,35 @@ describe('auth store', () => {
     expect(auth.signedOutReason).toBe('pin')
     expect(localStorage.getItem('kompas.token')).toBeNull()
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }))
+  })
+
+  it('unlocks with a fingerprint only when it is switched on, and forgets it on sign-out', async () => {
+    vi.useRealTimers()
+    localStorage.setItem('kompas.token', JSON.stringify('1|abc'))
+    const prompt = { title: 'Вход', cancel: 'PIN' }
+
+    const auth = useAuth()
+    await auth.setPin('2580')
+    auth.unlocked = false
+
+    expect(await auth.unlockWithBiometric(prompt)).toBe(false)
+    expect(confirmBiometric).not.toHaveBeenCalled()
+
+    auth.setBiometric(true)
+    await auth.unlock('0000')
+    expect(auth.pinAttemptsLeft).toBe(MAX_PIN_ATTEMPTS - 1)
+
+    vi.mocked(confirmBiometric).mockResolvedValueOnce(false)
+    expect(await auth.unlockWithBiometric(prompt)).toBe(false)
+    expect(auth.unlocked).toBe(false)
+
+    expect(await auth.unlockWithBiometric(prompt)).toBe(true)
+    expect(auth.unlocked).toBe(true)
+    expect(auth.pinAttemptsLeft).toBe(MAX_PIN_ATTEMPTS)
+    expect(localStorage.getItem('kompas.biometric')).toBe('true')
+
+    auth.forget()
+    expect(auth.biometric).toBe(false)
+    expect(localStorage.getItem('kompas.biometric')).toBeNull()
   })
 })

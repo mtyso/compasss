@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Delete } from 'lucide-vue-next'
+import { Delete, FingerprintPattern } from 'lucide-vue-next'
 import { haptics } from '@/lib/haptics'
 import { PIN_LENGTH } from '@/lib/pin'
 
@@ -10,9 +10,11 @@ const props = defineProps<{
   busy?: boolean
   /** The PIN was right: the dots turn green while the next screen opens. */
   success?: boolean
+  /** Shows the fingerprint key in the free corner (Android app with fingerprint unlock on). */
+  biometric?: boolean
 }>()
 
-const emit = defineEmits<{ complete: [pin: string] }>()
+const emit = defineEmits<{ complete: [pin: string]; biometric: [] }>()
 
 const digits = ref('')
 const shaking = ref(false)
@@ -84,7 +86,10 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
       <button v-for="key in keys" :key="key" type="button" class="pin-key" @click="press(key)">
         {{ key }}
       </button>
-      <span />
+      <button v-if="biometric" type="button" class="pin-key pin-key-plain" :aria-label="$t('pin.biometric')" @click="emit('biometric')">
+        <FingerprintPattern class="size-8" :stroke-width="1.6" />
+      </button>
+      <span v-else />
       <button type="button" class="pin-key" @click="press('0')">0</button>
       <button type="button" class="pin-key pin-key-plain" :aria-label="$t('pin.erase')" @click="erase">
         <Delete class="size-7" :stroke-width="1.8" />
