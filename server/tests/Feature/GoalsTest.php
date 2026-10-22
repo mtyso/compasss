@@ -144,6 +144,30 @@ it('does not hold goals back from the limit when they get what is left over', fu
         ->assertJsonPath('limit.limit_uzs', 800_000);
 });
 
+it('still keeps a debt payment out of the limit when goals get what is left over', function () {
+    $this->patchJson('/api/me', ['settings' => ['goal_mode' => 'leftover']], $this->auth)->assertOk();
+    $this->postJson('/api/goals', ['type' => 'save', 'title' => 'Отпуск', 'currency' => 'UZS', 'target_amount' => 15_000_000, 'deadline' => '2027-07-01'], $this->auth)->assertCreated();
+    // 600 000 a month, 75% of it on the salary
+    $debt = $this->postJson('/api/goals', ['type' => 'debt', 'title' => 'Кредит', 'currency' => 'UZS', 'target_amount' => 6_000_000, 'monthly_amount' => 600_000], $this->auth)
+        ->assertCreated()->assertJsonPath('period.due', 450_000)->json();
+
+    // (12 000 000 − 450 000) / 15 days; the vacation waits for what is left over
+    $this->getJson('/api/today', $this->auth)
+        ->assertJsonPath('goals.due_uzs', 1_701_000)
+        ->assertJsonPath('limit.planned_savings_uzs', 450_000)
+        ->assertJsonPath('limit.limit_uzs', 770_000);
+
+    $this->travelTo(Carbon::parse('2026-10-23 08:00', 'Asia/Tashkent'));
+    $this->artisan('advisor:run morning')->assertSuccessful();
+    $reminder = $this->user->insights()->where('rule', 'goal_due')->sole();
+    expect($reminder->payload['variant'])->toBe('leftover_debt')
+        ->and($reminder->payload['debt_uzs'])->toBe(450_000);
+
+    // Paid: only the vacation is left to the leftovers, and the limit holds nothing back.
+    $this->postJson('/api/goals/contribute', ['account_id' => $this->card->id, 'items' => [['goal_id' => $debt['id'], 'amount' => 450_000]]], $this->auth)->assertOk();
+    $this->getJson('/api/today', $this->auth)->assertJsonPath('limit.planned_savings_uzs', 0);
+});
+
 it('saves for a dollar goal from a som card at today\'s rate', function () {
     $goal = $this->postJson('/api/goals', ['type' => 'buy', 'title' => 'Ноутбук', 'currency' => 'USD', 'target_amount' => 120_000], $this->auth)
         ->assertCreated()->assertJsonPath('currency', 'USD')->json();

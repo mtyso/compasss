@@ -614,7 +614,7 @@ const uz: typeof ru = {
     modes: { first: 'Avval maqsadlar', leftover: 'Qolgan puldan' },
     modeHints: {
       first: "Bu davr to'lovlari majburiy to'lovlar kabi kunlik limitdan oldin ayriladi. Shunda maqsad xarajatlarga yeyilib ketmaydi.",
-      leftover: "Limit maqsadlarsiz hisoblanadi, maqsadlarga qolgan pul ketadi. Yumshoqroq, lekin maqsadlar oson suriladi.",
+      leftover: "Limit maqsadlarsiz hisoblanadi, maqsadlarga qolgan pul ketadi. Yumshoqroq, lekin maqsadlar oson suriladi. Qarz to'lovlari baribir limitdan ayriladi.",
     },
   },
   // Shared interface pieces (components/ui).

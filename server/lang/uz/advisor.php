@@ -64,6 +64,10 @@ return [
                 'title' => 'Maqsadlarga hali :goals_uzs ajratilmagan',
                 'body' => "Keyingi daromadgacha kunlar: :days. Pul qolgan bo'lsa, hozir ajrating, aks holda maqsadlar rejasi suriladi.",
             ],
+            'leftover_debt' => [
+                'title' => "Maqsad va qarzlarga hali :goals_uzs kiritilmagan",
+                'body' => "Keyingi daromadgacha kunlar: :days. Qarzlar bo'yicha :debt_uzs to'lov kunlik limitga kirmaydi: kechikmasligi uchun uni kiriting. Qolganini pul qolgan bo'lsa ajrating.",
+            ],
         ],
         'goal_leftover' => [
             'days' => [

@@ -31,13 +31,19 @@ final class GoalsPlan
         return $this->collecting()->sum('dueUzs');
     }
 
+    /** This period's debt payments not made yet, in som: a loan has to be paid whatever the mode. */
+    public function debtDueUzs(): int
+    {
+        return $this->collecting()->filter(fn (GoalState $s) => $s->goal->type === 'debt')->sum('dueUzs');
+    }
+
     /**
      * What the daily limit keeps out of the money for spending (docs/PLAN.md, D25): this period's
-     * contributions not made yet, or nothing when goals get what is left over.
+     * contributions not made yet. When goals get what is left over, only the debt payments.
      */
     public function reservedUzs(): int
     {
-        return $this->mode === 'first' ? $this->dueUzs() : 0;
+        return $this->mode === 'first' ? $this->dueUzs() : $this->debtDueUzs();
     }
 
     /** Planned contributions a month, in som. */
