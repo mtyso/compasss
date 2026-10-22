@@ -3,9 +3,12 @@
 use App\Models\ExchangeRate;
 use App\Models\Transaction;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
+    // The rates below are for 20 and 21 October: on any later real date /api/accounts would ask CBU for today's.
+    $this->travelTo(Carbon::parse('2026-10-21 15:00', 'Asia/Tashkent'));
     config(['telegram.allowed_ids' => ['111222333']]);
     $this->user = User::factory()->create(['telegram_id' => 111222333]);
     $this->auth = ['Authorization' => 'Bearer '.$this->user->createToken('t')->plainTextToken];
