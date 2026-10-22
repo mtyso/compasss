@@ -114,7 +114,7 @@ export type GoalInput = Partial<
     | 'type' | 'title' | 'icon' | 'currency' | 'target_amount' | 'account_id' | 'deadline' | 'monthly_amount' | 'rate'
     | 'price' | 'down_percent' | 'loan_months' | 'unit' | 'start_value' | 'target_value'
   >
-> & { cushion?: boolean; archived?: boolean; done?: boolean }
+> & { cushion?: boolean; saved?: number | null; archived?: boolean; done?: boolean }
 
 /** Goals (docs/PLAN.md, 2.6): the list with this period's plan, one goal in full, «Отложить» and «Купил». */
 export const useGoals = defineStore('goals', () => {

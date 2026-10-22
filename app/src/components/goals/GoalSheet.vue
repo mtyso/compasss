@@ -30,13 +30,14 @@ const goals = useGoals()
 const { t } = useI18n()
 
 const DOWN_PERCENTS = [10, 20, 30, 40, 50]
-const LOAN_MONTHS = [6, 12, 24, 36, 48]
+const LOAN_MONTHS = [6, 12, 24, 36, 48, 60]
 
 const type = ref<GoalType>('save')
 const title = ref('')
 const icon = ref<string | null>(null)
 const currency = ref<Currency>('UZS')
 const target = ref<number | null>(null)
+const already = ref<number | null>(null)
 const deadline = ref<string | null>(null)
 const monthly = ref<number | null>(null)
 const rate = ref<number | null>(null)
@@ -75,6 +76,7 @@ watch(open, (value) => {
   icon.value = goal?.icon ?? null
   currency.value = goal?.currency ?? 'UZS'
   target.value = goal?.target_amount ?? null
+  already.value = null
   deadline.value = goal?.deadline ?? null
   monthly.value = goal?.monthly_amount ?? null
   rate.value = goal?.rate ?? null
@@ -109,7 +111,7 @@ const collects = computed(() => (type.value === 'buy' && installment.value ? dow
 const neededMonthly = computed(() => {
   if (!deadline.value || !collects.value) return null
   const months = Math.max(1, Math.ceil(daysBetween(today.value, deadline.value) / MONTH_DAYS))
-  const left = Math.max(0, collects.value - (props.goal?.saved ?? 0))
+  const left = Math.max(0, collects.value - (props.goal?.saved ?? already.value ?? 0))
   return roundUp(monthlyFor(left, months, type.value === 'debt' ? rate.value : null), currency.value)
 })
 
@@ -134,6 +136,7 @@ function input(): GoalInput {
       if (type.value === 'debt') data.rate = rate.value
     }
     if (creating.value && type.value === 'save' && cushion.value) data.cushion = true
+    if (creating.value && type.value !== 'debt' && already.value) data.saved = already.value
   } else {
     Object.assign(data, { unit: unit.value.trim() || null, start_value: startValue.value, target_value: targetValue.value })
   }
@@ -234,6 +237,11 @@ async function remove(): Promise<void> {
           </div>
         </template>
         <AmountField v-else v-model="target" :currency="currency" :label="$t(`goals.target.${type}`)" />
+
+        <section v-if="creating && type !== 'debt'" class="flex flex-col gap-2">
+          <AmountField v-model="already" :currency="currency" :label="$t('goals.already')" />
+          <p class="text-caption text-ink-3">{{ $t('goals.alreadyHint') }}</p>
+        </section>
 
         <label v-if="type === 'debt'" class="flex flex-col gap-2">
           <span class="field-label">{{ $t('goals.debtRate') }}</span>

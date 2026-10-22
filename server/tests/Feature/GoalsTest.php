@@ -76,6 +76,39 @@ it('sets a goal\'s contribution aside before the daily limit, and «Отложи
         ->assertJsonPath('history.0.amount', 1_251_000);
 });
 
+it('starts a goal\'s jar with what is already saved, and an installment without interest costs nothing extra', function () {
+    $goal = $this->postJson('/api/goals', [
+        'type' => 'buy', 'title' => 'Dongfeng 008', 'currency' => 'UZS', 'deadline' => '2027-04-01',
+        'price' => 400_000_000, 'down_percent' => 30, 'loan_months' => 60, 'rate' => 0, 'saved' => 17_948_000,
+    ], $this->auth)
+        ->assertCreated()
+        ->assertJsonPath('target_amount', 120_000_000)
+        ->assertJsonPath('saved', 17_948_000)
+        // 102 052 000 left over 6 pay months
+        ->assertJsonPath('monthly_required', 17_009_000)
+        ->assertJsonPath('status', 'on_track')
+        // 280 000 000 over 60 months with no interest
+        ->assertJsonPath('installment.payment', 4_667_000)
+        ->assertJsonPath('installment.overpay', 0)
+        // Without interest the options go both ways: a smaller down payment buys sooner at no extra cost
+        ->assertJsonPath('installment.options.0.down_percent', 20)
+        ->assertJsonPath('installment.options.0.payment', 5_334_000)
+        ->assertJsonPath('installment.options.0.overpay', 0)
+        ->assertJsonPath('installment.options.1.down_percent', 40)
+        ->json();
+
+    expect(Account::find($goal['account_id'])->opening_balance)->toBe(17_948_000);
+    // The money was already aside: it is not spending money and does not count as this period's contribution.
+    $this->getJson('/api/today', $this->auth)
+        ->assertJsonPath('limit.spendable_uzs', 12_000_000)
+        ->assertJsonPath('goals.goals.0.period.made', 0);
+
+    $this->postJson('/api/goals', ['type' => 'save', 'title' => 'Отпуск', 'currency' => 'UZS', 'target_amount' => 1_000_000, 'saved' => 1, 'account_id' => $this->card->id], $this->auth)
+        ->assertUnprocessable()->assertJsonValidationErrors('saved');
+    $this->postJson('/api/goals', ['type' => 'debt', 'title' => 'Долг', 'currency' => 'UZS', 'target_amount' => 1_000_000, 'saved' => 1], $this->auth)
+        ->assertUnprocessable()->assertJsonValidationErrors('saved');
+});
+
 it('keeps the plan forecast within the deadline when the goal keeps to its plan', function () {
     $this->travelTo(Carbon::parse('2026-10-22 12:00', 'Asia/Tashkent'));
     // 14 pay months from 10 Oct to 1 Dec 2027: 2 143 000 a month, though 14 average months from today end on 23 Dec

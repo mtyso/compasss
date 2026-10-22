@@ -41,17 +41,15 @@ final class Installment
         }
         $rate = $goal->rate === null ? null : (float) $goal->rate;
         $option = fn (int $percent) => self::option($goal->price, $percent, $goal->loan_months, $rate, $goal->currency ?? 'UZS', $fxRate);
+        // With interest a bigger down payment saves money later; without it a smaller one only means buying sooner
+        $percents = $rate > 0 ? [$goal->down_percent + 10, $goal->down_percent + 20] : [$goal->down_percent - 10, $goal->down_percent + 10];
 
         return [
             'price' => $goal->price,
             'months' => $goal->loan_months,
             'rate' => $rate,
             ...$option($goal->down_percent),
-            // A bigger down payment: a longer wait now, a smaller payment and overpayment later
-            'options' => array_values(array_map($option, array_filter(
-                [$goal->down_percent + 10, $goal->down_percent + 20],
-                fn (int $p) => $p <= 90,
-            ))),
+            'options' => array_values(array_map($option, array_filter($percents, fn (int $p) => $p >= 1 && $p <= 90))),
         ];
     }
 

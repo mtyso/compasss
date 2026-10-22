@@ -310,10 +310,11 @@ function bought(debt: { id: number } | null): void {
             v-for="option in goal.installment.options"
             :key="option.down_percent"
             :title="$t('goals.downOption', { percent: option.down_percent, amount: fmt(option.down_amount) })"
-            :subtitle="option.payment ? $t('goals.downOptionDetail', { payment: fmt(option.payment), saved: fmt(goal.installment.overpay - (option.overpay ?? 0)) }) : undefined"
+            :subtitle="option.payment ? (goal.installment.overpay ? $t('goals.downOptionDetail', { payment: fmt(option.payment), saved: fmt(goal.installment.overpay - (option.overpay ?? 0)) }) : $t('goals.downOptionPayment', { payment: fmt(option.payment) })) : undefined"
             :chevron="false"
           />
         </div>
+        <p v-if="goal.installment.overpay === 0 && goal.installment.options.length" class="text-caption text-ink-2">{{ $t('goals.noInterestHint') }}</p>
       </section>
 
       <!-- «Как быстрее»: more a month, and where it could come from. -->

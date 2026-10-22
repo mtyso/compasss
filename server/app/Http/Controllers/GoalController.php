@@ -78,7 +78,7 @@ class GoalController extends Controller
             }
 
             return $user->goals()->create([
-                ...collect($data)->except(['cushion'])->all(),
+                ...collect($data)->except(['cushion', 'saved'])->all(),
                 'account_id' => $account?->id,
                 'currency' => $account?->currency ?? ($data['currency'] ?? null),
                 // The «в графике» line starts from what the goal already has.
@@ -347,7 +347,8 @@ class GoalController extends Controller
             'name' => mb_substr($debt ? $data['title'] : __('goals.jar_name', ['goal' => $data['title']]), 0, 60),
             'type' => $debt ? 'debt' : 'savings',
             'currency' => $data['currency'],
-            'opening_balance' => $debt ? -(int) $data['target_amount'] : 0,
+            // What is already put aside for the goal starts the jar.
+            'opening_balance' => $debt ? -(int) $data['target_amount'] : (int) ($data['saved'] ?? 0),
             'spendable' => false,
             'is_cushion' => ! $debt && ! empty($data['cushion']),
             'sort' => (int) $user->accounts()->max('sort') + 1,
@@ -368,6 +369,7 @@ class GoalController extends Controller
             'currency' => $creating && $money ? ['sometimes', Rule::in(array_keys(Money::CURRENCIES))] : ['prohibited'],
             'account_id' => $creating && $money ? ['sometimes', 'nullable', 'integer'] : ['prohibited'],
             'cushion' => $creating && $type === 'save' ? ['sometimes', 'boolean'] : ['prohibited'],
+            'saved' => $creating && in_array($type, ['save', 'buy'], true) ? ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000000000000', 'prohibits:account_id'] : ['prohibited'],
             'target_amount' => $money ? ['sometimes', 'nullable', 'integer', 'min:1', 'max:1000000000000'] : ['prohibited'],
             'deadline' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'after:today'],
             'monthly_amount' => $money ? ['sometimes', 'nullable', 'integer', 'min:0', 'max:1000000000000'] : ['prohibited'],
