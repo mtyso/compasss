@@ -315,6 +315,7 @@ function bought(debt: { id: number } | null): void {
           />
         </div>
         <p v-if="goal.installment.overpay === 0 && goal.installment.options.length" class="text-caption text-ink-2">{{ $t('goals.noInterestHint') }}</p>
+        <UiButton variant="secondary" size="sm" class="self-start" :to="{ name: 'calc-compare', query: { goal: goal.id } }">{{ $t('calc.compare.short') }}</UiButton>
       </section>
 
       <!-- «Как быстрее»: more a month, and where it could come from. -->

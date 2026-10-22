@@ -85,3 +85,13 @@ export function formatMonthTitle(month: string, locale: Locale = 'ru'): string {
       .replace(/\s*г\.$/, ''),
   )
 }
+
+/** A big sum in short words for a sentence: «16,3 млн сум», «163 млн сум», «1,2 mlrd so'm»; dollars stay exact. */
+export function formatShort(minor: number, currency: Currency, locale: Locale = 'ru'): string {
+  const abs = Math.abs(minor)
+  if (currency !== 'UZS' || abs < 1_000_000) return formatMoney(minor, currency, locale)
+  const [size, word] = abs >= 1e9 ? [1e9, locale === 'uz' ? 'mlrd' : 'млрд'] : [1e6, locale === 'uz' ? 'mln' : 'млн']
+  const value = Math.round((abs / size) * 10) / 10
+  const number = (value >= 100 ? String(Math.round(value)) : String(value)).replace('.', ',')
+  return `${minor < 0 ? '−' : ''}${number} ${word} ${locale === 'uz' ? "so'm" : 'сум'}`
+}
