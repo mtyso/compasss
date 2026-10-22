@@ -168,7 +168,7 @@ function openNew(): void {
     <Transition name="tab" mode="out-in">
       <!-- Tasks -->
       <div v-if="tab === 'tasks'" key="tasks" class="flex flex-col gap-5">
-        <form v-if="view !== 'done'" class="card flex min-h-13 items-center gap-3 pr-1.5 pl-4" @submit.prevent="quickAdd">
+        <form v-if="view !== 'done'" class="flex min-h-13 items-center gap-3 rounded-control bg-surface-2 pr-1.5 pl-4" @submit.prevent="quickAdd">
           <Plus class="size-5 shrink-0 text-ink-3" :stroke-width="2.2" aria-hidden="true" />
           <input
             ref="quickInput"
@@ -204,10 +204,10 @@ function openNew(): void {
 
         <template v-else>
           <TransitionGroup name="section" tag="div" class="relative flex flex-col gap-5 empty:hidden">
-            <section v-for="group in groups" :key="group.key" class="flex flex-col gap-2.5">
+            <section v-for="group in groups" :key="group.key" class="flex flex-col gap-1.5">
               <h2 class="section-title" :class="{ '!text-danger': group.key === 'overdue' }">
                 {{ groupTitle(group.key, today, t, settings.locale) }}
-                <span class="num ml-1 font-normal text-ink-3">{{ group.tasks.filter((x) => !x.done_at).length || '' }}</span>
+                <span class="num ml-1 font-medium text-ink-3">{{ group.tasks.filter((x) => !x.done_at).length || '' }}</span>
               </h2>
               <TransitionGroup name="row" tag="div" class="group relative">
                 <TaskRow
@@ -241,7 +241,7 @@ function openNew(): void {
           <article v-if="habits.forToday.length" class="card flex flex-col gap-3 p-5">
             <div class="flex items-baseline justify-between gap-3">
               <span class="text-sm font-medium text-ink-2">{{ $t('habits.summary', { done: doneToday, total: habits.forToday.length }) }}</span>
-              <span class="num font-display text-headline font-bold">{{ Math.round((doneToday / habits.forToday.length) * 100) }}%</span>
+              <span class="num text-headline font-semibold">{{ Math.round((doneToday / habits.forToday.length) * 100) }}%</span>
             </div>
             <UiProgress :value="doneToday / habits.forToday.length" tone="habit" />
           </article>
@@ -257,12 +257,12 @@ function openNew(): void {
             />
             <UiRow :title="$t('habits.new')" tone="muted" :chevron="false" @click="openHabit(null)">
               <template #leading>
-                <span class="grid size-10 place-items-center rounded-[0.875rem] border border-dashed border-ink/20"><Plus class="size-[18px]" /></span>
+                <span class="grid size-10 place-items-center text-ink-3"><Plus class="size-5" :stroke-width="2.2" /></span>
               </template>
             </UiRow>
           </div>
 
-          <section v-if="notToday.length" class="flex flex-col gap-2.5">
+          <section v-if="notToday.length" class="flex flex-col gap-1.5">
             <h2 class="section-title">{{ $t('habits.notToday') }}</h2>
             <div class="group">
               <HabitRow
@@ -278,7 +278,7 @@ function openNew(): void {
           </section>
         </template>
 
-        <section v-if="habits.archived.length" class="flex flex-col gap-2.5">
+        <section v-if="habits.archived.length" class="flex flex-col gap-1.5">
           <h2 class="section-title flex items-center gap-1.5"><Archive class="size-3.5" :stroke-width="2.2" />{{ $t('habits.archived') }}</h2>
           <div class="group">
             <UiRow

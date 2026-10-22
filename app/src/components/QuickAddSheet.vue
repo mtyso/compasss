@@ -279,12 +279,12 @@ function addAccount(): void {
               enterkeyhint="done"
               autocomplete="off"
               placeholder="0"
-              class="num min-w-0 flex-1 bg-transparent font-display text-[2.75rem] leading-none font-bold tracking-[-0.03em] outline-none placeholder:text-ink/20"
+              class="num min-w-0 flex-1 bg-transparent text-[2.75rem] leading-none font-semibold tracking-[-0.03em] outline-none placeholder:text-ink/20"
               :class="type === 'income' ? 'text-money' : 'text-ink'"
               @input="groupInput($event, (value) => (amountText = value))"
               @keydown.enter="save"
             />
-            <span class="font-display text-xl font-semibold text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
+            <span class="text-xl font-medium text-ink-3">{{ currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
           </span>
           <span class="num absolute top-full left-0 mt-1 text-caption text-ink-3">
             <template v-if="amount && !typedPlain">= {{ formatMoney(amount, currency, settings.locale) }}</template>
@@ -295,7 +295,7 @@ function addAccount(): void {
 
       <!-- Accounts -->
       <section class="flex flex-col gap-2.5">
-        <h3 class="section-title">{{ type === 'transfer' ? $t('quickAdd.from') : $t('quickAdd.account') }}</h3>
+        <h3 class="field-label">{{ type === 'transfer' ? $t('quickAdd.from') : $t('quickAdd.account') }}</h3>
         <div class="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-0.5">
           <button
             v-for="item in money.activeAccounts"
@@ -314,7 +314,7 @@ function addAccount(): void {
 
       <template v-if="type === 'transfer'">
         <section class="flex flex-col gap-2.5">
-          <h3 class="section-title flex items-center gap-1"><ArrowDown class="size-3.5" :stroke-width="2.4" />{{ $t('quickAdd.to') }}</h3>
+          <h3 class="field-label flex items-center gap-1"><ArrowDown class="size-3.5" :stroke-width="2.4" />{{ $t('quickAdd.to') }}</h3>
           <div class="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 py-0.5">
             <button
               v-for="item in targetAccounts"
@@ -332,7 +332,7 @@ function addAccount(): void {
         </section>
         <Transition name="fade">
           <label v-if="needsToAmount && toAccount" class="flex flex-col gap-1.5">
-            <span class="section-title">{{ $t('quickAdd.received', { account: toAccount.name }) }}</span>
+            <span class="field-label">{{ $t('quickAdd.received', { account: toAccount.name }) }}</span>
             <span class="field flex items-baseline gap-2">
               <input :value="toAmountText" inputmode="decimal" autocomplete="off" placeholder="0" class="num min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none" @input="groupInput($event, (value) => (toAmountText = value))" />
               <span class="text-sm text-ink-3">{{ toAccount.currency === 'USD' ? '$' : $t('quickAdd.som') }}</span>
@@ -343,7 +343,7 @@ function addAccount(): void {
 
       <!-- Categories -->
       <section v-else class="flex flex-col gap-2.5">
-        <h3 class="section-title">{{ $t('quickAdd.category') }}</h3>
+        <h3 class="field-label">{{ $t('quickAdd.category') }}</h3>
         <div class="-mx-1 grid grid-cols-4 gap-x-1 gap-y-2">
           <button
             v-for="item in parents"
@@ -386,7 +386,7 @@ function addAccount(): void {
 
       <!-- Date -->
       <section class="flex flex-col gap-2.5">
-        <h3 class="section-title">{{ $t('quickAdd.date') }}</h3>
+        <h3 class="field-label">{{ $t('quickAdd.date') }}</h3>
         <div class="flex flex-wrap gap-2">
           <button type="button" class="chip !py-1.5" :class="{ 'chip-on': day === isoDate() }" @click="day = isoDate()">{{ $t('quickAdd.today') }}</button>
           <button type="button" class="chip !py-1.5" :class="{ 'chip-on': day === shiftDate(isoDate(), -1) }" @click="day = shiftDate(isoDate(), -1)">

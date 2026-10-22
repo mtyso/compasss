@@ -148,7 +148,7 @@ async function remove(): Promise<void> {
       </div>
 
       <section class="flex flex-col gap-2">
-        <h3 class="section-title">{{ $t('tasks.date') }}</h3>
+        <h3 class="field-label">{{ $t('tasks.date') }}</h3>
         <div class="flex flex-wrap gap-2">
           <button type="button" class="chip" :class="{ 'chip-on': dueOn === today }" :aria-pressed="dueOn === today" @click="pickDate(today)">{{ $t('things.today') }}</button>
           <button type="button" class="chip" :class="{ 'chip-on': dueOn === tomorrow }" :aria-pressed="dueOn === tomorrow" @click="pickDate(tomorrow)">{{ $t('things.tomorrow') }}</button>
@@ -176,12 +176,12 @@ async function remove(): Promise<void> {
       </section>
 
       <section class="flex flex-col gap-2">
-        <h3 class="section-title">{{ $t('tasks.priority') }}</h3>
+        <h3 class="field-label">{{ $t('tasks.priority') }}</h3>
         <UiSegmented v-model="priority" :options="priorityOptions" :label="$t('tasks.priority')" />
       </section>
 
       <section class="flex flex-col gap-2">
-        <h3 class="section-title">{{ $t('tasks.repeat') }}</h3>
+        <h3 class="field-label">{{ $t('tasks.repeat') }}</h3>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="choice in repeatChoices"
@@ -196,7 +196,7 @@ async function remove(): Promise<void> {
           </button>
         </div>
         <Transition name="fade">
-          <div v-if="repeatChoice === 'custom'" class="card flex flex-col gap-3 p-3">
+          <div v-if="repeatChoice === 'custom'" class="flex flex-col gap-3">
             <div class="flex items-center gap-2">
               <span class="text-sm text-ink-2">{{ $t('tasks.every') }}</span>
               <input v-model.number="every" type="number" min="1" max="365" inputmode="numeric" class="field num w-20 !py-2 text-center font-semibold" />

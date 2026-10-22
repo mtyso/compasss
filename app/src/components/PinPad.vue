@@ -137,7 +137,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 }
 
 .pin-key {
-  @apply flex size-[4.75rem] items-center justify-center rounded-full bg-surface text-[1.75rem] font-medium text-ink shadow-card select-none;
+  @apply flex size-[4.75rem] items-center justify-center rounded-full bg-surface-2 text-[1.75rem] font-medium text-ink select-none;
   transition:
     transform var(--dur-spring) var(--ease-spring),
     background-color 300ms var(--ease-standard);
@@ -146,7 +146,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 .pin-key:active {
   transform: scale(0.9);
-  background-color: var(--c-surface-2);
+  background-color: color-mix(in srgb, var(--c-ink) 14%, var(--c-surface-2));
   transition-duration: 60ms;
 }
 

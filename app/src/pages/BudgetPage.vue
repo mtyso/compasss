@@ -93,17 +93,17 @@ async function save(): Promise<void> {
     </template>
 
     <template v-else>
-      <article class="card flex flex-col gap-1.5 p-5">
-        <span class="text-sm font-medium text-ink-2">{{ $t('budget.total') }}</span>
-        <MoneyAmount :amount="totalLimit" animate class="font-display text-[2.125rem] leading-none font-bold tracking-[-0.03em]" />
+      <section class="flex flex-col gap-1.5">
+        <span class="text-[0.9375rem] font-medium text-ink-2">{{ $t('budget.total') }}</span>
+        <MoneyAmount :amount="totalLimit" animate class="text-[2.25rem] leading-none font-semibold tracking-[-0.03em]" />
         <span v-if="expectedIncome" class="num pt-1 text-caption" :class="totalLimit > expectedIncome ? 'text-danger' : 'text-ink-3'">
           {{ $t('budget.ofIncome', { income: formatMoney(expectedIncome, 'UZS', settings.locale), percent: Math.round((totalLimit / expectedIncome) * 100) }) }}
         </span>
         <RouterLink v-else :to="{ name: 'income' }" class="press self-start pt-1 text-caption font-medium text-money">{{ $t('today.addIncome') }}</RouterLink>
-      </article>
+      </section>
 
       <section class="flex flex-col gap-2.5">
-        <p class="px-1 text-caption text-ink-3">{{ $t('budget.intro') }}</p>
+        <p class="text-caption text-ink-3">{{ $t('budget.intro') }}</p>
         <div class="group">
           <label v-for="row in rows" :key="row.category.id" class="flex min-h-14 items-center gap-3 px-4 py-2.5">
             <CategoryIcon :icon="row.category.icon" :color="row.category.color" size="sm" />

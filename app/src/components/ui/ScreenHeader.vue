@@ -42,7 +42,8 @@ function measure(): void {
   const title = titleEl.value
   if (!title || !scroller) return
   const top = scroller.getBoundingClientRect().top + parseFloat(getComputedStyle(scroller).paddingTop)
-  collapsed.value = title.getBoundingClientRect().bottom < top + 44
+  // At the top of the screen the large title is always shown in full, however high it sits.
+  collapsed.value = scroller.scrollTop > 0 && title.getBoundingClientRect().bottom < top + 44
 }
 
 function onScroll(): void {
