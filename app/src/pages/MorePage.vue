@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { ChevronRight, KeyRound, LogOut } from 'lucide-vue-next'
+import { ChevronRight, KeyRound, LayoutGrid, LogOut, Wallet } from 'lucide-vue-next'
 import { api } from '@/lib/api'
 import { useAuth } from '@/stores/auth'
 import { useSettings, type Theme } from '@/stores/settings'
@@ -61,6 +61,22 @@ onMounted(async () => {
             </button>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-2">
+      <h2 class="px-1 text-sm font-semibold">{{ $t('more.money') }}</h2>
+      <div class="flex flex-col divide-y divide-line overflow-hidden rounded-2xl bg-surface shadow-sm">
+        <RouterLink :to="{ name: 'accounts' }" class="flex items-center gap-3 px-4 py-3 active:bg-line">
+          <Wallet class="size-5 text-ink-2" />
+          <span class="flex-1">{{ $t('more.accounts') }}</span>
+          <ChevronRight class="size-4 text-ink-3" />
+        </RouterLink>
+        <RouterLink :to="{ name: 'categories' }" class="flex items-center gap-3 px-4 py-3 active:bg-line">
+          <LayoutGrid class="size-5 text-ink-2" />
+          <span class="flex-1">{{ $t('more.categories') }}</span>
+          <ChevronRight class="size-4 text-ink-3" />
+        </RouterLink>
       </div>
     </section>
 
