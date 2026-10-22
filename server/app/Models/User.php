@@ -76,6 +76,16 @@ class User extends Authenticatable
         return $this->hasMany(RecurringPayment::class);
     }
 
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    public function habits(): HasMany
+    {
+        return $this->hasMany(Habit::class);
+    }
+
     public function insights(): HasMany
     {
         return $this->hasMany(Insight::class);
