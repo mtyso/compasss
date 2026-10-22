@@ -8,7 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Account extends Model
 {
-    public const TYPES = ['card', 'cash', 'savings', 'deposit', 'other'];
+    // A debt account holds a negative balance; paying the debt is a transfer to it (docs/PLAN.md, D24)
+    public const TYPES = ['card', 'cash', 'savings', 'deposit', 'debt', 'other'];
 
     protected $fillable = ['name', 'type', 'currency', 'opening_balance', 'spendable', 'is_cushion', 'sort', 'archived_at'];
 

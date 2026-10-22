@@ -83,6 +83,7 @@ class TaskController extends Controller
         $required = $task ? 'sometimes' : 'required';
         $data = $request->validate([
             'title' => [$required, 'string', 'max:200'],
+            'goal_id' => ['sometimes', 'nullable', 'integer', Rule::exists('goals', 'id')->where('user_id', $request->user()->id)],
             'notes' => ['sometimes', 'nullable', 'string', 'max:5000'],
             'due_on' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'due_time' => ['sometimes', 'nullable', 'date_format:H:i'],

@@ -15,7 +15,7 @@ class Task extends Model
     /** 0 обычная, 1 важная, 2 срочная. */
     public const PRIORITIES = [0, 1, 2];
 
-    protected $fillable = ['title', 'notes', 'due_on', 'due_time', 'priority', 'repeat', 'done_at'];
+    protected $fillable = ['goal_id', 'title', 'notes', 'due_on', 'due_time', 'priority', 'repeat', 'done_at'];
 
     // `due_on` stays uncast and is always written as Y-m-d, like RecurringPayment::next_due_on.
     protected function casts(): array
@@ -57,6 +57,7 @@ class Task extends Model
 
         return [
             'id' => $this->id,
+            'goal_id' => $this->goal_id,
             'title' => $this->title,
             'notes' => $this->notes,
             'due_on' => $due?->toDateString(),
