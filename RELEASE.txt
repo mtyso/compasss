@@ -1,2 +1,2 @@
-source: 84d51372964047f41231fd4c8d838deb8f97447d
-subject: Merge pull request #12 from mtyso/claude/project-thread-due5hn
+source: c0f80bcc65b86814fcb8e142ff6d907598442868
+subject: Merge pull request #7 from mtyso/claude/project-thread-e6ru9q
