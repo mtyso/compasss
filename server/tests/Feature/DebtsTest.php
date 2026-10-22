@@ -172,6 +172,18 @@ it('offers a paid-off debt\'s payment to the next one and moves it there', funct
     $this->postJson("/api/insights/{$closed->id}/action", [], $this->auth)->assertUnprocessable();
 });
 
+it('stops offering to roll a payment on once the next debt is paid off too', function () {
+    $card = $this->postJson('/api/debts/borrow', ['name' => 'Кредитка', 'currency' => 'UZS', 'amount' => 500_000, 'monthly_amount' => 100_000], $this->auth)->json();
+    $brother = $this->postJson('/api/debts/borrow', ['name' => 'Брат', 'currency' => 'UZS', 'amount' => 600_000, 'monthly_amount' => 300_000], $this->auth)->json();
+    $this->postJson("/api/debts/{$brother['account_id']}/settle", ['account_id' => $this->card->id], $this->auth)->assertOk();
+    $closed = $this->user->insights()->where('rule', 'goal_reached')->sole();
+    expect($closed->action())->toBe('roll');
+
+    $this->postJson("/api/debts/{$card['account_id']}/settle", ['account_id' => $this->card->id], $this->auth)->assertOk();
+    expect($closed->fresh()->action())->toBeNull();
+    $this->postJson("/api/insights/{$closed->id}/action", [], $this->auth)->assertUnprocessable();
+});
+
 it('does not let money go back and forth between debts', function () {
     $lent = $this->postJson('/api/debts/lend', ['name' => 'Бекзод', 'account_id' => $this->card->id, 'amount' => 500_000], $this->auth)->json();
     $debt = $this->postJson('/api/debts/borrow', ['name' => 'Брат', 'currency' => 'UZS', 'amount' => 600_000], $this->auth)->json();

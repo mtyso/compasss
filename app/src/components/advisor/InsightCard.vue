@@ -65,8 +65,12 @@ async function settle(): Promise<void> {
     haptics.notify('success')
     showToast({ message: returned ? t('debts.returned') : t('debts.rolledToast'), tone: 'success' })
   } catch (e) {
-    if (e instanceof ApiError && e.status === 422) void router.push({ name: 'debts', query: returned ? { settle: props.insight.ref } : {} })
-    else showToast({ message: t('quickAdd.failed'), tone: 'danger' })
+    if (e instanceof ApiError && e.status === 422 && returned) void router.push({ name: 'debts', query: { settle: props.insight.ref } })
+    else if (e instanceof ApiError && e.status === 422) {
+      // Nothing to roll on to any more: say so, and the reloaded card loses its button.
+      showToast({ message: Object.values(e.errors)[0]?.[0] ?? e.message })
+      void advisor.load()
+    } else showToast({ message: t('quickAdd.failed'), tone: 'danger' })
   } finally {
     busy.value = false
   }

@@ -367,6 +367,30 @@ it('pushes «обещал вернуть» and records the return once from its 
         ->and(Transaction::where('account_id', $lent->id)->count())->toBe(1);
 });
 
+it('brings a debt paid off at night after the summary with «Перенести платёж», and drops the button when there is nothing to roll on to', function () {
+    $this->travelTo(Carbon::parse('2026-10-21 23:00', 'Asia/Tashkent'));
+    $debts = app(Debts::class);
+    [$card] = $debts->borrow($this->user, null, ['name' => 'Кредитка', 'currency' => 'UZS', 'amount' => 500_000, 'monthly_amount' => 100_000], now());
+    [$brother] = $debts->borrow($this->user, null, ['name' => 'Брат', 'currency' => 'UZS', 'amount' => 600_000, 'monthly_amount' => 300_000], now());
+    $debts->settle($this->user, $brother, $this->card, [], now());
+    $closed = $this->user->insights()->where('rule', 'goal_reached')->sole();
+
+    $this->travelTo(Carbon::parse('2026-10-22 08:00', 'Asia/Tashkent'));
+    $this->artisan('advisor:run morning')->assertSuccessful();
+    $this->artisan('bot:digest morning')->assertSuccessful();
+    $this->artisan('bot:notify')->assertSuccessful();
+    [$summary, $sent] = advCalls('sendRichMessage');
+    expect($summary['rich_message']['html'])->not->toContain('Брат')
+        ->and($sent['rich_message']['html'])->toContain('Брат')
+        ->and(advButtons($sent))->toContain("ins:roll:{$closed->id}");
+
+    // Paid off in the meantime: the tap says so once, and the button goes.
+    $debts->settle($this->user, $card, $this->card, [], now());
+    advTap("ins:roll:{$closed->id}");
+    expect(advToast())->toBe('Следующий долг уже закрыт.')
+        ->and(advButtons(collect(advCalls('editMessageReplyMarkup'))->last()))->toBe(['https://kompas.example.uz/advice']);
+});
+
 it('keeps payment reminders out of the morning summary unless money is missing', function () {
     $home = $this->user->categories()->firstWhere('system_key', 'home');
     $make = fn (string $name, int $amount) => $this->user->recurringPayments()->create([

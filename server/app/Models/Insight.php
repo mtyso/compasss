@@ -75,7 +75,7 @@ class Insight extends Model
             $this->rule === 'subscription_found' && $this->status !== 'dismissed'
                 && ! SubscriptionFinder::covered($this->user, $this->payload ?? []) => 'add_payment',
             $this->rule === 'lent_due' && $this->lent() !== null => 'returned',
-            $this->rule === 'goal_reached' && ($this->payload['variant'] ?? null) === 'debt_roll' => 'roll',
+            $this->rule === 'goal_reached' && ($this->payload['variant'] ?? null) === 'debt_roll' && $this->nextDebt() !== null => 'roll',
             default => null,
         };
     }
@@ -120,6 +120,14 @@ class Insight extends Model
         return $account !== null && (Balances::forUser($this->user)[$account->id] ?? 0) > 0 ? $account : null;
     }
 
+    /** The debt a paid-off one's payment is offered to, while it is still owed. */
+    public function nextDebt(): ?Account
+    {
+        $debt = $this->user->accounts()->whereNull('archived_at')->where('type', 'debt')->find($this->payload['next_account_id'] ?? 0);
+
+        return $debt !== null && (Balances::forUser($this->user)[$debt->id] ?? 0) < 0 ? $debt : null;
+    }
+
     /** «Вернул» on a reminder: all of it, back to the account it was lent from (or the first one for spending). */
     public function returned(Carbon $now, string $source = 'app'): Transaction
     {
@@ -140,10 +148,7 @@ class Insight extends Model
     public function roll(Carbon $now): Goal
     {
         $user = $this->user;
-        $next = $user->accounts()->whereNull('archived_at')->where('type', 'debt')->find($this->payload['next_account_id'] ?? 0);
-        if ($next === null || (Balances::forUser($user)[$next->id] ?? 0) >= 0) {
-            throw ValidationException::withMessages(['action' => __('debts.roll_nothing')]);
-        }
+        $next = $this->nextDebt() ?? throw ValidationException::withMessages(['action' => __('debts.roll_nothing')]);
         $amount = app(GoalContributor::class)->inCurrency((int) $this->payload['payment_amount'], $this->payload['currency'] ?? 'UZS', $next->currency, $now);
 
         return DB::transaction(function () use ($user, $next, $amount, $now) {

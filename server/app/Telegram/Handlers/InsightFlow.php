@@ -110,7 +110,8 @@ class InsightFlow
     {
         $l = $user->locale;
         if ($insight->action() !== 'roll') {
-            return __('bot.debts.rolled_before', [], $l);
+            // Rolled on already, or the next debt is gone too.
+            return $insight->status === 'useful' ? __('bot.debts.rolled_before', [], $l) : __('debts.roll_nothing', [], $l);
         }
         try {
             $goal = $insight->roll(now());
