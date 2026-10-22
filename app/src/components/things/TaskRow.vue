@@ -22,7 +22,7 @@ const repeat = computed(() => (props.task.repeat ? repeatLabel(props.task.repeat
 <template>
   <div class="flex items-start gap-3 pl-4">
     <span class="pt-3"><TaskCheck :checked="done" :priority="task.priority" :label="done ? $t('tasks.uncheck', { title: task.title }) : $t('tasks.check', { title: task.title })" @toggle="emit('toggle')" /></span>
-    <button type="button" class="press-soft flex min-h-14 min-w-0 flex-1 flex-col justify-center gap-0.5 py-3 pr-4 text-left" @click="emit('open')">
+    <button type="button" class="press-soft flex min-h-14 min-w-0 flex-1 flex-col justify-center gap-0.5 py-3 pr-4 text-left md:rounded-r-xl" @click="emit('open')">
       <span class="title break-words" :class="{ 'is-done': done }">{{ task.title }}</span>
       <span v-if="due || repeat || task.notes" class="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5 text-caption" :class="done ? 'text-ink-3' : 'text-ink-2'">
         <span v-if="due" :class="{ 'font-medium text-danger': task.overdue && !done }">{{ due }}</span>

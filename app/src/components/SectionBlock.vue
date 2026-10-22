@@ -7,7 +7,7 @@ defineProps<{ title: string; empty?: string; icon?: Component; tone?: 'neutral' 
 </script>
 
 <template>
-  <section class="flex flex-col gap-2.5">
+  <section class="flex flex-col gap-3">
     <h2 class="section-title">{{ title }}</h2>
     <slot>
       <UiEmpty :icon="icon" :text="empty ?? ''" :tone="tone" />

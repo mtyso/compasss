@@ -35,12 +35,12 @@ function onKey(event: KeyboardEvent): void {
   <div
     role="radiogroup"
     :aria-label="label"
-    class="relative grid rounded-[0.875rem] bg-surface-2 p-1"
+    class="relative grid rounded-[0.75rem] bg-surface-2 p-1"
     :style="{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }"
     @keydown="onKey"
   >
     <span
-      class="thumb pointer-events-none absolute top-1 bottom-1 left-1 rounded-[0.625rem] bg-control shadow-card"
+      class="thumb pointer-events-none absolute top-1 bottom-1 left-1 rounded-[0.5rem] bg-control shadow-card"
       :style="{ width: `calc((100% - 0.5rem) / ${options.length})`, transform: `translateX(${index * 100}%)` }"
       aria-hidden="true"
     />
@@ -52,8 +52,8 @@ function onKey(event: KeyboardEvent): void {
       role="radio"
       :aria-checked="option.value === model"
       :tabindex="option.value === model ? 0 : -1"
-      class="relative z-10 truncate rounded-[0.625rem] px-2 font-medium transition-colors duration-200"
-      :class="[size === 'sm' ? 'py-1.5 text-caption' : 'py-2 text-sm', i === index ? 'text-ink' : 'text-ink-2']"
+      class="relative z-10 truncate rounded-[0.5rem] px-2 transition-colors duration-200"
+      :class="[size === 'sm' ? 'py-1.5 text-caption' : 'py-2 text-sm', i === index ? 'font-semibold text-ink' : 'font-medium text-ink-2 hover:text-ink']"
       @click="choose(option.value)"
     >
       {{ option.label }}

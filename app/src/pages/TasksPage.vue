@@ -290,7 +290,7 @@ function openNew(): void {
               @click="openHabit(habit)"
             >
               <template #leading>
-                <span class="grid size-10 place-items-center rounded-[0.875rem] bg-surface-2 text-ink-3">
+                <span class="grid size-10 place-items-center rounded-full bg-surface-2 text-ink-3">
                   <component :is="habitIcon(habit.icon)" class="size-5" :stroke-width="1.9" />
                 </span>
               </template>

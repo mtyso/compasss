@@ -24,12 +24,12 @@ const ICONS = {
 
 const component = computed(() => ICONS[(props.icon ?? 'circle-ellipsis') as keyof typeof ICONS] ?? CircleEllipsis)
 const hex = computed(() => CATEGORY_COLORS[props.color ?? 'gray'] ?? CATEGORY_COLORS.gray)
-const box = computed(() => ({ sm: 'size-9 rounded-xl', md: 'size-10 rounded-[0.875rem]', lg: 'size-12 rounded-2xl' })[props.size])
-const glyph = computed(() => ({ sm: 'size-[18px]', md: 'size-5', lg: 'size-6' })[props.size])
+const box = computed(() => ({ sm: 'size-9', md: 'size-10', lg: 'size-12' })[props.size])
+const glyph = computed(() => ({ sm: 'size-[18px]', md: 'size-5', lg: 'size-[22px]' })[props.size])
 </script>
 
 <template>
-  <span class="grid shrink-0 place-items-center" :class="box" :style="{ backgroundColor: `color-mix(in srgb, ${hex} 14%, transparent)`, color: hex }">
-    <component :is="component" :class="glyph" :stroke-width="1.9" />
+  <span class="grid shrink-0 place-items-center rounded-full text-white" :class="box" :style="{ backgroundColor: hex }">
+    <component :is="component" :class="glyph" :stroke-width="2" />
   </span>
 </template>

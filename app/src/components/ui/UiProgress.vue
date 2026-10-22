@@ -31,7 +31,7 @@ const colors = {
 
 <template>
   <div class="relative" :class="size === 'sm' ? 'h-1.5' : 'h-2'">
-    <div class="absolute inset-0 overflow-hidden rounded-full bg-ink/8">
+    <div class="absolute inset-0 overflow-hidden rounded-full bg-ink/[0.07]">
       <div
         class="bar h-full w-full origin-left rounded-full"
         :class="colors[resolved]"

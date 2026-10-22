@@ -25,18 +25,18 @@ const props = withDefaults(
 const tag = computed(() => (props.to ? RouterLink : props.href ? 'a' : 'button'))
 
 const variants = {
-  primary: 'bg-ink text-surface',
-  secondary: 'bg-surface text-ink shadow-card',
-  ghost: 'text-ink-2 active:bg-ink/8',
-  danger: 'bg-danger text-white',
-  'danger-soft': 'bg-danger-soft text-danger',
+  primary: 'bg-money text-on-money hover:brightness-105',
+  secondary: 'bg-surface-2 text-ink hover:bg-ink/[0.07]',
+  ghost: 'text-ink-2 hover:bg-ink/5 active:bg-ink/8',
+  danger: 'bg-danger text-white dark:text-[#1f0806] hover:brightness-105',
+  'danger-soft': 'bg-danger-soft text-danger hover:brightness-[0.98]',
   telegram: 'bg-[#2aabee] text-white dark:bg-[#2b9fd9]',
 } as const
 
 const sizes = {
-  sm: 'h-9 gap-1.5 rounded-xl px-3.5 text-sm',
+  sm: 'h-9 gap-1.5 rounded-[0.625rem] px-3.5 text-sm',
   md: 'h-12 gap-2 rounded-control px-5 text-body',
-  lg: 'h-14 gap-2.5 rounded-[1.125rem] px-6 text-base',
+  lg: 'h-14 gap-2.5 rounded-[0.875rem] px-6 text-base',
 } as const
 </script>
 

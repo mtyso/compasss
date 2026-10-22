@@ -421,6 +421,7 @@ const uz: typeof ru = {
     close: 'Yopish',
     saved: 'Yozildi',
     updated: 'Saqlandi',
+    settings: 'Sozlamalar',
   },
 }
 
