@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { BellOff, Check, ThumbsUp, X } from 'lucide-vue-next'
@@ -56,6 +56,9 @@ async function pay(): Promise<void> {
 }
 
 /** «Вернул» on money promised back, «Перенести платёж» on a paid-off debt. If it cannot be done here, the debts screen. */
+/** «За октябрь отложено 14% дохода» opens that month's report. */
+const reportMonth = computed(() => (props.insight.rule === 'savings_rate' && typeof props.insight.ref === 'string' ? props.insight.ref : null))
+
 async function settle(): Promise<void> {
   haptics.impact('light')
   busy.value = true
@@ -100,7 +103,7 @@ function mute(): void {
       </UiIconButton>
     </div>
 
-    <div v-if="insight.action || !compact" class="flex flex-wrap items-center gap-2 pl-8">
+    <div v-if="insight.action || reportMonth || !compact" class="flex flex-wrap items-center gap-2 pl-8">
       <UiButton v-if="insight.action === 'mark_one_off'" size="sm" variant="secondary" :loading="busy" @click="act">
         {{ $t('advice.markOneOff') }}
       </UiButton>
@@ -115,6 +118,9 @@ function mute(): void {
       </UiButton>
       <UiButton v-else-if="insight.action === 'returned' || insight.action === 'roll'" size="sm" :loading="busy" @click="settle">
         {{ insight.action === 'returned' ? $t('debts.returned') : $t('debts.roll') }}
+      </UiButton>
+      <UiButton v-else-if="reportMonth" size="sm" variant="secondary" :to="{ name: 'report', params: { month: reportMonth } }">
+        {{ $t('report.title') }}
       </UiButton>
       <template v-if="!compact && insight.status !== 'dismissed'">
         <UiButton v-if="insight.status !== 'useful'" size="sm" variant="ghost" :disabled="busy" @click="rate('useful')">

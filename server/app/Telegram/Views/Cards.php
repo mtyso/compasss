@@ -12,6 +12,7 @@ use App\Models\RecurringPayment;
 use App\Models\Task;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Money\MonthReport;
 use App\Money\MonthSpending;
 use App\Money\Plan;
 use App\Telegram\Keyboard;
@@ -567,5 +568,80 @@ class Cards
                 Card::e(Fmt::uzs((int) $row->total, $l)),
             ])->all())
             ->footer(Card::e(Fmt::date($start, $l).' — '.Fmt::date($end->copy()->subDay(), $l)));
+    }
+
+    /**
+     * «Итоги месяца» on the 1st (docs/PLAN.md, D30): what was kept of the income, spending against the usual
+     * level and the budget, and the goals. Null when nothing was recorded that month.
+     */
+    public function monthly(User $user, ?Carbon $now = null): ?Card
+    {
+        $l = $user->locale;
+        $now ??= now();
+        $month = $now->copy()->startOfMonth()->subMonthNoOverflow();
+        $report = app(MonthReport::class)->for($user, $month->format('Y-m'), $now);
+        if ($report['income_uzs'] === 0 && $report['expense_uzs'] === 0) {
+            return null;
+        }
+
+        $saved = $report['saved_uzs'];
+        $summary = $saved < 0
+            ? __('bot.digest.monthly_deficit', ['amount' => Fmt::uzs(-$saved, $l)], $l)
+            : __($report['rate'] === null ? 'bot.digest.monthly_saved_plain' : 'bot.digest.monthly_saved', ['amount' => Fmt::uzs($saved, $l), 'rate' => $report['rate']], $l);
+        $prevRate = $report['prev']['rate'] ?? null;
+        if ($saved >= 0 && $prevRate !== null) {
+            $summary .= ' '.__('bot.digest.monthly_prev', ['rate' => $prevRate], $l);
+        }
+
+        $card = Card::make()
+            ->heading('📊 '.__('bot.digest.monthly_title', ['month' => Fmt::monthName($month, $l)], $l), 2)
+            ->paragraph(Card::e($summary))
+            ->facts(array_values(array_filter([
+                [__('bot.digest.monthly_income', [], $l), Card::e(Fmt::uzs($report['income_uzs'], $l))],
+                [__('bot.digest.monthly_expense', [], $l), Card::e(Fmt::uzs($report['expense_uzs'], $l))],
+                $report['one_off_uzs'] > 0 ? [__('bot.digest.monthly_one_off', [], $l), Card::e(Fmt::uzs($report['one_off_uzs'], $l))] : null,
+            ])));
+
+        if ($report['usual_uzs']) {
+            $diff = (int) round(($report['expense_uzs'] - $report['one_off_uzs'] - $report['usual_uzs']) * 100 / $report['usual_uzs']);
+            $card->paragraph(Card::e(match (true) {
+                $diff < 0 => __('bot.digest.monthly_less', ['n' => -$diff, 'usual' => Fmt::uzs($report['usual_uzs'], $l)], $l),
+                $diff > 0 => __('bot.digest.monthly_more', ['n' => $diff, 'usual' => Fmt::uzs($report['usual_uzs'], $l)], $l),
+                default => __('bot.digest.monthly_same', [], $l),
+            }));
+            $categories = $user->categories()->get()->keyBy('id');
+            foreach (MonthReport::movers($report['categories']) as $side => $rows) {
+                if ($rows === []) {
+                    continue;
+                }
+                $card->heading(__("bot.digest.monthly_{$side}", [], $l), 4)->facts(array_map(fn (array $m) => [
+                    Fmt::categoryEmoji($categories[$m['category_id']] ?? null).' '.Fmt::categoryName($categories[$m['category_id']] ?? null, $l),
+                    Card::e(Fmt::uzs(abs($m['diff']), $l, $side === 'up' ? '+' : '−')),
+                ], $rows));
+            }
+        }
+
+        if ($report['budget'] !== null) {
+            $budget = $report['budget'];
+            $card->paragraph(Card::e($budget['kept'] === $budget['count']
+                ? __('bot.digest.monthly_budget_all', [], $l)
+                : __('bot.digest.monthly_budget_kept', ['kept' => $budget['kept'], 'count' => $budget['count']], $l)));
+        }
+
+        $goals = array_values(array_filter($report['goals'], fn (array $g) => $g['added'] > 0));
+        if ($goals !== []) {
+            $card->heading(__('bot.digest.monthly_goals', [], $l), 4)->facts(array_map(fn (array $g) => [
+                ($g['type'] === 'debt' ? '💳 ' : '🎯 ').$g['title'],
+                Card::e('+'.Fmt::money($g['added'], $g['currency'], $l).' · '.round($g['progress_to'] * 100).'%'),
+            ], $goals));
+        }
+
+        return $card;
+    }
+
+    /** «Открыть итоги»: the month's report in the Mini App (YYYY-MM). */
+    public function reportKeyboard(User $user, string $month): Keyboard
+    {
+        return Keyboard::make()->row([Keyboard::webApp('📊 '.__('bot.buttons.open_report', [], $user->locale), "/money/report/{$month}", 'primary')]);
     }
 }

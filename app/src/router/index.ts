@@ -25,6 +25,7 @@ export const router = createRouter({
       children: [
         { path: '', name: 'today', component: () => import('@/pages/TodayPage.vue') },
         { path: 'money', name: 'money', component: () => import('@/pages/MoneyPage.vue') },
+        { path: 'money/report/:month(\\d{4}-\\d{2})?', name: 'report', component: () => import('@/pages/ReportPage.vue') },
         { path: 'tasks', name: 'tasks', component: () => import('@/pages/TasksPage.vue') },
         { path: 'goals', name: 'goals', component: () => import('@/pages/GoalsPage.vue') },
         { path: 'goals/:id(\\d+)', name: 'goal', component: () => import('@/pages/GoalPage.vue') },

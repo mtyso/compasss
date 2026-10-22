@@ -26,7 +26,7 @@ class Commands
     {
         match ($command) {
             'today' => $this->today($chatId, $user),
-            'month' => $this->telegram->sendCard($chatId, $this->cards->month($user), $this->cards->startKeyboard($user)),
+            'month' => $this->telegram->sendCard($chatId, $this->cards->month($user), $this->cards->reportKeyboard($user, now()->format('Y-m'))),
             default => $this->telegram->sendCard($chatId, $this->cards->start($user), $this->cards->startKeyboard($user)),
         };
     }
