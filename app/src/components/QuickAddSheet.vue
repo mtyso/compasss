@@ -279,7 +279,7 @@ function addAccount(): void {
               enterkeyhint="done"
               autocomplete="off"
               placeholder="0"
-              class="num min-w-0 flex-1 bg-transparent text-[2.75rem] leading-none font-semibold tracking-[-0.03em] outline-none placeholder:text-ink/20"
+              class="amount-input num min-w-0 flex-1 bg-transparent text-[2.75rem] leading-none font-semibold tracking-[-0.03em] outline-none placeholder:text-ink/20"
               :class="type === 'income' ? 'text-money' : 'text-ink'"
               @input="groupInput($event, (value) => (amountText = value))"
               @keydown.enter="save"
@@ -443,6 +443,14 @@ function addAccount(): void {
   transition:
     transform 420ms var(--ease-enter),
     opacity var(--dur-fast) var(--ease-standard);
+}
+
+/* Where the browser can size a field to its text, the currency follows the number: «85 000 сум». */
+@supports (field-sizing: content) {
+  .amount-input {
+    field-sizing: content;
+    flex: 0 1 auto;
+  }
 }
 
 /* Content scrolling under the pinned amount fades out instead of being cut at a hard edge. */

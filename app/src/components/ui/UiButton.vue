@@ -26,7 +26,7 @@ const tag = computed(() => (props.to ? RouterLink : props.href ? 'a' : 'button')
 
 const variants = {
   primary: 'bg-money text-on-money hover:brightness-105',
-  secondary: 'bg-surface-2 text-ink hover:bg-ink/[0.07]',
+  secondary: 'bg-(--secondary-fill) text-ink hover:brightness-[0.96] dark:hover:brightness-125',
   ghost: 'text-ink-2 hover:bg-ink/5 active:bg-ink/8',
   danger: 'bg-danger text-white dark:text-[#1f0806] hover:brightness-105',
   'danger-soft': 'bg-danger-soft text-danger hover:brightness-[0.98]',

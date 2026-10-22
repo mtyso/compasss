@@ -48,7 +48,7 @@ function mute(): void {
 </script>
 
 <template>
-  <article class="flex flex-col gap-3 rounded-card p-4" :class="[SEVERITY_PANELS[insight.severity], { 'opacity-60': insight.status === 'dismissed' }]">
+  <article class="flex flex-col gap-3 rounded-card p-4" :class="[SEVERITY_PANELS[insight.severity], { 'opacity-60': insight.status === 'dismissed' }]" data-panel>
     <div class="flex items-start gap-3">
       <component :is="RULE_ICONS[insight.rule]" class="mt-0.5 size-5 shrink-0" :class="SEVERITY_TONES[insight.severity]" :stroke-width="2.1" />
       <div class="flex min-w-0 flex-1 flex-col gap-1">

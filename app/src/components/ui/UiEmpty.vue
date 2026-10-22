@@ -22,7 +22,7 @@ const tones = {
 </script>
 
 <template>
-  <div class="flex items-start gap-3 rounded-card bg-surface-2 px-4 py-3.5">
+  <div class="flex items-start gap-3 rounded-card bg-surface-2 px-4 py-3.5" data-panel>
     <component :is="icon" v-if="icon" class="mt-px size-5 shrink-0" :class="tones[tone]" :stroke-width="2" />
     <div class="flex min-w-0 flex-1 flex-col gap-0.5">
       <p v-if="title" class="font-semibold">{{ title }}</p>

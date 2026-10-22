@@ -99,7 +99,7 @@ const LOOK: Record<Verdict, { icon: typeof CircleCheck; tone: string; panel: str
     </form>
 
     <Transition name="verdict">
-      <article v-if="result" :key="`${result.verdict}-${result.amount_uzs}`" class="flex flex-col gap-4 rounded-hero p-5" :class="LOOK[result.verdict].panel" aria-live="polite">
+      <article v-if="result" :key="`${result.verdict}-${result.amount_uzs}`" class="flex flex-col gap-4 rounded-hero p-5" :class="LOOK[result.verdict].panel" aria-live="polite" data-panel>
         <div class="flex items-center gap-3">
           <span class="verdict-icon grid size-12 shrink-0 place-items-center rounded-full" :class="LOOK[result.verdict].tone">
             <component :is="LOOK[result.verdict].icon" class="size-6" :stroke-width="2.2" />
