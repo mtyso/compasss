@@ -11,7 +11,8 @@ const props = defineProps<{ goal: Goal; main?: boolean }>()
 const text = useGoalText()
 
 const tone = computed(() => statusTone(props.goal.status))
-const toneText = { money: 'text-money', habit: 'text-habit', danger: 'text-danger', goal: 'text-ink-3', neutral: 'text-ink-3' } as const
+const toneText = { money: 'text-money', habit: 'text-habit', danger: 'text-danger', goal: '', neutral: '' } as const
+const forecast = computed(() => text.forecast(props.goal))
 const percent = computed(() => Math.min(100, Math.floor(props.goal.progress * 100)))
 </script>
 
@@ -22,12 +23,13 @@ const percent = computed(() => Math.min(100, Math.floor(props.goal.progress * 10
       <span class="flex items-baseline justify-between gap-3">
         <span class="flex min-w-0 items-baseline gap-2">
           <span class="truncate font-medium">{{ goal.title }}</span>
-          <span v-if="main" class="shrink-0 text-micro font-semibold tracking-wide text-goal uppercase">{{ $t('goals.main') }}</span>
+          <span v-if="main" class="shrink-0 text-caption font-medium text-goal">{{ $t('goals.main') }}</span>
         </span>
         <span class="num shrink-0 text-caption font-medium text-ink-2">{{ percent }}%</span>
       </span>
       <UiProgress :value="goal.progress" :tone="goal.done_at ? 'neutral' : 'goal'" size="sm" />
-      <span class="truncate text-caption" :class="toneText[tone]">{{ text.line(goal) }}</span>
+      <!-- Only the status word carries colour, so the line does not read as a link. -->
+      <span class="truncate text-caption text-ink-2"><span :class="toneText[tone]">{{ text.status(goal) }}</span><template v-if="forecast"> · {{ forecast }}</template></span>
     </span>
   </RouterLink>
 </template>
