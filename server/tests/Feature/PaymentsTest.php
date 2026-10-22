@@ -92,6 +92,21 @@ it('lets a note naming the payment differ more, and links an expense moved into 
         ->assertJsonPath('recurring_payment_id', $internet['id']);
 });
 
+it('drops the link when a paid payment is edited into something else, but not for another sum', function () {
+    $payment = newPayment();
+    $tx = spend(150_000, $this->internet->id);
+    $edit = fn (array $data) => $this->patchJson("/api/transactions/{$tx['id']}", [
+        'type' => 'expense', 'account_id' => $this->card->id, 'amount' => 150_000, 'category_id' => $this->internet->id, 'occurred_at' => '2026-10-21 14:00', ...$data,
+    ], $this->auth)->assertOk();
+
+    // The bill came out higher: still the payment.
+    $edit(['amount' => 190_000])->assertJsonPath('recurring_payment_id', $payment['id']);
+
+    // It was a café after all: the payment is due again.
+    $edit(['category_id' => $this->cafe->id])->assertJsonPath('recurring_payment_id', null);
+    $this->getJson('/api/recurring-payments', $this->auth)->assertJsonPath('0.next_due_on', '2026-10-21');
+});
+
 it('keeps «Оплачено» to one month and lets a month be skipped', function () {
     $payment = newPayment();
 

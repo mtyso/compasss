@@ -54,6 +54,15 @@ class TransactionWriter
             $transaction->source = $data['source'] ?? 'app';
         }
 
+        // A paid payment edited into something else (an income, another category) no longer pays it. The sum
+        // may change freely: a bill varies, and «Оплачено» may pay it from an account in another currency.
+        $released = $transaction->exists && $transaction->recurring_payment_id !== null && $transaction->isDirty(['type', 'category_id'])
+            ? $this->payments->unpaidBy($user, $transaction)
+            : null;
+        if ($released !== null) {
+            $transaction->recurring_payment_id = null;
+        }
+
         // An expense that pays a recurring payment counts as it (D28). A link set by the caller
         // («Оплачено») is left alone: the caller moves the due date itself.
         $payment = $transaction->recurring_payment_id === null && $account->spendable
@@ -61,7 +70,10 @@ class TransactionWriter
             ? $this->payments->find($user, $transaction)
             : null;
 
-        DB::transaction(function () use ($transaction, $payment) {
+        DB::transaction(function () use ($transaction, $payment, $released) {
+            if ($released !== null) {
+                PaymentMatcher::release($released, $transaction);
+            }
             $transaction->recurring_payment_id ??= $payment?->id;
             $transaction->save();
             $payment?->advance();

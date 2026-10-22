@@ -44,6 +44,17 @@ class PaymentMatcher
                 && self::close($p, $transaction->amount, $transaction->note));
     }
 
+    /** The payment a linked expense stops paying after an edit: no longer an expense, or in an unrelated category. */
+    public function unpaidBy(User $user, Transaction $transaction): ?RecurringPayment
+    {
+        $payment = self::paymentOf($transaction);
+        if ($payment === null) {
+            return null;
+        }
+
+        return $transaction->type === 'expense' && self::related(self::parents($user), $payment->category_id, $transaction->category_id) ? null : $payment;
+    }
+
     /** The same category, or one inside the other («Связь» and «Связь › Интернет»). */
     public static function related(Collection $parents, ?int $a, ?int $b): bool
     {
@@ -74,7 +85,14 @@ class PaymentMatcher
     public static function released(Transaction $transaction): void
     {
         $payment = self::paymentOf($transaction);
-        if ($payment !== null && ! self::laterExists($payment, $transaction)) {
+        if ($payment !== null) {
+            self::release($payment, $transaction);
+        }
+    }
+
+    public static function release(RecurringPayment $payment, Transaction $transaction): void
+    {
+        if (! self::laterExists($payment, $transaction)) {
             $payment->rewind();
         }
     }
