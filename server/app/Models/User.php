@@ -18,6 +18,12 @@ class User extends Authenticatable
 
     public const LOCALES = ['ru', 'uz'];
 
+    /** Settings the app may change, with their validation rules. */
+    public const SETTINGS = [
+        // Money that must stay on the spending accounts whatever happens (docs/PLAN.md, 2.1)
+        'min_balance_uzs' => ['integer', 'min:0', 'max:1000000000000'],
+    ];
+
     protected static function booted(): void
     {
         // Every account starts with the ready-made category set (docs/PLAN.md, section 8).
@@ -45,6 +51,27 @@ class User extends Authenticatable
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(Budget::class);
+    }
+
+    public function incomeSchedules(): HasMany
+    {
+        return $this->hasMany(IncomeSchedule::class);
+    }
+
+    public function recurringPayments(): HasMany
+    {
+        return $this->hasMany(RecurringPayment::class);
+    }
+
+    /** A user setting with its default (docs/PLAN.md, 2.5: thresholds are settings). */
+    public function setting(string $key, mixed $default = null): mixed
+    {
+        return ($this->settings ?? [])[$key] ?? $default;
     }
 
     public function isAllowed(): bool
