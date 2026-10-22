@@ -185,6 +185,20 @@ it('sends last month\'s report on the 1st: kept share, against the usual, budget
         ->and(json_encode($sent['reply_markup']))->toContain('money\\/report\\/2026-10');
 });
 
+it('leaves the weekly totals out on a Sunday that is the 1st, when the month\'s report comes', function () {
+    $this->travelTo(Carbon::parse('2026-11-01 20:00', 'Asia/Tashkent'));
+    $this->user->transactions()->create([
+        'type' => 'expense', 'account_id' => $this->card->id, 'amount' => 300_000, 'currency' => 'UZS', 'rate' => '1', 'amount_uzs' => 300_000,
+        'occurred_at' => now()->subDays(2), 'category_id' => $this->user->categories()->firstWhere('system_key', 'cafe')->id,
+    ]);
+
+    $this->artisan('bot:digest weekly')->assertSuccessful();
+    $this->artisan('bot:digest monthly')->assertSuccessful();
+
+    expect(cmdCalls('sendRichMessage'))->toHaveCount(1)
+        ->and(cmdCalls('sendRichMessage')[0]['rich_message']['html'])->toContain('Итоги месяца: Октябрь');
+});
+
 it('sets up the webhook, commands in both languages and the Mini App menu button', function () {
     $this->artisan('telegram:setup')->assertSuccessful();
 

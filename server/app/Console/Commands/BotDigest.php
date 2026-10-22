@@ -33,7 +33,8 @@ class BotDigest extends Command
         foreach ($users as $user) {
             match ($kind) {
                 'morning' => $commands->today($user->telegram_id, $user, morning: true),
-                'weekly' => ($card = $cards->weekly($user)) ? $telegram->sendCard($user->telegram_id, $card, $cards->startKeyboard($user)) : null,
+                // A Sunday that is the 1st gets the month's report at the same hour instead: one card, not two.
+                'weekly' => now()->timezone(config('app.timezone'))->day !== 1 && ($card = $cards->weekly($user)) ? $telegram->sendCard($user->telegram_id, $card, $cards->startKeyboard($user)) : null,
                 'monthly' => ($card = $cards->monthly($user)) ? $telegram->sendCard($user->telegram_id, $card, $cards->reportKeyboard($user, now()->startOfMonth()->subMonthNoOverflow()->format('Y-m'))) : null,
             };
         }
