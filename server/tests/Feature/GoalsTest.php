@@ -76,6 +76,16 @@ it('sets a goal\'s contribution aside before the daily limit, and «Отложи
         ->assertJsonPath('history.0.amount', 1_251_000);
 });
 
+it('keeps the plan forecast within the deadline when the goal keeps to its plan', function () {
+    $this->travelTo(Carbon::parse('2026-10-22 12:00', 'Asia/Tashkent'));
+    // 14 pay months from 10 Oct to 1 Dec 2027: 2 143 000 a month, though 14 average months from today end on 23 Dec
+    $this->postJson('/api/goals', ['type' => 'save', 'title' => 'Подушка', 'currency' => 'UZS', 'target_amount' => 30_000_000, 'deadline' => '2027-12-01'], $this->auth)
+        ->assertCreated()
+        ->assertJsonPath('monthly_required', 2_143_000)
+        ->assertJsonPath('forecast.plan_on', '2027-12-01')
+        ->assertJsonPath('status', 'on_track');
+});
+
 it('takes only the rest of the period for a goal set in the middle of it', function () {
     $this->travelTo(Carbon::parse('2026-10-21 12:00', 'Asia/Tashkent'));
     // 1 000 000 a month, 75% on the salary, 4 of the 15 days of this period left

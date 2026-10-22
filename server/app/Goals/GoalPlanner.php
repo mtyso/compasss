@@ -77,8 +77,9 @@ class GoalPlanner
         $progress = $target > 0 ? min(1, max(0, $saved / $target)) : 0;
         $ratePercent = $goal->type === 'debt' && $goal->rate !== null ? (float) $goal->rate : null;
 
+        $steps = $this->steps($goal);
         if (! $goal->isActive()) {
-            return new GoalState($goal, saved: $saved, remaining: $remaining, rate: $rate, status: 'done', progress: $progress);
+            return new GoalState($goal, saved: $saved, remaining: $remaining, rate: $rate, status: 'done', progress: $progress, steps: $steps);
         }
 
         // What the goal had when the period began: this period's contributions do not lower what it asks for.
@@ -102,6 +103,13 @@ class GoalPlanner
 
         [$status, $behind] = $this->status($goal, $remaining, $saved, $remainingAtStart, $required, $monthly, $period, $today);
 
+        // What the deadline asks for is counted in pay months, and a month's contribution goes in at its start,
+        // so keeping to the plan is on time even when average months from today run a few days past the deadline.
+        $forecastPlan = $remaining > 0 && $planMonths !== null ? GoalMath::dateAfter($today, $planMonths) : null;
+        if ($forecastPlan !== null && $required > 0 && $deadline !== null && $forecastPlan->gt($deadline)) {
+            $forecastPlan = $deadline->copy();
+        }
+
         return new GoalState(
             goal: $goal,
             saved: $saved,
@@ -114,13 +122,22 @@ class GoalPlanner
             dueUzs: $rate === null ? 0 : Money::toUzs($due, $currency, $rate),
             monthlyUzs: $rate === null ? 0 : Money::toUzs($monthly, $currency, $rate),
             rate: $rate,
-            forecastPlan: $remaining > 0 && $planMonths !== null ? GoalMath::dateAfter($today, $planMonths) : null,
+            forecastPlan: $forecastPlan,
             forecastFact: $remaining > 0 && $factMonths !== null ? GoalMath::dateAfter($today, $factMonths) : null,
             factMonthly: $factMonthly,
             status: $status,
             behind: $behind,
             progress: $progress,
+            steps: $steps,
         );
+    }
+
+    /** @return array{done: int, total: int} the goal's tasks, done and all */
+    private function steps(Goal $goal): array
+    {
+        $tasks = $goal->tasks()->get(['id', 'done_at']);
+
+        return ['done' => $tasks->whereNotNull('done_at')->count(), 'total' => $tasks->count()];
     }
 
     /** @return array{0: string, 1: int} the status and how much the goal is behind its line */
@@ -159,8 +176,7 @@ class GoalPlanner
 
     private function otherState(Goal $goal, Carbon $today): GoalState
     {
-        $tasks = $goal->tasks()->get(['id', 'done_at']);
-        $steps = ['done' => $tasks->whereNotNull('done_at')->count(), 'total' => $tasks->count()];
+        $steps = $this->steps($goal);
 
         $checkins = $goal->checkins()->orderBy('date')->get(['date', 'value']);
         $current = $checkins->last()?->value !== null ? (float) $checkins->last()->value : ($goal->start_value !== null ? (float) $goal->start_value : null);
