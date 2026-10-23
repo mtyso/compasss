@@ -17,16 +17,18 @@ import { CATEGORY_COLORS } from '@/lib/palette'
 import { ApiError } from '@/lib/api'
 import { isoDate, isoTime, shiftDate } from '@/lib/dates'
 import { groupDigits, groupInput } from '@/lib/digits'
-import { formatMoney } from '@/lib/format'
+import { formatDayMonth, formatMoney } from '@/lib/format'
 import { amountToInput, parseAmount, toUzs } from '@/lib/money'
 import { readJson, writeJson } from '@/lib/storage'
 import { useMoney, useQuickAdd, type Category, type Transaction, type TransactionType } from '@/stores/money'
+import { usePlan, type RecurringPayment } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
 
 const LAST_ACCOUNT_KEY = 'kompas.lastAccount'
 
 const quick = useQuickAdd()
 const money = useMoney()
+const plan = usePlan()
 const settings = useSettings()
 const router = useRouter()
 const { t } = useI18n()
@@ -169,7 +171,7 @@ async function save(): Promise<void> {
   error.value = null
   const isNewToday = !quick.editing && day.value === isoDate()
   try {
-    await money.saveTransaction(
+    const saved = await money.saveTransaction(
       {
         type: type.value,
         account_id: accountId.value,
@@ -185,7 +187,13 @@ async function save(): Promise<void> {
     )
     writeJson(LAST_ACCOUNT_KEY, accountId.value)
     haptics.notify('success')
-    showToast({ message: quick.editing ? t('ui.updated') : t('ui.saved'), detail: savedDetail(), tone: 'success' })
+    // The server counted it as a recurring payment it pays (D28): say which, and when the next one is due.
+    const paid = !quick.editing && saved.recurring_payment_id ? await countedPayment(saved.recurring_payment_id) : null
+    showToast(
+      paid
+        ? { message: t('payments.counted', { name: paid.name }), detail: t('payments.nextOn', { date: formatDayMonth(paid.next_due_on, settings.locale) }), tone: 'success' }
+        : { message: quick.editing ? t('ui.updated') : t('ui.saved'), detail: savedDetail(), tone: 'success' },
+    )
     quick.close()
   } catch (e) {
     haptics.notify('error')
@@ -193,6 +201,11 @@ async function save(): Promise<void> {
   } finally {
     saving.value = false
   }
+}
+
+async function countedPayment(id: number): Promise<RecurringPayment | null> {
+  await plan.loadPayments().catch(() => {})
+  return plan.payments.find((p) => p.id === id) ?? null
 }
 
 /** «Кафе и рестораны, −85 000 сум» for the toast after saving. */

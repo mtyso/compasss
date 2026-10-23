@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Advisor\Rules\PaymentDue;
 use App\Advisor\Texts;
 use App\Goals\GoalContributor;
+use App\Money\PaymentPayer;
+use App\Money\SubscriptionFinder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /** One piece of advice (docs/PLAN.md, 2.2). Rendered from lang/{locale}/advisor.php when read. */
@@ -16,10 +20,11 @@ class Insight extends Model
     public const RULES = [
         'budget_threshold', 'category_pace', 'overspend_forecast', 'large_spend', 'small_things',
         'income_split', 'goal_due', 'goal_leftover', 'goal_pace', 'goal_reached', 'cushion', 'savings_rate', 'good_news', 'forgot_to_record',
+        'payment_due', 'subscription_found',
     ];
 
     /** The same, for a validation rule inside a constant expression. */
-    public const RULES_LIST = 'budget_threshold,category_pace,overspend_forecast,large_spend,small_things,income_split,goal_due,goal_leftover,goal_pace,goal_reached,cushion,savings_rate,good_news,forgot_to_record';
+    public const RULES_LIST = 'budget_threshold,category_pace,overspend_forecast,large_spend,small_things,income_split,goal_due,goal_leftover,goal_pace,goal_reached,cushion,savings_rate,good_news,forgot_to_record,payment_due,subscription_found';
 
     /** Most important first. */
     public const SEVERITIES = ['alert', 'warn', 'good', 'info'];
@@ -63,8 +68,42 @@ class Insight extends Model
             $this->rule === 'large_spend' => 'mark_one_off',
             in_array($this->rule, ['income_split', 'goal_due'], true) && ($this->payload['goals_uzs'] ?? 0) > 0,
             $this->rule === 'goal_leftover' => 'contribute',
+            $this->rule === 'payment_due' && $this->payment() !== null => 'pay',
+            $this->rule === 'subscription_found' && $this->status !== 'dismissed'
+                && ! SubscriptionFinder::covered($this->user, $this->payload ?? []) => 'add_payment',
             default => null,
         };
+    }
+
+    /** What the action works on in the app: the payment to pay, or the suggestion to turn into one. */
+    public function ref(): int|string|null
+    {
+        return match ($this->rule) {
+            'payment_due' => $this->payload['payment_id'] ?? null,
+            'subscription_found' => $this->subject,
+            default => null,
+        };
+    }
+
+    /** The recurring payment a reminder is about, while it still waits for the reminded due date. */
+    public function payment(): ?RecurringPayment
+    {
+        $payment = $this->user->recurringPayments()->find($this->payload['payment_id'] ?? 0);
+
+        return $payment !== null && PaymentDue::stillDue($payment, $this->payload ?? []) ? $payment : null;
+    }
+
+    /** «Оплачено» on a reminder: the payment from its own account, as in the app (PaymentPayer). */
+    public function pay(Carbon $now, string $source = 'app'): Transaction
+    {
+        $payment = $this->payment() ?? throw ValidationException::withMessages(['action' => __('money.pay_already')]);
+
+        // Answered first, so paying does not take this reminder away with the unread ones.
+        return DB::transaction(function () use ($payment, $now, $source) {
+            $this->update(['status' => 'useful']);
+
+            return app(PaymentPayer::class)->pay($this->user, $payment, at: $now, source: $source);
+        });
     }
 
     /** @return array<string, mixed> */
@@ -124,6 +163,7 @@ class Insight extends Model
             'status' => $this->status,
             ...$this->text($locale),
             'action' => $this->action(),
+            'ref' => $this->ref(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

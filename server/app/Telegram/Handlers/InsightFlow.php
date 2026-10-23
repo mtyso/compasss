@@ -12,11 +12,11 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * The buttons under an insight the bot sent on its own (App\Telegram\Notifier): «Полезно»,
- * «Не присылать такое», «Разовая покупка» and «Отложить», the same answers the «Советы» feed takes.
+ * «Не присылать такое», «Разовая покупка», «Отложить» and «Оплачено», the same answers the «Советы» feed takes.
  */
 class InsightFlow
 {
-    public function __construct(private TelegramClient $telegram, private Cards $cards) {}
+    public function __construct(private TelegramClient $telegram, private Cards $cards, private Commands $commands) {}
 
     public function onCallback(array $query, User $user): void
     {
@@ -24,7 +24,7 @@ class InsightFlow
         $chatId = (int) ($query['message']['chat']['id'] ?? 0);
         $messageId = (int) ($query['message']['message_id'] ?? 0);
 
-        $insight = preg_match('/^ins:(useful|mute|oneoff|save):(\d+)$/', $query['data'] ?? '', $m)
+        $insight = preg_match('/^ins:(useful|mute|oneoff|save|pay):(\d+)$/', $query['data'] ?? '', $m)
             ? $user->insights()->find((int) $m[2])
             : null;
         if (! $insight) {
@@ -48,6 +48,10 @@ class InsightFlow
                 $toast = $this->contribute($insight, $user);
                 break;
 
+            case 'pay':
+                $toast = $this->pay($insight, $user);
+                break;
+
             default: // oneoff
                 if ($insight->action() === 'mark_one_off') {
                     $insight->markOneOff();
@@ -56,8 +60,23 @@ class InsightFlow
         }
 
         $this->telegram->answerCallbackQuery($query['id'], $toast);
-        // Answered: only «Открыть Компас» stays under the text. A refused «Отложить» keeps its buttons.
-        $this->telegram->editKeyboard($chatId, $messageId, $this->cards->insightKeyboard($insight, $user, answered: $insight->action() !== 'contribute'));
+        // Answered: only «Открыть Компас» stays under the text. A refused «Отложить» or «Оплачено» keeps its buttons.
+        $this->telegram->editKeyboard($chatId, $messageId, $this->cards->insightKeyboard($insight, $user, answered: ! in_array($insight->action(), ['contribute', 'pay'], true)));
+    }
+
+    /** «Оплачено» under a payment reminder, as under the day's summary (Commands::pay). */
+    public function pay(Insight $insight, User $user): string
+    {
+        $payment = $insight->payment();
+        if ($payment === null) {
+            return __('bot.pay.already', [], $user->locale);
+        }
+        $toast = $this->commands->pay($payment, $user);
+        if ($insight->payment() === null) {
+            $insight->update(['status' => 'useful']);
+        }
+
+        return $toast;
     }
 
     /**

@@ -55,6 +55,7 @@ class InsightController extends Controller
 
         $data = match ($insight->action()) {
             'mark_one_off' => ['transaction' => $insight->markOneOff()?->toApi()],
+            'pay' => ['transaction' => $insight->pay(now())->toApi()],
             'contribute' => [
                 'transactions' => array_map(fn (Transaction $t) => $t->toApi(), $insight->contribute(now())),
                 'goals' => $planner->plan($user, now())->toApi(),

@@ -8,12 +8,13 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Support\Money;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /** Fills the derived fields of an operation: currency, rate, sum in som, transfer amount. */
 class TransactionWriter
 {
-    public function __construct(private ExchangeRates $rates) {}
+    public function __construct(private ExchangeRates $rates, private PaymentMatcher $payments) {}
 
     /** @param  array<string, mixed>  $data  validated input (App\Http\Requests\TransactionRequest) */
     public function save(User $user, Transaction $transaction, array $data): Transaction
@@ -52,7 +53,31 @@ class TransactionWriter
             $transaction->user_id = $user->id;
             $transaction->source = $data['source'] ?? 'app';
         }
-        $transaction->save();
+
+        // A paid payment edited into something else (an income, another category) no longer pays it. The sum
+        // may change freely: a bill varies, and «Оплачено» may pay it from an account in another currency.
+        $released = $transaction->exists && $transaction->recurring_payment_id !== null && $transaction->isDirty(['type', 'category_id'])
+            ? $this->payments->unpaidBy($user, $transaction)
+            : null;
+        if ($released !== null) {
+            $transaction->recurring_payment_id = null;
+        }
+
+        // An expense that pays a recurring payment counts as it (D28). A link set by the caller
+        // («Оплачено») is left alone: the caller moves the due date itself.
+        $payment = $transaction->recurring_payment_id === null && $account->spendable
+            && (! $transaction->exists || $transaction->isDirty(['type', 'category_id', 'amount', 'occurred_at']))
+            ? $this->payments->find($user, $transaction)
+            : null;
+
+        DB::transaction(function () use ($transaction, $payment, $released) {
+            if ($released !== null) {
+                PaymentMatcher::release($released, $transaction);
+            }
+            $transaction->recurring_payment_id ??= $payment?->id;
+            $transaction->save();
+            $payment?->advance();
+        });
         TransactionSaved::dispatch($transaction);
 
         return $transaction;

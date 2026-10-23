@@ -14,9 +14,11 @@ use App\Advisor\Rules\GoodNews;
 use App\Advisor\Rules\IncomeSplit;
 use App\Advisor\Rules\LargeSpend;
 use App\Advisor\Rules\OverspendForecast;
+use App\Advisor\Rules\PaymentDue;
 use App\Advisor\Rules\Rule;
 use App\Advisor\Rules\SavingsRate;
 use App\Advisor\Rules\SmallThings;
+use App\Advisor\Rules\SubscriptionFound;
 use App\Advisor\Rules\Withdraws;
 use App\Models\Insight;
 use App\Models\Transaction;
@@ -35,6 +37,7 @@ class Advisor
     public const RULES = [
         BudgetThreshold::class, CategoryPace::class, OverspendForecast::class, LargeSpend::class, SmallThings::class,
         IncomeSplit::class, GoalDue::class, GoalLeftover::class, GoalPace::class, GoalReached::class, Cushion::class, SavingsRate::class, GoodNews::class, ForgotToRecord::class,
+        PaymentDue::class, SubscriptionFound::class,
     ];
 
     /** @return Collection<int, Insight> the insights this run added */
@@ -116,6 +119,8 @@ class Advisor
 
         return $user->insights()
             ->whereIn('status', ['new', 'seen'])
+            // «Сегодня» lists due payments itself, with «Оплачено» on each.
+            ->where('rule', '!=', 'payment_due')
             ->where('created_at', '>=', $now->copy()->subDays(7))
             ->latest('id')
             ->limit(30)

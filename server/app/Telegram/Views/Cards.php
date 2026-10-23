@@ -85,6 +85,11 @@ class Cards
         }
 
         $card->paragraph($details);
+        // Recorded by hand, it paid a recurring payment (App\Money\PaymentMatcher): say so, and when it is due next.
+        $payment = $tx->recurring_payment_id ? $user->recurringPayments()->find($tx->recurring_payment_id) : null;
+        if ($payment !== null) {
+            $card->paragraph('✅ '.Card::e(__('bot.record.counted_as_payment', ['name' => $payment->name, 'date' => Fmt::date($payment->dueDate(), $l)], $l)));
+        }
         if ($tx->currency !== 'UZS') {
             $card->paragraph('<i>'.Card::e(__('bot.record.converted', ['uzs' => Fmt::uzs($tx->amount_uzs, $l)], $l)).'</i>');
         }
@@ -282,6 +287,7 @@ class Cards
                 ->row([match ($insight->action()) {
                     'mark_one_off' => Keyboard::callback('☝️ '.__('bot.buttons.one_off', [], $l), "ins:oneoff:{$insight->id}", 'primary'),
                     'contribute' => Keyboard::callback('🎯 '.__('bot.buttons.contribute', [], $l), "ins:save:{$insight->id}", 'success'),
+                    'pay' => Keyboard::callback('✅ '.__('bot.buttons.paid', ['name' => $insight->payload['name'] ?? ''], $l), "ins:pay:{$insight->id}", 'success'),
                     default => null,
                 }])
                 ->row([

@@ -6,8 +6,10 @@ import { Archive, CheckCheck, ListChecks, Plus, Repeat } from 'lucide-vue-next'
 import HabitRow from '@/components/things/HabitRow.vue'
 import HabitSheet from '@/components/things/HabitSheet.vue'
 import HabitValueSheet from '@/components/things/HabitValueSheet.vue'
+import PaymentTaskRow from '@/components/things/PaymentTaskRow.vue'
 import TaskRow from '@/components/things/TaskRow.vue'
 import TaskSheet from '@/components/things/TaskSheet.vue'
+import PaySheet from '@/components/plan/PaySheet.vue'
 import { habitIcon } from '@/components/things/habitIcons'
 import { useTaskToggle, useThingActions } from '@/components/things/useThingActions'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
@@ -22,8 +24,10 @@ import { isoDate } from '@/lib/dates'
 import { haptics } from '@/lib/haptics'
 import { scheduleLabel } from '@/lib/habits'
 import { readJson, writeJson } from '@/lib/storage'
-import { groupTasks, groupTitle } from '@/lib/tasks'
+import { groupTasks, groupTitle, withPayments } from '@/lib/tasks'
 import { useHabits, type Habit } from '@/stores/habits'
+import { useMoney } from '@/stores/money'
+import { usePlan, type RecurringPayment } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
 import { useTasks, type Task, type TaskInput } from '@/stores/tasks'
 
@@ -37,6 +41,8 @@ const VIEWS: View[] = ['today', 'week', 'all', 'done']
 
 const tasks = useTasks()
 const habits = useHabits()
+const plan = usePlan()
+const money = useMoney()
 const settings = useSettings()
 const route = useRoute()
 const router = useRouter()
@@ -59,7 +65,7 @@ const viewOptions = computed(() => VIEWS.map((value) => ({ value, label: t(`task
 
 async function load(): Promise<void> {
   try {
-    await Promise.all([tasks.load(), habits.load(), view.value === 'done' ? tasks.loadDone() : null])
+    await Promise.all([tasks.load(), habits.load(), plan.loadPayments(), money.ensureLoaded(), view.value === 'done' ? tasks.loadDone() : null])
     failed.value = false
   } catch {
     failed.value = true
@@ -83,7 +89,10 @@ watch(
 // Tasks
 
 const { shown, justDone, toggle } = useTaskToggle(() => tasks.tasks)
-const groups = computed(() => (view.value === 'done' ? [] : groupTasks(shown.value, view.value, today, justDone.value)))
+// Recurring payments are things to do too: each sits in the section of its due date (D28).
+const groups = computed(() =>
+  view.value === 'done' ? [] : withPayments(groupTasks(shown.value, view.value, today, justDone.value), plan.payments, view.value, today),
+)
 const emptyText = computed(() => t(`tasks.empty${view.value.charAt(0).toUpperCase()}${view.value.slice(1)}`))
 
 const quickTitle = ref('')
@@ -112,6 +121,18 @@ async function quickAdd(): Promise<void> {
 const taskSheetOpen = ref(false)
 const editingTask = ref<Task | null>(null)
 const taskDraft = ref<Partial<TaskInput>>({})
+
+const paySheetOpen = ref(false)
+const paying = ref<RecurringPayment | null>(null)
+
+function openPayment(payment: RecurringPayment): void {
+  paying.value = payment
+  paySheetOpen.value = true
+}
+
+function editPayment(payment: RecurringPayment): void {
+  void router.push({ name: 'payments', query: { edit: payment.id } })
+}
 
 function openTask(task: Task | null, draft: Partial<TaskInput> = {}): void {
   editingTask.value = task
@@ -207,12 +228,20 @@ function openNew(): void {
             <section v-for="group in groups" :key="group.key" class="flex flex-col gap-1.5">
               <h2 class="section-title" :class="{ '!text-danger': group.key === 'overdue' }">
                 {{ groupTitle(group.key, today, t, settings.locale) }}
-                <span class="num ml-1 font-medium text-ink-3">{{ group.tasks.filter((x) => !x.done_at).length || '' }}</span>
+                <span class="num ml-1 font-medium text-ink-3">{{ group.tasks.filter((x) => !x.done_at).length + (group.payments?.length ?? 0) || '' }}</span>
               </h2>
               <TransitionGroup name="row" tag="div" class="group relative">
+                <PaymentTaskRow
+                  v-for="payment in group.payments"
+                  :key="`p${payment.id}`"
+                  :payment="payment"
+                  :today="today"
+                  :hide-today="group.key === 'today'"
+                  @open="openPayment(payment)"
+                />
                 <TaskRow
                   v-for="task in group.tasks"
-                  :key="task.id"
+                  :key="`t${task.id}`"
                   :task="task"
                   :today="today"
                   :hide-today="group.key === 'today'"
@@ -301,6 +330,7 @@ function openNew(): void {
     </Transition>
 
     <TaskSheet v-model:open="taskSheetOpen" :task="editingTask" :draft="taskDraft" />
+    <PaySheet v-model:open="paySheetOpen" :payment="paying" @edit="editPayment" />
     <HabitSheet v-model:open="habitSheetOpen" :habit="editingHabit" />
     <HabitValueSheet v-model:open="valueSheetOpen" :habit="valueHabit" @save="saveValue" />
   </div>

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Plus, Trash2 } from 'lucide-vue-next'
 import AmountField from '@/components/AmountField.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
+import CategoryIcon from '@/components/CategoryIcon.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import PaySheet from '@/components/plan/PaySheet.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
 import MoneyAmount from '@/components/ui/MoneyAmount.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -13,15 +16,17 @@ import UiSegmented from '@/components/ui/UiSegmented.vue'
 import { haptics } from '@/lib/haptics'
 import { ApiError } from '@/lib/api'
 import { isoDate } from '@/lib/dates'
-import type { Currency } from '@/lib/format'
+import { formatMoney, type Currency } from '@/lib/format'
 import { CURRENCIES, toUzs } from '@/lib/money'
 import { useMoney } from '@/stores/money'
-import { usePlan, type RecurringPayment } from '@/stores/plan'
+import { usePlan, type PaymentSuggestion, type RecurringPayment } from '@/stores/plan'
 import { useSettings } from '@/stores/settings'
 
 const plan = usePlan()
 const money = useMoney()
 const settings = useSettings()
+const route = useRoute()
+const router = useRouter()
 const { t } = useI18n()
 
 const sheetOpen = ref(false)
@@ -36,11 +41,52 @@ const nextDue = ref('')
 const saving = ref(false)
 const error = ref<string | null>(null)
 const loaded = ref(false)
+/** The suggestion the sheet was opened from: its next due date goes with the new payment. */
+const fromSuggestion = ref<PaymentSuggestion | null>(null)
 
 onMounted(async () => {
-  await Promise.all([plan.loadPayments(), money.ensureLoaded()]).catch(() => {})
+  await Promise.all([plan.loadPayments(), money.ensureLoaded(), plan.loadSuggestions()]).catch(() => {})
   loaded.value = true
+  // From a payment elsewhere (?edit, ?pay) or from the advice «похоже на регулярный платёж» (?suggest).
+  const { edit, pay, suggest } = route.query
+  const byId = (id: unknown) => plan.payments.find((p) => p.id === Number(id))
+  if (edit && byId(edit)) open(byId(edit)!)
+  else if (pay && byId(pay)) openPay(byId(pay)!)
+  else if (typeof suggest === 'string') {
+    const suggestion = plan.suggestions.find((x) => x.key === suggest)
+    if (suggestion) add(suggestion)
+  }
+  if (Object.keys(route.query).length) void router.replace({ query: {} })
 })
+
+const paySheetOpen = ref(false)
+const paying = ref<RecurringPayment | null>(null)
+function openPay(payment: RecurringPayment): void {
+  paying.value = payment
+  paySheetOpen.value = true
+}
+
+/** «Добавить» on a suggestion: the form filled in from the spending it found. */
+function add(suggestion: PaymentSuggestion): void {
+  open(null)
+  fromSuggestion.value = suggestion
+  name.value = suggestion.name
+  amount.value = suggestion.amount
+  currency.value = suggestion.currency
+  categoryId.value = suggestion.category_id
+  accountId.value = money.accountById.has(suggestion.account_id) ? suggestion.account_id : accountId.value
+  day.value = suggestion.day_of_month
+}
+
+async function dismiss(suggestion: PaymentSuggestion): Promise<void> {
+  haptics.selection()
+  await plan.dismissSuggestion(suggestion.key).catch(() => {})
+}
+
+/** «3 мес. подряд по 120 000 сум» */
+function suggestionLine(suggestion: PaymentSuggestion): string {
+  return t('payments.suggestionLine', { n: suggestion.count, amount: formatMoney(suggestion.amount, suggestion.currency, settings.locale), day: suggestion.day_of_month })
+}
 
 const currencyOptions = computed(() => CURRENCIES.map((value) => ({ value, label: value === 'UZS' ? t('accounts.som') : t('accounts.dollar') })))
 
@@ -50,12 +96,19 @@ const monthlyUzs = computed(() =>
     .reduce((sum, p) => sum + toUzs(p.amount, p.currency, money.rates[p.currency] ?? (p.currency === 'UZS' ? 1 : 0)), 0),
 )
 
+function iconOf(categoryId: number): { icon?: string; color?: string } {
+  const category = money.categoryById.get(categoryId)
+  const root = category ? money.rootOf(category) : undefined
+  return { icon: root?.icon ?? undefined, color: root?.color ?? undefined }
+}
+
 const categoryGroups = computed(() =>
   money.topCategories('expense').map((parent) => ({ parent, children: money.childCategories(parent.id) })),
 )
 
 function open(payment: RecurringPayment | null): void {
   editing.value = payment
+  fromSuggestion.value = null
   name.value = payment?.name ?? ''
   amount.value = payment?.amount ?? null
   currency.value = payment?.currency ?? 'UZS'
@@ -89,9 +142,12 @@ async function save(): Promise<void> {
         account_id: accountId.value,
         day_of_month: day.value,
         ...(editing.value && nextDue.value ? { next_due_on: nextDue.value } : {}),
+        // This month's charge was already spent: the payment starts from the next one.
+        ...(!editing.value && fromSuggestion.value && day.value === fromSuggestion.value.day_of_month ? { next_due_on: fromSuggestion.value.next_due_on } : {}),
       },
       editing.value?.id,
     )
+    if (fromSuggestion.value) void plan.loadSuggestions().catch(() => {})
     sheetOpen.value = false
     haptics.notify('success')
   } catch (e) {
@@ -133,7 +189,7 @@ async function remove(): Promise<void> {
             :payment="payment"
             :class="{ 'opacity-50': !payment.active }"
             @open="open(payment)"
-            @edit="open(payment)"
+            @edit="openPay(payment)"
           />
           <UiRow :title="$t('payments.add')" tone="muted" :chevron="false" @click="open(null)">
             <template #leading>
@@ -142,7 +198,28 @@ async function remove(): Promise<void> {
           </UiRow>
         </div>
       </section>
+      <section v-if="plan.suggestions.length" class="flex flex-col gap-2.5">
+        <h2 class="section-title">{{ $t('payments.suggestions') }}</h2>
+        <p class="text-caption text-ink-3">{{ $t('payments.suggestionsIntro') }}</p>
+        <div class="group">
+          <div v-for="suggestion in plan.suggestions" :key="suggestion.key" class="flex items-start gap-3 py-3 pr-3 pl-4">
+            <CategoryIcon v-bind="iconOf(suggestion.category_id)" size="sm" />
+            <div class="flex min-w-0 flex-1 flex-col gap-2">
+              <span class="flex flex-col gap-0.5">
+                <span class="truncate font-medium">{{ suggestion.name }}</span>
+                <span class="text-caption text-ink-3">{{ suggestionLine(suggestion) }}</span>
+              </span>
+              <span class="flex gap-2">
+                <UiButton size="sm" variant="secondary" @click="add(suggestion)">{{ $t('payments.addShort') }}</UiButton>
+                <UiButton size="sm" variant="ghost" @click="dismiss(suggestion)">{{ $t('payments.notThis') }}</UiButton>
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
     </template>
+
+    <PaySheet v-model:open="paySheetOpen" :payment="paying" @edit="open" />
 
     <BottomSheet v-model:open="sheetOpen" :title="editing ? editing.name : $t('payments.new')">
       <label class="flex flex-col gap-2">
