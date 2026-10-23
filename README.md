@@ -16,3 +16,5 @@ APK собирает GitHub Actions, Android Studio не нужна.
 3. Отправить `kompas.apk` на телефон и открыть. Android попросит разрешить установку из этого источника.
 
 Пока в секретах нет ключа подписи (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`), собирается отладочная версия: перед установкой новой старую нужно удалить. С ключом новые версии ставятся поверх.
+
+Пуш-уведомления работают в сборке, у которой в секретах есть `GOOGLE_SERVICES_JSON_BASE64` (файл из Firebase, [DEPLOY.md](docs/DEPLOY.md), шаг 11); без него APK такой же, только уведомления приходят в бот.
