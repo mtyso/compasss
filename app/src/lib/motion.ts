@@ -55,24 +55,3 @@ const supportsLinearEasing = typeof CSS !== 'undefined' && CSS.supports?.('trans
 export function easingOf(s: Spring): string {
   return supportsLinearEasing ? s.easing : 'cubic-bezier(0.2, 0.9, 0.1, 1)'
 }
-
-/**
- * Animates a number from `from` to `to`, calling `onFrame` on each frame. Returns a function that
- * stops it. Ease-out so the last digits settle slowly enough to read.
- */
-export function tweenNumber(from: number, to: number, ms: number, onFrame: (value: number) => void): () => void {
-  if (from === to || ms <= 0 || prefersReducedMotion()) {
-    onFrame(to)
-    return () => {}
-  }
-  const start = performance.now()
-  let frame = 0
-  const step = (now: number): void => {
-    const t = Math.min(1, (now - start) / ms)
-    const eased = 1 - Math.pow(1 - t, 4)
-    onFrame(t === 1 ? to : from + (to - from) * eased)
-    if (t < 1) frame = requestAnimationFrame(step)
-  }
-  frame = requestAnimationFrame(step)
-  return () => cancelAnimationFrame(frame)
-}

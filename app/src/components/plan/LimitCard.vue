@@ -8,16 +8,22 @@ import { useSettings } from '@/stores/settings'
 
 /**
  * Today's safe-to-spend, the first thing on «Сегодня». Set as type, not as a card: the sum is the
- * largest thing on the screen, the bar under it fills as the day's limit is spent, and the line
- * under the bar says what the limit is measured against.
+ * largest thing on the screen and rolls up like a counter when the screen opens.
+ *
+ * Under it is the runway to payday: one capsule per day left, today first and widest. Green is
+ * money a day still has; today's capsule empties from the right as the day's limit is spent and
+ * turns red once it is overspent, and the days after it wait full. So the picture says what the
+ * number means: the free money, split evenly between the days until income.
  */
 const props = defineProps<{ limit: DailyLimit; incomeName?: string | null }>()
 const settings = useSettings()
 
 const over = computed(() => props.limit.left_today_uzs < 0)
-const share = computed(() =>
-  props.limit.limit_uzs > 0 ? props.limit.spent_today_uzs / props.limit.limit_uzs : props.limit.spent_today_uzs > 0 ? 1 : 0,
+const left = computed(() =>
+  props.limit.limit_uzs > 0 ? Math.max(0, props.limit.left_today_uzs) / props.limit.limit_uzs : 0,
 )
+/** Days after today on the runway, drawn as segments of one track. */
+const later = computed(() => Math.max(0, Math.min(props.limit.days_left, 62) - 1))
 const money = (value: number) => formatMoney(value, 'UZS', settings.locale)
 </script>
 
@@ -28,18 +34,18 @@ const money = (value: number) => formatMoney(value, 'UZS', settings.locale)
       <MoneyAmount
         :amount="Math.abs(limit.left_today_uzs)"
         animate
+        intro
         class="limit-sum text-amount font-semibold md:text-[3.25rem]"
         :class="over ? 'text-danger' : 'text-ink'"
       />
     </div>
 
     <div class="flex flex-col gap-2.5">
-      <div class="h-2 overflow-hidden rounded-full bg-ink/[0.07]">
-        <div
-          class="limit-bar h-full w-full origin-left rounded-full"
-          :class="over ? 'bg-danger' : 'bg-money'"
-          :style="{ transform: `scaleX(${Math.min(1, share)})` }"
-        />
+      <div class="flex h-2.5 gap-1" aria-hidden="true">
+        <div class="today-capsule relative overflow-hidden rounded-full" :class="[over ? 'bg-danger' : 'bg-money/15', later ? 'w-[44%] shrink-0' : 'flex-1']">
+          <div v-if="!over" class="limit-bar absolute inset-0 origin-left rounded-full bg-money" :style="{ transform: `scaleX(${left})` }" />
+        </div>
+        <div v-if="later" class="runway relative flex-1 rounded-full" :style="{ '--days': later }" />
       </div>
       <p class="flex flex-wrap justify-between gap-x-4 gap-y-0.5 text-caption text-ink-2">
         <span class="num">{{ $t('today.perDay', { amount: money(limit.limit_uzs) }) }}</span>
@@ -83,14 +89,39 @@ const money = (value: number) => formatMoney(value, 'UZS', settings.locale)
 }
 
 .limit-bar {
-  transition:
-    transform 800ms var(--ease-spring),
-    background-color var(--dur-base) var(--ease-standard);
+  transition: transform 800ms var(--ease-spring);
 }
 
 @starting-style {
   .limit-bar {
     transform: scaleX(0);
+  }
+}
+
+/*
+ * The days after today: one green track cut into a segment per day by thin gaps of the page
+ * colour, so 2 days and 20 days both read as days, not as a bar of a different length.
+ */
+.runway {
+  background:
+    repeating-linear-gradient(
+      to right,
+      transparent 0 calc(100% / var(--days) - 3px),
+      var(--c-bg) calc(100% / var(--days) - 3px) calc(100% / var(--days))
+    ),
+    color-mix(in srgb, var(--c-money) 42%, transparent);
+  background-clip: border-box;
+  clip-path: inset(0 3px 0 0 round 999px);
+  transform-origin: left;
+  transition:
+    transform 700ms var(--ease-spring) 120ms,
+    opacity 300ms var(--ease-standard) 120ms;
+}
+
+@starting-style {
+  .runway {
+    transform: scaleX(0.2);
+    opacity: 0;
   }
 }
 </style>
