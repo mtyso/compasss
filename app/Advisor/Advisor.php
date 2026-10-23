@@ -13,6 +13,7 @@ use App\Advisor\Rules\GoalReached;
 use App\Advisor\Rules\GoodNews;
 use App\Advisor\Rules\IncomeSplit;
 use App\Advisor\Rules\LargeSpend;
+use App\Advisor\Rules\LentDue;
 use App\Advisor\Rules\OverspendForecast;
 use App\Advisor\Rules\PaymentDue;
 use App\Advisor\Rules\Rule;
@@ -37,7 +38,7 @@ class Advisor
     public const RULES = [
         BudgetThreshold::class, CategoryPace::class, OverspendForecast::class, LargeSpend::class, SmallThings::class,
         IncomeSplit::class, GoalDue::class, GoalLeftover::class, GoalPace::class, GoalReached::class, Cushion::class, SavingsRate::class, GoodNews::class, ForgotToRecord::class,
-        PaymentDue::class, SubscriptionFound::class,
+        PaymentDue::class, SubscriptionFound::class, LentDue::class,
     ];
 
     /** @return Collection<int, Insight> the insights this run added */

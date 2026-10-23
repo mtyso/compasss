@@ -5,13 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Account extends Model
 {
-    // A debt account holds a negative balance; paying the debt is a transfer to it (docs/PLAN.md, D24)
-    public const TYPES = ['card', 'cash', 'savings', 'deposit', 'debt', 'other'];
+    // A debt account holds a negative balance; paying the debt is a transfer to it (docs/PLAN.md, D24).
+    // A `lent` one is money someone owes the user: lending is a transfer to it, getting it back one from it (D29).
+    public const TYPES = ['card', 'cash', 'savings', 'deposit', 'debt', 'lent', 'other'];
 
-    protected $fillable = ['name', 'type', 'currency', 'opening_balance', 'spendable', 'is_cushion', 'sort', 'archived_at'];
+    protected $fillable = ['name', 'type', 'currency', 'opening_balance', 'spendable', 'is_cushion', 'due_on', 'sort', 'archived_at'];
 
     protected function casts(): array
     {
@@ -33,6 +35,12 @@ class Account extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    /** `due_on` stays uncast and is always written as Y-m-d. */
+    public function dueDate(): ?Carbon
+    {
+        return $this->due_on ? Carbon::parse($this->due_on, config('app.timezone'))->startOfDay() : null;
+    }
+
     public function hasTransactions(): bool
     {
         return Transaction::withTrashed()
@@ -52,6 +60,7 @@ class Account extends Model
             'balance' => $balance,
             'spendable' => $this->spendable,
             'is_cushion' => $this->is_cushion,
+            'due_on' => $this->dueDate()?->toDateString(),
             'sort' => $this->sort,
             'archived' => $this->archived_at !== null,
         ];

@@ -33,8 +33,13 @@ final class GoalDue extends BaseRule implements Withdraws
         }
 
         return [$this->finding($days <= 1 ? 'warn' : 'info', $this->periodKey($context), '', [
-            'variant' => $goals->mode === 'first' ? 'first' : 'leftover',
+            'variant' => match (true) {
+                $goals->mode === 'first' => 'first',
+                $goals->debtDueUzs() > 0 => 'leftover_debt',
+                default => 'leftover',
+            },
             'goals_uzs' => $goals->dueUzs(),
+            'debt_uzs' => $goals->debtDueUzs(),
             'goal_id' => $goals->mainSaving()?->goal->id,
             'days' => $days,
         ])];

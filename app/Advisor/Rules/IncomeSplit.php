@@ -40,14 +40,16 @@ final class IncomeSplit extends BaseRule
         $limit = $context->limit();
         $goals = $context->goals();
         if ($goals->dueUzs() > 0) {
-            // «Сначала цели» already keeps them out of the money for each day; «из остатка» does it here.
-            $left = max(0, $limit->freeUzs - ($goals->mode === 'first' ? 0 : $goals->dueUzs()));
+            // «Сначала цели» already keeps them out of the money for each day; «из остатка» does it here,
+            // except for debt payments, which the limit keeps out in both modes.
+            $left = max(0, $limit->freeUzs - ($goals->mode === 'first' ? 0 : $goals->dueUzs() - $goals->debtDueUzs()));
 
             return [$this->finding('good', 't'.$income->id, '', [
                 'variant' => 'goals',
                 'amount_uzs' => $income->amount_uzs,
                 'payments_uzs' => $limit->upcomingUzs,
                 'goals_uzs' => $goals->dueUzs(),
+                'debt_uzs' => $goals->debtDueUzs(),
                 'goal_id' => $goals->mainSaving()?->goal->id,
                 'left_uzs' => $left,
                 'per_day_uzs' => intdiv($left, $limit->daysLeft),

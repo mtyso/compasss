@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\TelegramLoginController;
 use App\Http\Controllers\Auth\TelegramWebAppController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DebtController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\HabitController;
 use App\Http\Controllers\IncomeScheduleController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\InsightController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\RateController;
 use App\Http\Controllers\RecurringPaymentController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SummaryController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TodayController;
@@ -41,6 +43,7 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::apiResource('transactions', TransactionController::class)->parameters(['transactions' => 'id']);
     Route::post('/transactions/{id}/restore', [TransactionController::class, 'restore']);
     Route::get('/summary', SummaryController::class);
+    Route::get('/reports/month', [ReportController::class, 'month']);
     Route::get('/rates', RateController::class);
 
     Route::get('/budgets', [BudgetController::class, 'show']);
@@ -60,6 +63,12 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::apiResource('habits', HabitController::class)->except('show')->parameters(['habits' => 'id']);
     Route::post('/habits/{id}/restore', [HabitController::class, 'restore']);
     Route::put('/habits/{id}/logs/{date}', [HabitController::class, 'log']);
+
+    Route::get('/debts', [DebtController::class, 'index']);
+    Route::post('/debts/lend', [DebtController::class, 'lend']);
+    Route::post('/debts/borrow', [DebtController::class, 'borrow']);
+    Route::post('/debts/plan', [DebtController::class, 'plan']);
+    Route::post('/debts/{id}/settle', [DebtController::class, 'settle'])->whereNumber('id');
 
     Route::get('/goals', [GoalController::class, 'index']);
     Route::post('/goals', [GoalController::class, 'store']);

@@ -18,6 +18,7 @@ return [
 
     'buttons' => [
         'open_app' => 'Kompasni ochish',
+        'open_report' => 'Yakunni ochish',
         'category' => 'Toifa',
         'account' => 'Hisob',
         'undo' => 'Bekor qilish',
@@ -32,6 +33,8 @@ return [
         'contribute' => 'Ajratish',
         'useful' => 'Foydali',
         'mute' => 'Bunday yubormang',
+        'returned' => 'Qaytardi',
+        'roll' => "To'lovni o'tkazish",
     ],
 
     'record' => [
@@ -122,6 +125,29 @@ return [
         'weekly_more' => "O'tgan haftadan :amount ko'p.",
         'weekly_same' => "O'tgan hafta bilan bir xil.",
         'weekly_top' => "Eng ko'p ketgan",
+        'monthly_title' => 'Oy yakuni: :month',
+        'monthly_saved' => "Jamg'arildi :amount, bu daromadning :rate%.",
+        'monthly_saved_plain' => "Jamg'arildi :amount.",
+        'monthly_prev' => 'Bir oy oldin :rate% edi.',
+        'monthly_deficit' => "Xarajatlar daromaddan :amount ko'p.",
+        'monthly_income' => 'Daromad',
+        'monthly_expense' => 'Xarajatlar',
+        'monthly_one_off' => 'Shundan bir martalik',
+        'monthly_less' => 'Bir martalik xarajatlarsiz odatdagidan :n% kam (odatda :usual).',
+        'monthly_more' => "Bir martalik xarajatlarsiz odatdagidan :n% ko'p (odatda :usual).",
+        'monthly_same' => 'Bir martalik xarajatlarsiz odatdagidek.',
+        'monthly_up' => "Odatdagidan ko'p",
+        'monthly_down' => 'Odatdagidan kam',
+        'monthly_budget_all' => 'Byudjet barcha kategoriyalarda bajarildi.',
+        'monthly_budget_kept' => 'Byudjet doirasida: :count tadan :kept ta.',
+        'monthly_goals' => 'Maqsadlar',
+    ],
+
+    'debts' => [
+        'returned' => 'Yozdim: :name :amount qaytardi',
+        'returned_before' => 'Qaytargani allaqachon yozilgan.',
+        'rolled' => "«:name» bo'yicha to'lov endi oyiga :amount",
+        'rolled_before' => "To'lov allaqachon o'tkazilgan.",
     ],
 
     'pay' => [

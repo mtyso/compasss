@@ -29,6 +29,8 @@ class User extends Authenticatable
         'cushion_target_months' => ['integer', 'min:1', 'max:12'],
         // Goals (D25): `first` sets this period's contributions aside before the daily limit, `leftover` saves what is left
         'goal_mode' => ['string', 'in:first,leftover'],
+        // Debts (D29): which one gets money beyond its payment first, the dearest (`avalanche`) or the smallest (`snowball`)
+        'debt_method' => ['string', 'in:avalanche,snowball'],
         // «Не показывать такое»: rules switched off
         'muted_rules' => ['array', 'max:20'],
         'muted_rules.*' => ['string', 'distinct', 'in:'.Insight::RULES_LIST],

@@ -64,6 +64,10 @@ return [
                 'title' => 'Maqsadlarga hali :goals_uzs ajratilmagan',
                 'body' => "Keyingi daromadgacha kunlar: :days. Pul qolgan bo'lsa, hozir ajrating, aks holda maqsadlar rejasi suriladi.",
             ],
+            'leftover_debt' => [
+                'title' => 'Maqsad va qarzlarga hali :goals_uzs kiritilmagan',
+                'body' => "Keyingi daromadgacha kunlar: :days. Qarzlar bo'yicha :debt_uzs to'lov kunlik limitga kirmaydi: kechikmasligi uchun uni kiriting. Qolganini pul qolgan bo'lsa ajrating.",
+            ],
         ],
         'goal_leftover' => [
             'days' => [
@@ -105,6 +109,10 @@ return [
             'debt' => [
                 'title' => '«:goal» qarzi yopildi!',
                 'body' => "To'lovlarga ketayotgan pulni endi keyingi maqsadga yo'naltirish mumkin.",
+            ],
+            'debt_roll' => [
+                'title' => '«:goal» qarzi yopildi!',
+                'body' => "Oyiga :payment_amount bo'shadi. Uni «:next»ga o'tkazing: u tezroq yopiladi, limit esa o'zgarmaydi.",
             ],
         ],
         'cushion' => [
@@ -177,6 +185,16 @@ return [
             'default' => [
                 'title' => "«:name» doimiy to'lovga o'xshaydi",
                 'body' => "Ketma-ket :count oy, har safar :amount. Uni to'lovlarga qo'shing: limit unga pulni oldindan ajratadi, bot esa bir kun oldin eslatadi.",
+            ],
+        ],
+        'lent_due' => [
+            'today' => [
+                'title' => ':name bugun :amount qaytarishga va\'da bergan',
+                'body' => "Qaytarganda «Qaytardi»ni bosing: pul yana hisobda va limitda bo'ladi.",
+            ],
+            'late' => [
+                'title' => ':name hali :amount qaytarmadi',
+                'body' => "Va'da :due_on gacha edi. Eslatib qo'ying, qaytarganda «Qaytardi»ni bosing.",
             ],
         ],
     ],
