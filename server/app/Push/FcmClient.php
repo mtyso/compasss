@@ -126,8 +126,6 @@ class FcmClient
 
             return $this->retry("FCM {$status} ".($code ?? $error['status'] ?? ''));
         }
-        // Firebase answered, so it is not out of reach.
-        Cache::forget(self::FAILING_KEY);
 
         return match (true) {
             $code === 'UNREGISTERED' => PushResult::Dead,

@@ -45,12 +45,16 @@ beforeEach(function () {
     $this->fcmAnswers = [];
     $this->fcmDown = false;
     $this->fcmTries = 0;
+    $this->fcmByToken = [];
     Http::fake(function (HttpRequest $request) {
         if (str_starts_with($request->url(), 'https://oauth2.googleapis.com/')) {
             return Http::response(['access_token' => 'ya29.test', 'expires_in' => 3599, 'token_type' => 'Bearer']);
         }
         if (str_starts_with($request->url(), 'https://fcm.googleapis.com/')) {
             $this->fcmTries++;
+            if ($answer = $this->fcmByToken[$request->data()['message']['token']] ?? null) {
+                return $answer;
+            }
             if ($this->fcmDown) {
                 return Http::failedConnection()($request);
             }
@@ -472,6 +476,23 @@ it('counts misses in a row, not two single ones far apart', function () {
     pushAt('2026-10-24 08:31');
     expect($insight->fresh()->sent_via)->toBe(['push'])
         ->and(pushChat())->toHaveCount(1);
+});
+
+it('still gives up on a silent Firebase when an old phone keeps answering «another project»', function () {
+    pushPhone('old-build');
+    $this->app['auth']->forgetGuards();
+    $tablet = ['Authorization' => 'Bearer '.$this->user->createToken('Chrome, Android')->plainTextToken];
+    $this->postJson('/api/push/devices', ['token' => 'new-build'], $tablet)->assertOk();
+    pushVia('push');
+    $this->postJson('/api/events', ['title' => 'Встреча с дилером', 'starts_on' => '2026-10-23', 'start_time' => '14:45', 'end_time' => '15:00', 'remind_before' => 10], $this->auth)->assertCreated();
+
+    $this->fcmByToken = ['old-build' => pushFcmError(403, 'PERMISSION_DENIED', 'SENDER_ID_MISMATCH')];
+    $this->fcmDown = true;
+    foreach (range(35, 46) as $minute) {
+        pushAt("2026-10-23 14:{$minute}");
+    }
+    expect(pushChat())->toHaveCount(1)
+        ->and(json_encode(pushChat()[0], JSON_UNESCAPED_UNICODE))->toContain('Встреча с дилером');
 });
 
 it('sends a test notification to see the whole way works', function () {
