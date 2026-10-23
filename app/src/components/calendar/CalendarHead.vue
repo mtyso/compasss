@@ -11,8 +11,10 @@ import type { CalendarView } from '@/stores/calendar'
 /**
  * The calendar's sticky head. On a phone: back, the period title (a tap opens the month picker),
  * «Сегодня» with today's number, the layers and «+», then the views under them; ‹ › are swipes
- * there. On a wide screen one row: «Сегодня», ‹ ›, the title, then the views, the layers (only
- * while there is no side panel) and «+». A thin bar along its bottom edge shows a range on its way.
+ * there. On a wide screen «Сегодня», ‹ ›, the title, then the views, the layers (only while there is
+ * no side panel) and «+»: in one row beside the side panel, in two without it (a tablet, a narrow
+ * window), where one row leaves the title no room. A thin bar along its bottom edge shows a range
+ * on its way.
  */
 const props = defineProps<{
   title: string
@@ -43,6 +45,11 @@ function goBack(): void {
 }
 
 const todayNumber = computed(() => Number(props.today.slice(8, 10)))
+
+// A title that carries another year is the longest kind («Пн, 20 сентября 2027»). Where the row is
+// tight it gets smaller rather than lose the year: one size down on a phone, and in the two-row
+// wide head just as much as the row's width needs (see .is-long-wide).
+const long = computed(() => /\d{4}$/.test(props.title))
 </script>
 
 <template>
@@ -70,7 +77,7 @@ const todayNumber = computed(() => Number(props.today.slice(8, 10)))
             :aria-label="`${title}, ${t('calendar.pickDate')}`"
             @click="emit('pick')"
           >
-            <span class="truncate text-section font-semibold">{{ title }}</span>
+            <span class="truncate text-section font-semibold" :class="{ 'is-long-phone': long }">{{ title }}</span>
             <ChevronDown class="size-4 shrink-0 text-ink-3" :stroke-width="2.4" aria-hidden="true" />
           </button>
         </h1>
@@ -90,36 +97,47 @@ const todayNumber = computed(() => Number(props.today.slice(8, 10)))
     </template>
 
     <!-- Wide screen -->
-    <div v-else class="flex h-11 items-center gap-2">
-      <UiButton variant="secondary" size="sm" @click="emit('today')">{{ t('calendar.today') }}</UiButton>
-      <div class="flex shrink-0 items-center">
-        <UiIconButton size="sm" :label="t('calendar.prev')" @click="emit('prev')">
-          <ChevronLeft class="size-5" :stroke-width="2.2" />
+    <div v-else class="flex gap-x-2 gap-y-2.5" :class="panel ? 'items-center' : 'flex-col'">
+      <div class="title-row flex h-11 min-w-0 items-center gap-2" :class="{ 'flex-1': panel }">
+        <UiButton variant="secondary" size="sm" @click="emit('today')">{{ t('calendar.today') }}</UiButton>
+        <div class="flex shrink-0 items-center">
+          <UiIconButton size="sm" :label="t('calendar.prev')" @click="emit('prev')">
+            <ChevronLeft class="size-5" :stroke-width="2.2" />
+          </UiIconButton>
+          <UiIconButton size="sm" :label="t('calendar.next')" @click="emit('next')">
+            <ChevronRight class="size-5" :stroke-width="2.2" />
+          </UiIconButton>
+        </div>
+        <h1 class="flex min-w-0 flex-1 pl-1">
+          <span v-if="panel" class="truncate text-title font-bold">{{ title }}</span>
+          <button
+            v-else
+            type="button"
+            class="press flex min-w-0 items-center gap-1.5 rounded-[0.625rem] text-left"
+            :aria-label="`${title}, ${t('calendar.pickDate')}`"
+            @click="emit('pick')"
+          >
+            <span class="truncate text-title font-bold" :class="{ 'is-long-wide': long }">{{ title }}</span>
+            <ChevronDown class="size-5 shrink-0 text-ink-3" :stroke-width="2.4" aria-hidden="true" />
+          </button>
+        </h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <UiSegmented
+          v-model="view"
+          :options="views"
+          :label="t('calendar.title')"
+          size="sm"
+          class="w-[22rem] min-w-0"
+          :class="panel ? 'shrink-0' : 'shrink'"
+        />
+        <UiIconButton v-if="!panel" :label="t('calendar.layers')" class="ml-auto" @click="emit('layers')">
+          <SlidersHorizontal class="size-5" :stroke-width="2" />
         </UiIconButton>
-        <UiIconButton size="sm" :label="t('calendar.next')" @click="emit('next')">
-          <ChevronRight class="size-5" :stroke-width="2.2" />
+        <UiIconButton tone="filled" :label="t('calendar.newEvent')" @click="emit('add')">
+          <Plus class="size-5" :stroke-width="2.2" />
         </UiIconButton>
       </div>
-      <h1 class="flex min-w-0 flex-1 pl-1">
-        <span v-if="panel" class="truncate text-title font-bold">{{ title }}</span>
-        <button
-          v-else
-          type="button"
-          class="press flex min-w-0 items-center gap-1.5 rounded-[0.625rem] text-left"
-          :aria-label="`${title}, ${t('calendar.pickDate')}`"
-          @click="emit('pick')"
-        >
-          <span class="truncate text-title font-bold">{{ title }}</span>
-          <ChevronDown class="size-5 shrink-0 text-ink-3" :stroke-width="2.4" aria-hidden="true" />
-        </button>
-      </h1>
-      <UiSegmented v-model="view" :options="views" :label="t('calendar.title')" size="sm" class="w-[22rem] shrink-0" />
-      <UiIconButton v-if="!panel" :label="t('calendar.layers')" @click="emit('layers')">
-        <SlidersHorizontal class="size-5" :stroke-width="2" />
-      </UiIconButton>
-      <UiIconButton tone="filled" :label="t('calendar.newEvent')" @click="emit('add')">
-        <Plus class="size-5" :stroke-width="2.2" />
-      </UiIconButton>
     </div>
 
     <!-- A range on its way that was not prefetched. -->
@@ -130,6 +148,20 @@ const todayNumber = computed(() => Number(props.today.slice(8, 10)))
 </template>
 
 <style scoped>
+.is-long-phone {
+  font-size: 1rem;
+}
+
+/* «Сегодня», ‹ ›, the chevron and the gaps take about 13rem of the row; the longest title is about
+   10.5 times its font size wide. */
+.title-row {
+  container-type: inline-size;
+}
+
+.is-long-wide {
+  font-size: min(1.75rem, (100cqi - 13rem) / 10.5);
+}
+
 .busy {
   opacity: 0;
   transition: opacity var(--dur-fast) var(--ease-standard);

@@ -79,6 +79,7 @@ const allDayHeight = computed(() => {
 function barStyle(bar: WeekBar): Record<string, string> {
   return {
     top: `${bar.lane * (barHeight.value + 2)}px`,
+    height: `${barHeight.value}px`,
     left: `calc(${(bar.startCol / 7) * 100}% + ${bar.cutStart ? 0 : 2}px)`,
     width: `calc(${((bar.endCol - bar.startCol + 1) / 7) * 100}% - ${(bar.cutStart ? 0 : 2) + (bar.cutEnd ? 0 : 2)}px)`,
   }

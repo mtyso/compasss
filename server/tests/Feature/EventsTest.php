@@ -224,6 +224,22 @@ it('keeps a monthly series on the 31st when the 30th of April is changed with th
         ->and(eventDays($next['id'], '2026-07-01', '2026-07-31'))->toBe(['2026-07-31']);
 });
 
+it('keeps the 31st and 29 February when only the title of a shortened occurrence and the following ones changes', function () {
+    $rent = newEvent(['title' => 'Аренда', 'starts_on' => '2026-01-31', 'repeat' => ['unit' => 'month']]);
+    $next = $this->patchJson("/api/events/{$rent['id']}?scope=following&date=2026-02-28", ['title' => 'Аренда (новая)'], $this->auth)
+        ->assertOk()->json('event');
+
+    expect($next['repeat']['day'])->toBe(31)
+        ->and(eventDays($next['id'], '2026-02-01', '2026-04-30'))->toBe(['2026-02-28', '2026-03-31', '2026-04-30']);
+
+    $birthday = newEvent(['title' => 'День рождения', 'starts_on' => '2024-02-29', 'repeat' => ['unit' => 'year']]);
+    $later = $this->patchJson("/api/events/{$birthday['id']}?scope=following&date=2027-02-28", ['title' => 'ДР'], $this->auth)
+        ->assertOk()->json('event');
+
+    expect($later['repeat']['day'])->toBe(29)
+        ->and(eventDays($later['id'], '2028-02-01', '2028-03-31'))->toBe(['2028-02-29']);
+});
+
 it('keeps skipped days and changed occurrences on their places when a monthly series moves', function () {
     $rent = newEvent(['title' => 'Аренда', 'starts_on' => '2026-01-31', 'repeat' => ['unit' => 'month']]);
     $this->deleteJson("/api/events/{$rent['id']}?scope=one&date=2026-04-30", [], $this->auth)->assertOk();
