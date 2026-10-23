@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationNormalized } from 'vue-router'
-import { CalendarCheck, CalendarClock, ChartColumn, HandCoins, Handshake, LayoutGrid, Lightbulb, PieChart, Plus, Scale, Settings, Sun, Target, Wallet, WalletCards } from 'lucide-vue-next'
+import { CalendarCheck, CalendarClock, CalendarDays, ChartColumn, HandCoins, Handshake, LayoutGrid, Lightbulb, PieChart, Plus, Scale, Settings, Sun, Target, Wallet, WalletCards } from 'lucide-vue-next'
 import QuickAddSheet from '@/components/QuickAddSheet.vue'
 import CompassMark from '@/components/ui/CompassMark.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -32,6 +32,7 @@ const sideLinks = [
     { name: 'today', label: 'nav.today', icon: Sun },
     { name: 'money', label: 'nav.money', icon: Wallet },
     { name: 'tasks', label: 'nav.tasks', icon: CalendarCheck },
+    { name: 'calendar', label: 'nav.calendar', icon: CalendarDays, also: ['routine'] },
     { name: 'goals', label: 'nav.goals', icon: Target, also: ['goal'] },
     { name: 'advice', label: 'more.advice', icon: Lightbulb },
     { name: 'can-afford', label: 'advice.canAfford', icon: Scale },

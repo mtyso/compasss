@@ -10,9 +10,12 @@ export interface RepeatRule {
   every: number
   /** ISO weekdays for a weekly rule (1 = Monday). */
   days?: number[]
-  /** Day of month a monthly rule keeps to. */
+  /** Day of month a monthly or yearly rule keeps to. */
   day?: number
 }
+
+/** A repeat rule as the app sends it; the server adds `day` to monthly and yearly rules itself. */
+export type RepeatInput = Pick<RepeatRule, 'unit' | 'every' | 'days'>
 
 export interface Task {
   id: number
@@ -29,7 +32,7 @@ export interface Task {
 }
 
 export type TaskInput = Partial<Pick<Task, 'title' | 'notes' | 'due_on' | 'due_time' | 'priority' | 'goal_id'>> & {
-  repeat?: Pick<RepeatRule, 'unit' | 'every' | 'days'> | null
+  repeat?: RepeatInput | null
 }
 
 /** Tasks (docs/PLAN.md, D21): open ones plus those finished in the last days, filtered on the client. */

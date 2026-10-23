@@ -74,6 +74,24 @@ export function formatDayMonth(day: string, locale: Locale = 'ru'): string {
   return new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, day: 'numeric', month: 'long' }).format(new Date(`${day}T12:00:00+05:00`))
 }
 
+const UZ_MONTHS_SHORT = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek']
+
+/** «27 окт», «27-okt»: a calendar date (YYYY-MM-DD) with the month cut short, for tight titles. */
+export function formatDayMonthShort(day: string, locale: Locale = 'ru'): string {
+  if (locale === 'uz') {
+    return `${Number(day.slice(8, 10))}-${UZ_MONTHS_SHORT[Number(day.slice(5, 7)) - 1]}`
+  }
+  return new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, day: 'numeric', month: 'short' })
+    .format(new Date(`${day}T12:00:00+05:00`))
+    .replace(/\./g, '')
+}
+
+/** «Октябрь», «Oktabr»: the month alone, for a month given as YYYY-MM. */
+export function formatMonthName(month: string, locale: Locale = 'ru'): string {
+  if (locale === 'uz') return capitalize(UZ_MONTHS[Number(month.slice(5, 7)) - 1])
+  return capitalize(new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, month: 'long' }).format(new Date(`${month}-15T12:00:00+05:00`)))
+}
+
 /** «мая 2027» as it reads after «до» (Russian takes the genitive), «May 2027» in Uzbek, for a month as YYYY-MM. */
 export function formatMonthUntil(month: string, locale: Locale = 'ru'): string {
   if (locale === 'uz') return formatMonthTitle(month, locale)

@@ -27,6 +27,9 @@ export const router = createRouter({
         { path: 'money', name: 'money', component: () => import('@/pages/MoneyPage.vue') },
         { path: 'money/report/:month(\\d{4}-\\d{2})?', name: 'report', component: () => import('@/pages/ReportPage.vue') },
         { path: 'tasks', name: 'tasks', component: () => import('@/pages/TasksPage.vue') },
+        // Under «Дела»: the tab stays lit and going in and back slides like any deeper screen.
+        { path: 'tasks/calendar', name: 'calendar', component: () => import('@/pages/CalendarPage.vue') },
+        { path: 'tasks/calendar/routine', name: 'routine', component: () => import('@/pages/RoutinePage.vue') },
         { path: 'goals', name: 'goals', component: () => import('@/pages/GoalsPage.vue') },
         { path: 'goals/:id(\\d+)', name: 'goal', component: () => import('@/pages/GoalPage.vue') },
         { path: 'more', name: 'more', component: () => import('@/pages/MorePage.vue') },

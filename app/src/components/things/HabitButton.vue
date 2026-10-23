@@ -8,9 +8,10 @@ import type { Habit } from '@/stores/habits'
 /**
  * The one-tap control of a habit. A check habit is a circle that fills with the habit's colour; a
  * count or limit habit is a ring that fills towards the target, with the number inside, and turns
- * red once a limit is broken. A long press asks for an exact number instead.
+ * red once a limit is broken. A long press asks for an exact number instead. `sm` is the smaller
+ * one the calendar puts in a row of a day.
  */
-const props = defineProps<{ habit: Habit; label: string }>()
+const props = withDefaults(defineProps<{ habit: Habit; label: string; size?: 'sm' | 'md' }>(), { size: 'md' })
 const emit = defineEmits<{ tap: []; hold: [] }>()
 
 const color = computed(() => CATEGORY_COLORS[props.habit.color] ?? CATEGORY_COLORS.green)
@@ -54,8 +55,8 @@ onBeforeUnmount(cancel)
 <template>
   <button
     type="button"
-    class="habit-button relative grid size-12 shrink-0 place-items-center rounded-full"
-    :class="{ 'is-done': done, 'is-over': over, bump }"
+    class="habit-button relative grid shrink-0 place-items-center rounded-full"
+    :class="[size === 'sm' ? 'size-9' : 'size-12', { 'is-done': done, 'is-over': over, bump }]"
     :style="{ '--hc': color }"
     :aria-label="label"
     :aria-pressed="habit.type === 'check' ? done : undefined"
@@ -69,7 +70,7 @@ onBeforeUnmount(cancel)
   >
     <template v-if="habit.type === 'check'">
       <span class="fill absolute inset-1 rounded-full" />
-      <Check class="tick relative size-5" :stroke-width="3" />
+      <Check class="tick relative" :class="size === 'sm' ? 'size-4' : 'size-5'" :stroke-width="3" />
     </template>
     <template v-else>
       <svg class="absolute inset-0 -rotate-90" viewBox="0 0 48 48" aria-hidden="true">
@@ -86,8 +87,8 @@ onBeforeUnmount(cancel)
           :stroke-dashoffset="dash"
         />
       </svg>
-      <span v-if="habit.today.value > 0" class="value num relative text-sm font-bold">{{ habit.today.value }}</span>
-      <Plus v-else class="relative size-5 text-ink-3" :stroke-width="2.4" />
+      <span v-if="habit.today.value > 0" class="value num relative font-bold" :class="size === 'sm' ? 'text-xs' : 'text-sm'">{{ habit.today.value }}</span>
+      <Plus v-else class="relative text-ink-3" :class="size === 'sm' ? 'size-4' : 'size-5'" :stroke-width="2.4" />
     </template>
   </button>
 </template>

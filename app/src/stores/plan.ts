@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { api } from '@/lib/api'
 import type { Currency } from '@/lib/format'
 import type { Insight } from '@/stores/advisor'
+import type { TodayPlan } from '@/stores/calendar'
 import type { GoalsPlan } from '@/stores/goals'
 import { useMoney, type Transaction } from '@/stores/money'
 
@@ -67,6 +68,10 @@ export interface Today {
   insights: Insight[]
   insights_new: number
   goals: GoalsPlan
+  /** «План дня»: today's routine (with the night reaching in from yesterday) and today's events. */
+  plan: TodayPlan
+  /** How many routine blocks there are: none means «Задать распорядок дня». */
+  routine_blocks: number
 }
 
 export interface BudgetItem {
