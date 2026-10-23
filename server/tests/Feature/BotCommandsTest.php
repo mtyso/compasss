@@ -159,6 +159,46 @@ it('sends weekly totals compared with the week before', function () {
         ->toContain('🍽 Кафе и рестораны');
 });
 
+it('sends last month\'s report on the 1st: kept share, against the usual, budget and goals', function () {
+    $this->travelTo(Carbon::parse('2026-11-01 20:00', 'Asia/Tashkent'));
+    $op = fn (string $type, int $amount, string $when, string $key, array $extra = []) => $this->user->transactions()->create([
+        'type' => $type, 'account_id' => $this->card->id, 'amount' => $amount, 'currency' => 'UZS', 'rate' => '1', 'amount_uzs' => $amount,
+        'occurred_at' => Carbon::parse($when, 'Asia/Tashkent'), 'category_id' => $this->user->categories()->firstWhere('system_key', $key)->id, ...$extra,
+    ]);
+    foreach (['08' => 500_000, '09' => 500_000, '10' => 900_000] as $m => $cafe) {
+        $op('income', 10_000_000, "2026-{$m}-03 09:00", 'salary');
+        $op('expense', $cafe, "2026-{$m}-10 20:00", 'cafe');
+    }
+    $op('expense', 1_000_000, '2026-10-20 12:00', 'clothes', ['is_one_off' => true]);
+    $this->user->budgets()->create(['month' => '2026-10', 'category_id' => $this->user->categories()->firstWhere('system_key', 'cafe')->id, 'limit_uzs' => 600_000]);
+
+    $this->artisan('bot:digest monthly')->assertSuccessful();
+
+    $sent = cmdCalls('sendRichMessage')[0];
+    expect($sent['rich_message']['html'])
+        ->toContain(cmdNb('Итоги месяца: Октябрь'))
+        ->toContain(cmdNb('Отложено 8 100 000 сум, это 81% дохода. Месяцем раньше было 95%.'))
+        ->toContain(cmdNb('Без разовых трат на 80% больше обычного (обычно 500 000 сум).'))
+        ->toContain('Больше обычного')
+        ->toContain(cmdNb('+400 000 сум'))
+        ->toContain('В пределах бюджета: 0 из 1.')
+        ->and(json_encode($sent['reply_markup']))->toContain('money\\/report\\/2026-10');
+});
+
+it('leaves the weekly totals out on a Sunday that is the 1st, when the month\'s report comes', function () {
+    $this->travelTo(Carbon::parse('2026-11-01 20:00', 'Asia/Tashkent'));
+    $this->user->transactions()->create([
+        'type' => 'expense', 'account_id' => $this->card->id, 'amount' => 300_000, 'currency' => 'UZS', 'rate' => '1', 'amount_uzs' => 300_000,
+        'occurred_at' => now()->subDays(2), 'category_id' => $this->user->categories()->firstWhere('system_key', 'cafe')->id,
+    ]);
+
+    $this->artisan('bot:digest weekly')->assertSuccessful();
+    $this->artisan('bot:digest monthly')->assertSuccessful();
+
+    expect(cmdCalls('sendRichMessage'))->toHaveCount(1)
+        ->and(cmdCalls('sendRichMessage')[0]['rich_message']['html'])->toContain('Итоги месяца: Октябрь');
+});
+
 it('sets up the webhook, commands in both languages and the Mini App menu button', function () {
     $this->artisan('telegram:setup')->assertSuccessful();
 

@@ -80,13 +80,14 @@ class Insight extends Model
         };
     }
 
-    /** What the action works on in the app: the payment to pay, or the suggestion to turn into one. */
+    /** What the action works on in the app: the payment to pay, the suggestion to turn into one, the month to sum up. */
     public function ref(): int|string|null
     {
         return match ($this->rule) {
             'payment_due' => $this->payload['payment_id'] ?? null,
             'subscription_found' => $this->subject,
             'lent_due' => $this->payload['account_id'] ?? null,
+            'savings_rate' => $this->payload['month'] ?? null,
             default => null,
         };
     }

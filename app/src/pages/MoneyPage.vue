@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Handshake, Plus, ReceiptText } from 'lucide-vue-next'
+import { ChartColumn, ChevronLeft, ChevronRight, Handshake, Plus, ReceiptText } from 'lucide-vue-next'
 import CategoryIcon from '@/components/CategoryIcon.vue'
 import AccountIcon from '@/components/money/AccountIcon.vue'
 import TransactionRow from '@/components/money/TransactionRow.vue'
@@ -61,6 +61,14 @@ const debtsLines = computed(() => {
   ].filter((line): line is string => !!line)
 })
 const isCurrentMonth = computed(() => month.value === isoMonth())
+
+/** Under the totals, the way to the month's report: «Отложено 14% дохода». */
+const reportLine = computed(() => {
+  const income = summary.value?.income_uzs ?? 0
+  if (!income) return t('report.lineEmpty')
+  const rate = Math.round(((income - (summary.value?.expense_uzs ?? 0)) * 100) / income)
+  return rate >= 0 ? t('report.line', { rate }) : t('report.lineDeficit')
+})
 
 /**
  * Spending by main category, budgeted ones first. A budgeted bar is measured against its limit,
@@ -199,6 +207,11 @@ watch([month, () => money.revision], load)
                   </dd>
                 </div>
               </dl>
+              <div class="group">
+                <UiRow :to="{ name: 'report', params: { month: shownMonth ?? month } }" :title="$t('report.title')" :subtitle="reportLine">
+                  <template #leading><span class="grid size-9 place-items-center rounded-full bg-surface-2 text-ink-2"><ChartColumn class="size-[18px]" :stroke-width="2" /></span></template>
+                </UiRow>
+              </div>
             </section>
 
             <!-- Spending by category, against the budget -->

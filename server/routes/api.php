@@ -14,6 +14,7 @@ use App\Http\Controllers\InsightController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\RateController;
 use App\Http\Controllers\RecurringPaymentController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SummaryController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TodayController;
@@ -42,6 +43,7 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::apiResource('transactions', TransactionController::class)->parameters(['transactions' => 'id']);
     Route::post('/transactions/{id}/restore', [TransactionController::class, 'restore']);
     Route::get('/summary', SummaryController::class);
+    Route::get('/reports/month', [ReportController::class, 'month']);
     Route::get('/rates', RateController::class);
 
     Route::get('/budgets', [BudgetController::class, 'show']);

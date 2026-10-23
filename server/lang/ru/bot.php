@@ -18,6 +18,7 @@ return [
 
     'buttons' => [
         'open_app' => 'Открыть Компас',
+        'open_report' => 'Открыть итоги',
         'category' => 'Категория',
         'account' => 'Счёт',
         'undo' => 'Отменить',
@@ -124,6 +125,22 @@ return [
         'weekly_more' => 'На :amount больше, чем неделей раньше.',
         'weekly_same' => 'Столько же, сколько неделей раньше.',
         'weekly_top' => 'Больше всего ушло',
+        'monthly_title' => 'Итоги месяца: :month',
+        'monthly_saved' => 'Отложено :amount, это :rate% дохода.',
+        'monthly_saved_plain' => 'Отложено :amount.',
+        'monthly_prev' => 'Месяцем раньше было :rate%.',
+        'monthly_deficit' => 'Расходы больше доходов на :amount.',
+        'monthly_income' => 'Доход',
+        'monthly_expense' => 'Расходы',
+        'monthly_one_off' => 'Из них разовые',
+        'monthly_less' => 'Без разовых трат на :n% меньше обычного (обычно :usual).',
+        'monthly_more' => 'Без разовых трат на :n% больше обычного (обычно :usual).',
+        'monthly_same' => 'Без разовых трат как обычно.',
+        'monthly_up' => 'Больше обычного',
+        'monthly_down' => 'Меньше обычного',
+        'monthly_budget_all' => 'Бюджет выполнен во всех категориях.',
+        'monthly_budget_kept' => 'В пределах бюджета: :kept из :count.',
+        'monthly_goals' => 'Цели',
     ],
 
     'debts' => [
