@@ -9,6 +9,12 @@ import { readJson, writeJson } from '@/lib/storage'
 import { telegramApp } from '@/lib/telegram'
 import type { Locale } from '@/lib/format'
 
+/** Push notifications (D36): whether the server can push at all, and how many phones take them. */
+export interface PushState {
+  available: boolean
+  devices: number
+}
+
 export interface User {
   id: number
   name: string
@@ -17,6 +23,8 @@ export interface User {
   timezone: string
   base_currency: string
   settings: Record<string, unknown>
+  /** Missing in a session saved before push existed. */
+  push?: PushState
 }
 
 interface LoginStart {
