@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { BellRing, Send } from 'lucide-vue-next'
 import UiRow from '@/components/ui/UiRow.vue'
@@ -27,6 +27,9 @@ const testing = ref(false)
 const available = computed(() => auth.user?.push?.available ?? false)
 const devices = computed(() => auth.user?.push?.devices ?? 0)
 const visible = computed(() => isNative || devices.value > 0)
+
+// A phone switched on since this device signed in, or a choice made on the phone, shows here too.
+onMounted(() => void auth.refreshUser())
 
 const hint = computed(() => {
   if (!pushSupported) return t('notify.unsupported')

@@ -71,6 +71,16 @@ describe('push notifications on the phone', () => {
     expect(token).toHaveBeenCalledWith('fcm-token-2')
   })
 
+  it('listens for the token and taps on Android 7 too, where there are no channels', async () => {
+    plugin.createChannel.mockRejectedValueOnce(new Error('UNAVAILABLE'))
+    const push = await freshModule()
+    const open = vi.fn()
+    await push.setupPush({ token: vi.fn(), open })
+    await expect(push.registerPush()).resolves.toBe('fcm-token-1')
+    state.listeners.pushNotificationActionPerformed?.({ actionId: 'tap', notification: { id: '1', data: { url: '/advice' } } })
+    expect(open).toHaveBeenCalledWith('/advice')
+  })
+
   it('says no when notifications are not allowed', async () => {
     const push = await freshModule()
     await push.setupPush({ token: vi.fn(), open: vi.fn() })

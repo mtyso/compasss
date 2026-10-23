@@ -33,7 +33,6 @@ export async function setupPush(handlers: { token: (token: string) => void; open
   if (!pushSupported) return
   onToken = handlers.token
   try {
-    await PushNotifications.createChannel({ id: PUSH_CHANNEL, name: 'Компас', importance: 4, visibility: 1 })
     await PushNotifications.addListener('registration', ({ value }) => {
       // Asked for by registerPush(), whose caller sends it; otherwise Firebase rotated it on its own.
       if (waiter) waiter.resolve(value)
@@ -50,6 +49,12 @@ export async function setupPush(handlers: { token: (token: string) => void; open
     })
   } catch {
     // A phone without Google services: the app works on, without push.
+  }
+  try {
+    // After the listeners: Android 7 has no channels and refuses this, and the token and taps must still work.
+    await PushNotifications.createChannel({ id: PUSH_CHANNEL, name: 'Компас', importance: 4, visibility: 1 })
+  } catch {
+    // Firebase falls back to the manifest's default channel.
   }
 }
 
