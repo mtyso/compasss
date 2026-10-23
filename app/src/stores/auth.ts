@@ -102,9 +102,13 @@ export const useAuth = defineStore('auth', () => {
     if (!token.value) return
     const asked = userVersion
     try {
-      const next = await api<User>('/me')
-      // Something saved meanwhile (a setting, the phone switched on) answered with the newer account.
-      if (asked === userVersion && token.value) setUser(next)
+      const next = await api<User | null>('/me')
+      // Something saved meanwhile (a setting, the phone switched on) answered with the newer account; a page
+      // that is not the account (a host's check page) is no answer at all.
+      if (asked !== userVersion || !token.value || !next || typeof next !== 'object' || !('id' in next)) return
+      // The language stays this device's: App.vue sends it to the server when the two differ, and another
+      // device's choice must not be sent back over it.
+      setUser({ ...next, locale: user.value?.locale ?? next.locale })
     } catch {
       // Tried again the next time.
     }

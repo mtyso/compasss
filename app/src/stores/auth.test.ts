@@ -70,6 +70,15 @@ describe('auth store', () => {
     fetchMock.mockRejectedValueOnce(new TypeError('offline'))
     await auth.refreshUser()
     expect(auth.user?.settings.notify_via).toBe('both')
+
+    // A check page instead of the account, and another device's language: neither replaces what is here.
+    fetchMock.mockResolvedValueOnce(new Response('<html>challenge</html>', { status: 200, headers: { 'Content-Type': 'text/html' } }))
+    await auth.refreshUser()
+    expect(auth.user?.name).toBe('Elyor')
+    fetchMock.mockResolvedValueOnce(json({ ...fresh, locale: 'uz', settings: { notify_via: 'push' } }))
+    await auth.refreshUser()
+    expect(auth.user?.locale).toBe('ru')
+    expect(auth.user?.settings.notify_via).toBe('push')
   })
 
   it('stops when the sign-in is declined in the bot', async () => {
