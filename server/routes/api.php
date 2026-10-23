@@ -5,8 +5,10 @@ use App\Http\Controllers\AdvisorController;
 use App\Http\Controllers\Auth\TelegramLoginController;
 use App\Http\Controllers\Auth\TelegramWebAppController;
 use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DebtController;
+use App\Http\Controllers\EventController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\HabitController;
 use App\Http\Controllers\IncomeScheduleController;
@@ -15,6 +17,7 @@ use App\Http\Controllers\MeController;
 use App\Http\Controllers\RateController;
 use App\Http\Controllers\RecurringPaymentController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RoutineController;
 use App\Http\Controllers\SummaryController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TodayController;
@@ -63,6 +66,15 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::apiResource('habits', HabitController::class)->except('show')->parameters(['habits' => 'id']);
     Route::post('/habits/{id}/restore', [HabitController::class, 'restore']);
     Route::put('/habits/{id}/logs/{date}', [HabitController::class, 'log']);
+
+    Route::get('/calendar', CalendarController::class);
+    Route::post('/events', [EventController::class, 'store']);
+    Route::get('/events/{id}', [EventController::class, 'show'])->whereNumber('id');
+    Route::patch('/events/{id}', [EventController::class, 'update'])->whereNumber('id');
+    Route::delete('/events/{id}', [EventController::class, 'destroy'])->whereNumber('id');
+    Route::post('/events/{id}/restore', [EventController::class, 'restore'])->whereNumber('id');
+    Route::apiResource('routine', RoutineController::class)->except('show')->parameters(['routine' => 'id']);
+    Route::post('/routine/{id}/restore', [RoutineController::class, 'restore']);
 
     Route::get('/debts', [DebtController::class, 'index']);
     Route::post('/debts/lend', [DebtController::class, 'lend']);
