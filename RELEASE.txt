@@ -1,2 +1,2 @@
-source: 38186b99c94332a7c3ef77a5adbc54b3cde185dd
-subject: Merge pull request #16 from mtyso/claude/etap-2-report
+source: 831a1e1842944c93e48f12978a55c157b19699fd
+subject: Merge pull request #18 from mtyso/claude/project-thread-e6ru9q

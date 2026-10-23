@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Support\MonthDay;
 use App\Support\Repeat;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class TaskController extends Controller
@@ -102,8 +104,8 @@ class TaskController extends Controller
                 $repeat['days'] = array_values(array_unique(array_map('intval', $data['repeat']['days'])));
                 sort($repeat['days']);
             }
-            if ($repeat['unit'] === 'month') {
-                $repeat['day'] = (int) substr($due, 8, 2);
+            if (in_array($repeat['unit'], ['month', 'year'], true)) {
+                $repeat['day'] = self::repeatDay($due, $task?->repeat['day'] ?? null);
             }
             // A repeating task needs a date to repeat from.
             $data['repeat'] = $repeat;
@@ -111,14 +113,28 @@ class TaskController extends Controller
         } elseif (array_key_exists('due_on', $data) && $data['due_on'] === null && $task?->repeat) {
             // Taking the date away stops the repeat too.
             $data['repeat'] = null;
-        } elseif (! empty($data['due_on']) && ($task?->repeat['unit'] ?? null) === 'month') {
-            // A monthly task moved to another day repeats on that day from now on.
-            $data['repeat'] = [...$task->repeat, 'day' => (int) substr($data['due_on'], 8, 2)];
+        } elseif (! array_key_exists('repeat', $data) && ! empty($data['due_on']) && in_array($task?->repeat['unit'] ?? null, ['month', 'year'], true)) {
+            // A monthly or yearly task moved to another day repeats on that day from now on (a repeat sent says itself).
+            $data['repeat'] = [...$task->repeat, 'day' => self::repeatDay($data['due_on'], $task->repeat['day'] ?? null)];
         }
         if (array_key_exists('title', $data)) {
             $data['title'] = trim($data['title']);
         }
 
         return $data;
+    }
+
+    /**
+     * The day a monthly or yearly repeat goes by: the stored one while the date is that day in its month (a task
+     * on the 31st due the 30th of April, one on 29 February due the 28th), the date's own day otherwise.
+     */
+    private static function repeatDay(string $due, ?int $stored): int
+    {
+        $date = Carbon::parse($due);
+        if ($stored !== null && MonthDay::in($date->year, $date->month, $stored)->isSameDay($date)) {
+            return $stored;
+        }
+
+        return $date->day;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Advisor\Advisor;
+use App\Calendar\Agenda;
 use App\Goals\GoalPlanner;
 use App\Models\Habit;
 use App\Models\RecurringPayment;
@@ -13,7 +14,7 @@ use Illuminate\Http\Request;
 /** Everything the «Сегодня» screen needs in one request (docs/PLAN.md, section 7). */
 class TodayController extends Controller
 {
-    public function __invoke(Request $request, Plan $plan, Advisor $advisor, GoalPlanner $planner): JsonResponse
+    public function __invoke(Request $request, Plan $plan, Advisor $advisor, GoalPlanner $planner, Agenda $agenda): JsonResponse
     {
         $user = $request->user();
         $now = now();
@@ -22,6 +23,7 @@ class TodayController extends Controller
         $goals = $planner->plan($user, $now);
         $limit = $plan->limit($user, $now, $goals);
         $income = $plan->nextIncome($user, $today);
+        $day = $agenda->day($user, $today, $now, ['event']);
 
         return response()->json([
             'date' => $today->toDateString(),
@@ -47,6 +49,10 @@ class TodayController extends Controller
                 ->map(fn (Habit $h) => $h->toApi($today))
                 ->reject(fn (array $h) => $h['today']['state'] === 'off')
                 ->values(),
+            // «План дня»: today's routine (with the night from yesterday) and today's events.
+            'plan' => ['routine' => $day['routine'], 'events' => $day['items']],
+            // Whether there is a routine at all, so the app knows to offer setting one up.
+            'routine_blocks' => $user->routineBlocks()->count(),
         ]);
     }
 }

@@ -100,6 +100,16 @@ class User extends Authenticatable
         return $this->hasMany(Goal::class);
     }
 
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class);
+    }
+
+    public function routineBlocks(): HasMany
+    {
+        return $this->hasMany(RoutineBlock::class);
+    }
+
     /** A user setting with its default (docs/PLAN.md, 2.5: thresholds are settings). */
     public function setting(string $key, mixed $default = null): mixed
     {

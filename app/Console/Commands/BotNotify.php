@@ -8,7 +8,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('bot:notify')]
-#[Description('Send the advisor\'s new alerts, warnings and good news to Telegram, outside quiet hours')]
+#[Description('Send calendar reminders, and the advisor\'s new alerts, warnings and good news outside quiet hours')]
 class BotNotify extends Command
 {
     public function handle(Notifier $notifier): int
@@ -17,7 +17,8 @@ class BotNotify extends Command
             return self::SUCCESS;
         }
 
-        $sent = $notifier->run(now());
+        // Reminders first: the advisor's messages stop for the night, reminders do not.
+        $sent = $notifier->remind(now()) + $notifier->run(now());
         if ($sent > 0) {
             $this->info("Sent: {$sent}");
         }
