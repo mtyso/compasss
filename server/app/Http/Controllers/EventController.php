@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Calendar\Occurrences;
+use App\Calendar\Reminders;
 use App\Models\Event;
 use App\Models\User;
+use App\Support\MonthDay;
 use App\Support\Repeat;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -121,13 +125,17 @@ class EventController extends Controller
         if ($event->series_id !== null && ! empty($body['repeat'])) {
             $body += ['series_id' => null, 'series_date' => null];
         }
-        [$attributes, $delta] = $this->compose($this->stored($event), $body);
+        [$attributes, $move] = $this->compose($this->stored($event), $body);
+        $wasSeries = $event->repeat !== null;
 
-        DB::transaction(function () use ($event, $attributes, $delta) {
+        DB::transaction(function () use ($event, $attributes, $move, $wasSeries) {
             $event->update($attributes);
-            if ($delta !== 0) {
+            if ($wasSeries && $attributes['repeat'] === null) {
+                // A series made a single event: its changed occurrences go with the rest of it.
+                $event->exceptions()->get()->each->delete();
+            } elseif ($move !== null) {
                 foreach ($event->exceptions()->withTrashed()->get() as $exception) {
-                    $exception->update(['series_date' => Event::day($exception->series_date)->addDays($delta)->toDateString()]);
+                    $exception->update(['series_date' => $move($exception->series_date)]);
                 }
             }
         });
@@ -177,9 +185,9 @@ class EventController extends Controller
             'ends_on' => Event::day($date)->addDays($series->spanDays())->toDateString(),
             'skip_dates' => array_values(array_filter($skipped, fn (string $d) => $d >= $date)) ?: null,
         ];
-        [$attributes, $delta] = $this->compose($base, $body);
+        [$attributes, $move] = $this->compose($base, $body);
 
-        return DB::transaction(function () use ($user, $series, $date, $skipped, $attributes, $delta) {
+        return DB::transaction(function () use ($user, $series, $date, $skipped, $attributes, $move) {
             $series->update([
                 'repeat_until' => Event::day($date)->subDay()->toDateString(),
                 'skip_dates' => array_values(array_filter($skipped, fn (string $d) => $d < $date)) ?: null,
@@ -188,9 +196,11 @@ class EventController extends Controller
             foreach ($series->exceptions()->withTrashed()->where('series_date', '>=', $date)->get() as $exception) {
                 $exception->update([
                     'series_id' => $next->id,
-                    'series_date' => Event::day($exception->series_date)->addDays($delta)->toDateString(),
+                    'series_date' => $move ? $move($exception->series_date) : $exception->series_date,
                 ]);
             }
+            // Reminders already sent for the occurrences the new series takes over are not sent again.
+            app(Reminders::class)->carryOver($user, $series->id, $next->id);
 
             return $next;
         });
@@ -202,7 +212,7 @@ class EventController extends Controller
      *
      * @param  array<string, mixed>  $base  the fields before the change
      * @param  array<string, mixed>  $body  the fields sent
-     * @return array{0: array<string, mixed>, 1: int} the fields and the days the start moved
+     * @return array{0: array<string, mixed>, 1: (Closure(string): string)|null} the fields, and where an occurrence goes
      */
     private function compose(array $base, array $body): array
     {
@@ -216,35 +226,70 @@ class EventController extends Controller
         if ($event['repeat'] === null) {
             $event['repeat_until'] = $event['skip_dates'] = null;
         } else {
-            $event = $this->fitRule($event, array_key_exists('repeat', $body) ? 0 : $moved);
+            $event = $this->fitRule($event, array_key_exists('repeat', $body) ? 0 : $moved, $base['repeat']['day'] ?? null);
         }
         $delta = Event::daysBetween($before, Event::day($event['starts_on']));
+        $move = null;
         if ($delta !== 0 && $event['repeat'] !== null) {
+            $move = self::mover($before, $event);
             // A repeat_until sent is a date of its own.
             if ($event['repeat_until'] !== null && ! array_key_exists('repeat_until', $body)) {
                 $event['repeat_until'] = Event::day($event['repeat_until'])->addDays($delta)->toDateString();
             }
             if ($event['skip_dates'] !== null) {
-                $event['skip_dates'] = array_map(fn (string $d) => Event::day($d)->addDays($delta)->toDateString(), $event['skip_dates']);
+                $event['skip_dates'] = array_map($move, $event['skip_dates']);
             }
         }
         $this->check($event);
 
-        return [$event, $delta];
+        return [$event, $move];
     }
 
     /**
-     * A monthly or yearly rule keeps the start's day. A weekly one's weekdays move along with a start moved by
-     * $shift days, and a start on a weekday the rule does not list moves on to the next one that it does.
+     * Where an occurrence of a series that started on $before goes now that it starts as $event does. A daily or
+     * weekly one moves by as many days as the start; a monthly or yearly one keeps its place in the series, so
+     * the 30th of April of a series on the 31st becomes the 30th of April of one on the 30th, not the 29th.
      *
      * @param  array<string, mixed>  $event
+     * @return Closure(string): string
+     */
+    private static function mover(Carbon $before, array $event): Closure
+    {
+        $start = Event::day($event['starts_on']);
+        $rule = $event['repeat'];
+        $delta = Event::daysBetween($before, $start);
+
+        return match ($rule['unit']) {
+            'month' => function (string $date) use ($before, $start, $rule): string {
+                $d = Event::day($date);
+                $month = $start->copy()->startOfMonth()->addMonths(($d->year - $before->year) * 12 + $d->month - $before->month);
+
+                return MonthDay::in($month->year, $month->month, (int) $rule['day'])->toDateString();
+            },
+            'year' => fn (string $date): string => MonthDay::in($start->year + Event::day($date)->year - $before->year, $start->month, (int) $rule['day'])->toDateString(),
+            default => fn (string $date): string => Event::day($date)->addDays($delta)->toDateString(),
+        };
+    }
+
+    /**
+     * A monthly or yearly rule keeps its day while the start is that day in its month (the 30th of April for the
+     * 31st), and takes the start's day otherwise. A weekly one's weekdays move along with a start moved by $shift
+     * days, and a start on a weekday the rule does not list moves on to the next one that it does.
+     *
+     * @param  array<string, mixed>  $event
+     * @param  int|null  $storedDay  the day of the rule before the change, when a rule sent without one replaces it
      * @return array<string, mixed>
      */
-    private function fitRule(array $event, int $shift): array
+    private function fitRule(array $event, int $shift, ?int $storedDay = null): array
     {
         $rule = $event['repeat'];
         $start = Event::day($event['starts_on']);
         if (($rule['unit'] ?? null) === 'week' && ! empty($rule['days'])) {
+            // Every few weeks, a day moved past Sunday or back past Monday would land in a week the series skips.
+            $weeks = array_unique(array_map(fn ($d) => (int) floor(((int) $d - 1 + $shift) / 7), $rule['days']));
+            if ($shift !== 0 && ($rule['every'] ?? 1) > 1 && count($weeks) > 1) {
+                throw ValidationException::withMessages(['starts_on' => __('things.event_weeks_shift')]);
+            }
             $days = array_map(fn ($d) => (((int) $d - 1 + $shift) % 7 + 7) % 7 + 1, $rule['days']);
             $days = array_values(array_unique($days));
             sort($days);
@@ -260,7 +305,8 @@ class EventController extends Controller
             }
         }
         if (in_array($rule['unit'] ?? null, ['month', 'year'], true)) {
-            $rule['day'] = $start->day;
+            $day = (int) ($rule['day'] ?? $storedDay ?? $start->day);
+            $rule['day'] = MonthDay::in($start->year, $start->month, $day)->isSameDay($start) ? $day : $start->day;
         }
         $event['repeat'] = $rule;
 

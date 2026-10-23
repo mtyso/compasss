@@ -24,7 +24,8 @@ class Reminders
 
     /**
      * Reminders whose time is in (now − 15 min, now] and not claimed yet, the earliest first. The key holds
-     * the remind moment, so an event moved after its reminder went out reminds again at the new time.
+     * the remind moment, so an event moved after its reminder went out reminds again at the new time. An
+     * exception counts as its series, so changing only the title of one occurrence does not remind again.
      *
      * @return Collection<int, array{key: string, kind: string, title: string, date: string, start: string|null, end: string|null, all_day: bool, remind_at: Carbon, remind_before: int}>
      */
@@ -50,6 +51,20 @@ class Reminders
             'key' => $key,
             'sent_at' => $now->toDateTimeString(),
         ]) === 1;
+    }
+
+    /**
+     * A series split by «это и следующие» goes on as a new event: the reminders already sent for the old one
+     * count for the new one too, so the occurrences it takes over are not reminded twice.
+     */
+    public function carryOver(User $user, int $from, int $to): void
+    {
+        $rows = CalendarReminder::where('user_id', $user->id)->where('key', 'like', "e{$from}:%")->get()
+            ->map(fn (CalendarReminder $r) => ['user_id' => $user->id, 'key' => "e{$to}:".substr($r->key, strlen("e{$from}:")), 'sent_at' => $r->sent_at->toDateTimeString()])
+            ->all();
+        if ($rows) {
+            CalendarReminder::query()->insertOrIgnore($rows);
+        }
     }
 
     /** Gives a claimed reminder back, so it is due again while still inside its window. */
@@ -84,7 +99,7 @@ class Reminders
                 $at = $start->copy()->subMinutes($event->remind_before);
                 if ($at->gt($since) && $at->lte($now)) {
                     $due[] = [
-                        'key' => "e{$event->id}:{$at->format('Y-m-d\TH:i')}",
+                        'key' => 'e'.($event->series_id ?? $event->id).":{$at->format('Y-m-d\TH:i')}",
                         'kind' => 'event',
                         'title' => $event->title,
                         'date' => $occurrence['date'],

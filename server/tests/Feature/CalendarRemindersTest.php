@@ -114,3 +114,30 @@ it('forgets handed-out reminders after a few days', function () {
 
     expect(CalendarReminder::count())->toBe(0);
 });
+
+it('does not remind again when only the title of a reminded occurrence changes', function () {
+    $event = $this->postJson('/api/events', ['title' => 'Зарядка', 'starts_on' => '2026-10-23', 'start_time' => '10:30', 'end_time' => '11:00',
+        'repeat' => ['unit' => 'day'], 'remind_before' => 10], $this->auth)->json();
+    [$key] = remindersDueAt('2026-10-23 10:20');
+    $this->reminders->claim($this->user, $key, now());
+
+    $one = $this->patchJson("/api/events/{$event['id']}?scope=one&date=2026-10-23", ['title' => 'Зарядка на улице'], $this->auth)->assertOk()->json('event');
+    expect(remindersDueAt('2026-10-23 10:22'))->toBe([]);
+
+    // Moved to a later time, it reminds again.
+    $this->patchJson("/api/events/{$one['id']}", ['start_time' => '10:40', 'end_time' => '11:10'], $this->auth)->assertOk();
+    expect(remindersDueAt('2026-10-23 10:30'))->toBe(["e{$event['id']}:2026-10-23T10:30"]);
+});
+
+it('does not remind again for occurrences taken over by «это и следующие»', function () {
+    $event = $this->postJson('/api/events', ['title' => 'Зарядка', 'starts_on' => '2026-10-20', 'start_time' => '10:30', 'end_time' => '11:00',
+        'repeat' => ['unit' => 'day'], 'remind_before' => 10], $this->auth)->json();
+    [$key] = remindersDueAt('2026-10-23 10:20');
+    $this->reminders->claim($this->user, $key, now());
+
+    $next = $this->patchJson("/api/events/{$event['id']}?scope=following&date=2026-10-23", ['notes' => 'Во дворе'], $this->auth)->assertOk()->json('event');
+
+    expect($next['id'])->not->toBe($event['id'])
+        ->and(remindersDueAt('2026-10-23 10:22'))->toBe([])
+        ->and(remindersDueAt('2026-10-24 10:20'))->toBe(["e{$next['id']}:2026-10-24T10:20"]);
+});

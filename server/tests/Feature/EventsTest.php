@@ -213,3 +213,48 @@ it('keeps events to their owner', function () {
     $foreign->restore();
     expect(eventDays($foreign->id, '2026-10-19', '2026-10-25'))->toBe([]);
 });
+
+it('keeps a monthly series on the 31st when the 30th of April is changed with the following ones', function () {
+    $rent = newEvent(['title' => 'Аренда', 'starts_on' => '2026-01-31', 'repeat' => ['unit' => 'month']]);
+    $next = $this->patchJson("/api/events/{$rent['id']}?scope=following&date=2026-04-30", ['title' => 'Аренда (новая)', 'repeat' => ['unit' => 'month']], $this->auth)
+        ->assertOk()->json('event');
+
+    expect($next['repeat'])->toBe(['unit' => 'month', 'every' => 1, 'day' => 31])
+        ->and(eventDays($next['id'], '2026-04-01', '2026-06-30'))->toBe(['2026-04-30', '2026-05-31', '2026-06-30'])
+        ->and(eventDays($next['id'], '2026-07-01', '2026-07-31'))->toBe(['2026-07-31']);
+});
+
+it('keeps skipped days and changed occurrences on their places when a monthly series moves', function () {
+    $rent = newEvent(['title' => 'Аренда', 'starts_on' => '2026-01-31', 'repeat' => ['unit' => 'month']]);
+    $this->deleteJson("/api/events/{$rent['id']}?scope=one&date=2026-04-30", [], $this->auth)->assertOk();
+    $june = $this->patchJson("/api/events/{$rent['id']}?scope=one&date=2026-06-30", ['title' => 'Аренда и свет'], $this->auth)->assertOk()->json('event');
+
+    // The October occurrence (the 31st) dragged to the 30th: the series goes by the 30th from now on.
+    $this->patchJson("/api/events/{$rent['id']}?scope=all&date=2026-10-31", ['starts_on' => '2026-10-30', 'ends_on' => '2026-10-30'], $this->auth)->assertOk()
+        ->assertJsonPath('event.repeat.day', 30)->assertJsonPath('event.skip_dates', ['2026-04-30', '2026-06-30']);
+
+    expect(Event::find($june['id'])->series_date)->toBe('2026-06-30')
+        ->and(eventDays($rent['id'], '2026-04-01', '2026-06-30'))->toBe(['2026-05-30'])
+        ->and(eventDays($june['id'], '2026-04-01', '2026-06-30'))->toBe(['2026-06-30']);
+});
+
+it('does not move a series every two weeks so that some days land in a skipped week', function () {
+    $gym = newEvent(['title' => 'Бассейн', 'starts_on' => '2026-10-05', 'repeat' => ['unit' => 'week', 'every' => 2, 'days' => [1, 5]]]);
+
+    $this->patchJson("/api/events/{$gym['id']}?scope=all&date=2026-10-19", ['starts_on' => '2026-10-22', 'ends_on' => '2026-10-22'], $this->auth)
+        ->assertJsonValidationErrors(['starts_on' => 'Так часть дней уйдёт на неделю, которую серия пропускает. Перенеси одно событие или поменяй дни повтора.']);
+    // Within the week it moves.
+    $this->patchJson("/api/events/{$gym['id']}?scope=all&date=2026-10-19", ['starts_on' => '2026-10-20', 'ends_on' => '2026-10-20'], $this->auth)->assertOk()
+        ->assertJsonPath('event.repeat.days', [2, 6]);
+    expect(eventDays($gym['id'], '2026-10-05', '2026-10-25'))->toBe(['2026-10-06', '2026-10-10', '2026-10-20', '2026-10-24']);
+});
+
+it('takes the changed occurrences away when the series stops repeating', function () {
+    $standup = dailyEvent(['title' => 'Планёрка']);
+    $moved = $this->patchJson("/api/events/{$standup['id']}?scope=one&date=2026-10-22", ['start_time' => '10:00', 'end_time' => '10:30'], $this->auth)->json('event');
+
+    $this->patchJson("/api/events/{$standup['id']}?scope=all&date=2026-10-20", ['repeat' => null], $this->auth)->assertOk();
+
+    expect(Event::find($moved['id']))->toBeNull()
+        ->and(eventDays($standup['id'], '2026-10-19', '2026-10-25'))->toBe(['2026-10-19']);
+});

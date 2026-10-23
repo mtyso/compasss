@@ -12,6 +12,7 @@ return [
     'event_too_long' => "Tadbir 31 kundan uzun bo'lishi mumkin emas.",
     'event_until_before_start' => 'Takrorlash birinchi tadbirdan oldin tugashi mumkin emas.',
     'event_not_occurrence' => "Bu kunda tadbir yo'q.",
+    'event_weeks_shift' => "Unda ba'zi kunlar seriya o'tkazib yuboradigan haftaga tushadi. Bitta tadbirni ko'chiring yoki takrorlash kunlarini o'zgartiring.",
     'routine_same_time' => 'Boshlanish va tugash bir xil.',
     'calendar_range' => "92 kundan ko'pini ko'rsatib bo'lmaydi.",
 ];
