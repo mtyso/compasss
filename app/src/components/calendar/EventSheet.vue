@@ -55,7 +55,7 @@ const titleInput = ref<HTMLInputElement | null>(null)
 
 /** An all-day event opened without times takes the next hour (or 09:00) only when it becomes timed. */
 let timesKnown = false
-/** The fields as the sheet opened, so a change sends only what moved (docs/PLAN.md, calendar 2.7). */
+/** The fields as the sheet opened, so a change sends only what moved (docs/PLAN.md, D32). */
 let initial: EventInput = {}
 
 /** A series (not an exception of one) opened at one of its occurrences: changes ask for a scope. */

@@ -19,7 +19,7 @@ import { useCalendar, type RoutineBlock } from '@/stores/calendar'
 import { useHabits } from '@/stores/habits'
 
 /**
- * «Распорядок дня»: the usual day by the hour (docs/PLAN.md, calendar 2.8). One weekday at a time,
+ * «Распорядок дня»: the usual day by the hour (docs/PLAN.md, D33). One weekday at a time,
  * as a timetable: its blocks in order, the night from the evening before first, and the free time
  * between them; under it how the day adds up. A tap on a block edits it.
  */
