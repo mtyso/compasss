@@ -43,5 +43,7 @@ describe('againstUsual', () => {
     expect(againstUsual({ expense_uzs: 1_496_000, one_off_uzs: 0, usual_uzs: 1_700_000, pace: 1 })).toBe(-12)
     expect(againstUsual({ expense_uzs: 1_020_000, one_off_uzs: 0, usual_uzs: 1_700_000, pace: 0.5 })).toBe(20)
     expect(againstUsual({ expense_uzs: 1_000_000, one_off_uzs: 0, usual_uzs: null, pace: 1 })).toBeNull()
+    // The first day of a month: the usual share rounds to nothing, so there is no percent to tell
+    expect(againstUsual({ expense_uzs: 50_000, one_off_uzs: 0, usual_uzs: 12_000, pace: 0.0333 })).toBeNull()
   })
 })

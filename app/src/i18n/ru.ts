@@ -409,6 +409,7 @@ export default {
     budgetAll: 'Бюджет выполнен во всех категориях',
     budgetAllSoFar: 'Пока все категории в пределах бюджета',
     usualShort: 'обычно {amount}',
+    usualNone: 'раньше трат не было',
     limitOf: 'лимит {amount}',
     overBy: 'больше лимита на {amount}',
     oneOffShort: 'разовая трата',

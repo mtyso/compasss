@@ -409,6 +409,7 @@ const uz: typeof ru = {
     budgetAll: 'Byudjet barcha kategoriyalarda bajarildi',
     budgetAllSoFar: 'Hozircha barcha kategoriyalar byudjet doirasida',
     usualShort: 'odatda {amount}',
+    usualNone: 'avval xarajat bo\'lmagan',
     limitOf: 'limit {amount}',
     overBy: "limitdan {amount} ko'p",
     oneOffShort: 'bir martalik xarajat',

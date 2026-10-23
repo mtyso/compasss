@@ -16,7 +16,8 @@ use Illuminate\Support\Carbon;
  * usual level and the budget, and how the money goals moved. All sums in som (D8) except a goal's own.
  *
  * «Обычно» is the median over up to three earlier months the app saw from the start, as the advisor counts it
- * (AdvisorContext::historyMonths), one-off spending left out.
+ * (AdvisorContext::historyMonths), one-off spending left out. When those months come to nothing spent, there is
+ * no usual level at all (null), as before the first whole month.
  */
 final class MonthReport
 {
@@ -51,6 +52,10 @@ final class MonthReport
                 $usualBy[$id] = AdvisorContext::median(array_map(fn (array $rows) => isset($rows[$id]) ? $rows[$id]['total'] - $rows[$id]['one_off'] : 0, $byMonth));
             }
             $usual = AdvisorContext::median(array_map(fn (array $rows) => array_sum(array_column($rows, 'total')) - array_sum(array_column($rows, 'one_off')), $byMonth));
+            // Months with nothing spent are no level to measure against: «0 against 2.5 million» says nothing.
+            if ($usual === 0) {
+                [$usual, $usualBy] = [null, []];
+            }
         }
 
         $limits = collect(BudgetStatus::for($user, $month, $now)->items)->pluck('limit_uzs', 'category_id')->all();
@@ -60,7 +65,7 @@ final class MonthReport
                 'category_id' => $id,
                 'total_uzs' => $expense[$id]['total'] ?? 0,
                 'one_off_uzs' => $expense[$id]['one_off'] ?? 0,
-                'usual_uzs' => $history === [] ? null : ($usualBy[$id] ?? 0),
+                'usual_uzs' => $usual === null ? null : ($usualBy[$id] ?? 0),
                 'limit_uzs' => $limits[$id] ?? null,
             ];
         }

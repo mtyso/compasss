@@ -4,6 +4,7 @@ namespace App\Telegram\Views;
 
 use App\Advisor\DailyLimit;
 use App\Advisor\PurchaseVerdict;
+use App\Calendar\Agenda;
 use App\Habits\HabitProgress;
 use App\Models\Category;
 use App\Models\Habit;
@@ -20,11 +21,12 @@ use App\Telegram\Phrase\ParsedPhrase;
 use App\Telegram\Rich\Card;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /** Every card the bot sends, in the user's language. Layout notes: docs/BOT.md. */
 class Cards
 {
-    public function __construct(private Plan $plan) {}
+    public function __construct(private Plan $plan, private Agenda $agenda) {}
 
     public function start(User $user): Card
     {
@@ -355,6 +357,11 @@ class Cards
             $card->quote(Card::e(__('bot.today.no_paydays', [], $l)));
         }
 
+        $plan = $this->planLines($user, $now, $l);
+        if ($plan !== []) {
+            $card->heading(__('bot.today.plan', [], $l), 4)->list($plan);
+        }
+
         $tasks = $this->tasksForToday($user, $today);
         if ($tasks->isNotEmpty()) {
             $shown = $tasks->take(self::TASKS_SHOWN);
@@ -477,6 +484,155 @@ class Cards
             ->filter(fn (RecurringPayment $p) => $p->dueDate()->lt($today->copy()->addDays($limit->daysLeft)))
             ->take(6)
             ->values();
+    }
+
+    // --- Calendar ------------------------------------------------------------------
+
+    private const PLAN_EVENTS = 5;
+
+    /** Routine kinds (App\Models\RoutineBlock::KINDS) as the bot shows them. */
+    private const ROUTINE_EMOJI = [
+        'sleep' => '😴', 'work' => '💼', 'study' => '📚', 'sport' => '🏃', 'meal' => '🍽',
+        'road' => '🚗', 'rest' => '🛋', 'family' => '👨‍👩‍👧', 'other' => '🕘',
+    ];
+
+    /**
+     * «План дня» in /today and the morning summary, as on «Сегодня» in the app (TodayPlan.vue): the routine
+     * block on now and the next one, then the events not over yet, timed by start and all-day last.
+     *
+     * @return list<string> html lines, none when nothing is on
+     */
+    private function planLines(User $user, Carbon $now, string $l): array
+    {
+        $now = $now->copy()->timezone(config('app.timezone'));
+        $date = $now->toDateString();
+        $minute = $now->hour * 60 + $now->minute;
+        $day = $this->agenda->day($user, $now->copy()->startOfDay(), $now, ['event']);
+
+        $current = $next = null;
+        foreach ($day['routine'] as $block) {
+            [$start, $end] = self::span($block, $date);
+            // The shortest of the ones on now: a block inside a longer one is what is going on.
+            if ($start <= $minute && $minute < $end && ($current === null || $start > $current[1] || ($start === $current[1] && $end < $current[2]))) {
+                $current = [$block, $start, $end];
+            }
+            if ($start > $minute && ($next === null || $start < $next[1])) {
+                $next = [$block, $start];
+            }
+        }
+
+        $lines = [];
+        if ($current !== null) {
+            $lines[] = $this->routineLine($current[0], 'bot.today.plan_now', ['time' => $current[0]['end']], $l);
+        }
+        if ($next !== null) {
+            $lines[] = $this->routineLine($next[0], 'bot.today.plan_next', ['time' => $next[0]['start']], $l);
+        }
+
+        $timed = collect($day['items'])->reject(fn (array $e) => self::allDay($e))
+            ->map(fn (array $e) => [$e, ...self::span($e, $date)])
+            ->filter(fn (array $s) => $s[2] > $minute)
+            ->sortBy(fn (array $s) => $s[1])
+            ->pluck(0);
+        $events = $timed->concat(collect($day['items'])->filter(fn (array $e) => self::allDay($e)))->values();
+
+        foreach ($events->take(self::PLAN_EVENTS) as $event) {
+            $time = self::allDay($event) ? Str::ucfirst(__('bot.calendar.all_day', [], $l)) : self::hours($event['start'], $event['end']);
+            $lines[] = '<b>'.Card::e($time).'</b> '.Card::e($event['title']);
+        }
+        if ($events->count() > self::PLAN_EVENTS) {
+            $lines[] = Card::e(__('bot.today.tasks_more', ['count' => $events->count() - self::PLAN_EVENTS], $l));
+        }
+
+        return $lines;
+    }
+
+    /** «💼 Сейчас: Работа, до 18:00». */
+    private function routineLine(array $block, string $key, array $replace, string $l): string
+    {
+        return (self::ROUTINE_EMOJI[$block['kind']] ?? self::ROUTINE_EMOJI['other']).' '
+            .Card::e(__($key, ['title' => $block['title'], ...$replace], $l));
+    }
+
+    /**
+     * A calendar reminder (App\Calendar\Reminders): what, and when, with «через 10 мин» while it is still
+     * ahead today. A routine block reminds as it starts, under its own icon, so it only needs its hours.
+     *
+     * @param  array{kind: string, block_kind?: string|null, title: string, date: string, start: string|null, end: string|null, all_day: bool}  $reminder
+     */
+    public function reminder(array $reminder, User $user, ?Carbon $now = null): Card
+    {
+        $l = $user->locale;
+        $zone = config('app.timezone');
+        $now = ($now ?? now())->copy()->timezone($zone);
+        $date = Carbon::parse($reminder['date'], $zone);
+        $allDay = $reminder['all_day'] || $reminder['start'] === null;
+        $hours = $allDay ? __('bot.calendar.all_day', [], $l) : self::hours($reminder['start'], $reminder['end']);
+
+        if ($reminder['kind'] === 'routine') {
+            return Card::make()
+                ->heading((self::ROUTINE_EMOJI[$reminder['block_kind'] ?? 'other'] ?? self::ROUTINE_EMOJI['other']).' '.$reminder['title'], 3)
+                ->paragraph(Card::e(__('bot.calendar.routine', ['time' => $hours], $l)));
+        }
+
+        $when = __('bot.calendar.when', ['day' => match (true) {
+            $date->isSameDay($now) => __('bot.calendar.today', [], $l),
+            $date->isSameDay($now->copy()->addDay()) => __('bot.calendar.tomorrow', [], $l),
+            default => Fmt::longDate($date, $l),
+        }, 'time' => $hours], $l);
+
+        if (! $allDay && $date->isSameDay($now)) {
+            $minutes = (int) ceil($now->diffInMinutes(Carbon::parse("{$reminder['date']} {$reminder['start']}", $zone), false));
+            $when .= ' · '.match (true) {
+                $minutes < 0 => __('bot.calendar.started', [], $l),
+                $minutes === 0 => __('bot.calendar.now', [], $l),
+                $minutes < 60 => __('bot.calendar.in_minutes', ['m' => $minutes], $l),
+                $minutes % 60 === 0 => __('bot.calendar.in_hours', ['h' => intdiv($minutes, 60)], $l),
+                default => __('bot.calendar.in_hours_minutes', ['h' => intdiv($minutes, 60), 'm' => $minutes % 60], $l),
+            };
+        }
+
+        return Card::make()
+            ->heading('⏰ '.$reminder['title'], 3)
+            ->paragraph(Card::e($when));
+    }
+
+    /** «Календарь»: the reminder's day in the Mini App. */
+    public function reminderKeyboard(array $reminder, User $user): Keyboard
+    {
+        $path = $reminder['kind'] === 'routine' ? '/tasks/calendar/routine' : "/tasks/calendar?view=day&date={$reminder['date']}";
+
+        return Keyboard::make()->row([Keyboard::webApp('📅 '.__('bot.buttons.calendar', [], $user->locale), $path)]);
+    }
+
+    /** «16:00–17:00», or «16:00» without an end. */
+    private static function hours(string $start, ?string $end): string
+    {
+        return $end === null ? $start : "{$start}–{$end}";
+    }
+
+    private static function allDay(array $item): bool
+    {
+        return ($item['all_day'] ?? false) || ($item['start'] ?? null) === null;
+    }
+
+    /**
+     * Where an item lies in a day, in minutes: from 0 when it began the day before, to 1440 when it runs
+     * past midnight (lib/calendar daySegments in the app).
+     *
+     * @return array{0: int, 1: int}
+     */
+    private static function span(array $item, string $date): array
+    {
+        $minutes = fn (string $time) => (int) substr($time, 0, 2) * 60 + (int) substr($time, 3, 2);
+        $start = $item['date'] < $date ? 0 : $minutes($item['start']);
+        $end = match (true) {
+            ($item['end_date'] ?? $item['date']) > $date, $item['end'] === '00:00' => 1440,
+            $item['end'] === null => $start + 60,
+            default => $minutes($item['end']),
+        };
+
+        return [$start, $end];
     }
 
     // --- /month ------------------------------------------------------------------

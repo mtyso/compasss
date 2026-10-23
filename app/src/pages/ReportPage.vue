@@ -66,6 +66,11 @@ const regular = computed(() => (report.value ? report.value.expense_uzs - report
 const usual = computed(() => (report.value ? usualNow(report.value) : null))
 const barMax = computed(() => Math.max(1, regular.value, usual.value ?? 0))
 const changes = computed(() => movers(report.value?.categories ?? [], report.value?.pace ?? 1))
+/** A mover's caption: its usual level, or that there was none before this month. */
+function moverLine(categoryId: number, usualNow: number): string {
+  const usual = report.value?.categories.find((c) => c.category_id === categoryId)?.usual_uzs
+  return usual ? t('report.usualShort', { amount: uzs(usualNow) }) : t('report.usualNone')
+}
 
 /** Categories with spending this month or a limit; the bar is against the limit, or the biggest category. */
 const rows = computed(() => {
@@ -173,8 +178,9 @@ function goalLine(goal: ReportGoal): string {
             <section v-if="report.usual_uzs !== null" class="flex flex-col gap-3">
               <h2 class="section-title">{{ $t('report.vsUsual') }}</h2>
               <div class="card flex flex-col gap-4 px-4 py-4">
-                <p class="text-[1.25rem] leading-tight font-semibold tracking-[-0.02em]" :class="{ 'text-money': (vsUsual ?? 0) < 0, 'text-danger': (vsUsual ?? 0) > 0 }">
-                  {{ !vsUsual ? $t('report.same') : vsUsual < 0 ? $t('report.less', { n: -vsUsual }) : $t('report.more', { n: vsUsual }) }}
+                <!-- No headline when the usual share of the first days rounds to nothing: the bars tell it -->
+                <p v-if="vsUsual !== null" class="text-[1.25rem] leading-tight font-semibold tracking-[-0.02em]" :class="{ 'text-money': vsUsual < 0, 'text-danger': vsUsual > 0 }">
+                  {{ vsUsual === 0 ? $t('report.same') : vsUsual < 0 ? $t('report.less', { n: -vsUsual }) : $t('report.more', { n: vsUsual }) }}
                 </p>
                 <div class="flex flex-col gap-3">
                   <div class="flex flex-col gap-1.5">
@@ -202,7 +208,7 @@ function goalLine(goal: ReportGoal): string {
                     <CategoryIcon :icon="category(m.category_id)?.icon" :color="category(m.category_id)?.color" size="sm" />
                     <div class="flex min-w-0 flex-1 flex-col">
                       <span class="truncate text-[0.9375rem]">{{ category(m.category_id)?.names[settings.locale] }}</span>
-                      <span class="truncate text-caption text-ink-3">{{ $t('report.usualShort', { amount: uzs(m.usual) }) }}</span>
+                      <span class="truncate text-caption text-ink-3">{{ moverLine(m.category_id, m.usual) }}</span>
                     </div>
                     <span class="num flex shrink-0 items-center gap-0.5 text-[0.9375rem] font-semibold" :class="side === 'up' ? 'text-danger' : 'text-money'">
                       <component :is="side === 'up' ? ArrowUpRight : ArrowDownRight" class="size-4" :stroke-width="2.4" />
