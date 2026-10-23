@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Bell, Clock, Plus } from 'lucide-vue-next'
 import RoutineSheet from '@/components/calendar/RoutineSheet.vue'
-import { blockSubtitle, blocksOn, dayTotals, EXAMPLE_BLOCKS, newBlockDays, timetable, totalsLine } from '@/components/calendar/routine'
+import { blockSubtitle, blocksOn, dayTotals, EXAMPLE_BLOCKS, newBlockDays, timetable, totalsParts } from '@/components/calendar/routine'
 import { routineColor, routineLook } from '@/components/calendar/routineLook'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -45,7 +45,7 @@ onMounted(async () => {
 const weekdays = computed(() => weekdayNames(t))
 const parts = computed(() => blocksOn(calendar.blocks, weekday.value))
 const rows = computed(() => timetable(parts.value))
-const summary = computed(() => (parts.value.length ? totalsLine(dayTotals(parts.value), t) : ''))
+const summary = computed(() => (parts.value.length ? totalsParts(dayTotals(parts.value), t) : []))
 
 function habitName(id: number | null): string | null {
   return id === null ? null : (habits.habits.find((h) => h.id === id)?.name ?? null)
@@ -154,7 +154,9 @@ async function seed(): Promise<void> {
         </div>
         <p v-else class="text-sm text-ink-3">{{ $t('routine.dayEmpty') }}</p>
 
-        <p v-if="summary" class="num pt-1 text-sm text-ink-2">{{ summary }}</p>
+        <p v-if="summary.length" class="num pt-1 text-sm text-ink-2">
+          <template v-for="(part, i) in summary" :key="i"><template v-if="i"> · </template><span class="whitespace-nowrap">{{ part }}</span></template>
+        </p>
       </section>
     </template>
 

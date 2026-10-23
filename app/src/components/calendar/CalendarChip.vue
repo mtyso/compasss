@@ -55,6 +55,7 @@ const sizes = {
 } as const
 
 const icons = computed(() => props.size !== 'xs')
+const hasAmount = computed(() => props.size === 'md' && (props.item.type === 'payment' || props.item.type === 'lent'))
 </script>
 
 <template>
@@ -62,6 +63,7 @@ const icons = computed(() => props.size !== 'xs')
     :is="as"
     :type="as === 'button' ? 'button' : undefined"
     class="chip-line flex min-w-0 items-center overflow-hidden text-left font-medium whitespace-nowrap"
+    :data-amount="hasAmount || undefined"
     :class="[
       sizes[size],
       look,
@@ -82,16 +84,28 @@ const icons = computed(() => props.size !== 'xs')
       <Handshake v-else-if="item.type === 'lent'" class="size-3.5 shrink-0" :stroke-width="2.2" aria-hidden="true" />
     </template>
     <span class="min-w-0 flex-1" :class="[size === 'xs' ? 'overflow-clip' : 'truncate', { 'line-through': item.type === 'task' && item.done }]">{{ text }}</span>
-    <MoneyAmount
-      v-if="size === 'md' && (item.type === 'payment' || item.type === 'lent')"
-      :amount="item.amount"
-      :currency="item.currency"
-      class="shrink-0 font-semibold"
-    />
+    <span v-if="hasAmount && (item.type === 'payment' || item.type === 'lent')" class="amount shrink-0 font-semibold">
+      <MoneyAmount :amount="item.amount" :currency="item.currency" />
+    </span>
   </component>
 </template>
 
 <style scoped>
+/* A payment's amount needs the chip to be wide enough for its name too (a week's day column is not). */
+[data-amount] {
+  container-type: inline-size;
+}
+
+.amount {
+  display: none;
+}
+
+@container (min-width: 12rem) {
+  .amount {
+    display: inline;
+  }
+}
+
 /* A tap darkens the chip a little, whatever its colour. */
 .press-soft-chip {
   transition: filter var(--dur-fast) var(--ease-standard);

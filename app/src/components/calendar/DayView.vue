@@ -245,6 +245,15 @@ function habitLabel(habit: Habit): string {
 
 const timeline = ref<HTMLElement | null>(null)
 const sticky = ref<HTMLElement | null>(null)
+/** The height of the all-day area, which the routine blocks' names stick under. */
+const stuckHeight = ref(0)
+let stuckObserver: ResizeObserver | null = null
+onMounted(() => {
+  if (typeof ResizeObserver === 'undefined' || !sticky.value) return
+  stuckObserver = new ResizeObserver(() => (stuckHeight.value = sticky.value?.offsetHeight ?? 0))
+  stuckObserver.observe(sticky.value)
+})
+onBeforeUnmount(() => stuckObserver?.disconnect())
 
 /**
  * Puts the first thing of the day (or now, on today) under the sticky parts. The page decides when:
@@ -321,11 +330,11 @@ defineExpose({ scrollToStart })
       <TimeGutter :hour-height="hourHeight" class="w-[3.25rem]" />
       <div class="relative min-w-0 flex-1 shadow-[inset_1px_0_0_var(--c-line)] mr-2 md:mr-0" :style="hourLines(hourHeight)">
         <!-- Routine lane -->
-        <div v-if="routineSegs.length" class="absolute inset-y-0 left-1 w-[clamp(5.5rem,30%,14rem)]">
+        <div v-if="routineSegs.length" class="absolute inset-y-0 left-1 w-[clamp(6.5rem,36%,14rem)]">
           <div
             v-for="segment in routineSegs"
             :key="segment.key"
-            class="routine absolute right-0 overflow-hidden"
+            class="routine absolute right-0 overflow-clip"
             :class="[segment.fromPrev ? 'rounded-t-none' : 'rounded-t-[0.5rem]', segment.toNext ? 'rounded-b-none' : 'rounded-b-[0.5rem]']"
             :style="routineStyle(segment)"
           >
@@ -336,12 +345,17 @@ defineExpose({ scrollToStart })
               @click="emit('routine', segment.item)"
             />
             <span class="rail pointer-events-none absolute inset-y-0 left-0 w-[3px]" aria-hidden="true" />
+            <!-- The name stays in sight while the block is scrolled under the sticky parts (a long «Работа»). -->
             <div
               v-if="heightOf(segment) >= 22"
-              class="pointer-events-none relative flex min-w-0 flex-col py-[3px] pl-2.5 pr-1.5"
-              :class="{ 'pr-11': blockHabits.has(segment.key) }"
+              class="routine-label pointer-events-none sticky flex min-w-0 flex-col py-[3px] pl-2.5 pr-1.5"
+              :class="{ 'pr-11': wide && blockHabits.has(segment.key), 'beside-check': !wide && blockHabits.has(segment.key) }"
+              :style="{ top: `calc(var(--cal-head, 0px) + ${stuckHeight}px)` }"
             >
-              <span class="flex min-w-0 items-center gap-1.5 text-caption leading-[17px] font-semibold text-ink">
+              <span
+                class="flex min-w-0 items-center gap-1.5 text-caption leading-[17px] font-semibold text-ink"
+                :class="{ 'pr-10': !wide && blockHabits.has(segment.key) && heightOf(segment) < 60 }"
+              >
                 <component
                   :is="routineLook(segment.item.kind).icon"
                   v-if="heightOf(segment) >= 40"
@@ -351,9 +365,16 @@ defineExpose({ scrollToStart })
                 />
                 <span class="truncate">{{ segment.item.title }}</span>
               </span>
-              <span v-if="heightOf(segment) >= 40" class="num truncate text-micro leading-[15px] text-ink-2">{{ segment.item.start }}–{{ segment.item.end }}</span>
+              <span
+                v-if="heightOf(segment) >= 40"
+                class="num truncate text-micro leading-[15px] text-ink-2"
+                :class="{ 'pr-10': !wide && blockHabits.has(segment.key) }"
+              >
+                {{ segment.item.start }}<span class="end">–{{ segment.item.end }}</span>
+              </span>
             </div>
-            <span v-if="blockHabits.has(segment.key)" class="absolute top-1 right-1 z-[1]">
+            <!-- The habit's check: beside the name on a wide screen, under it in a phone's narrower lane. -->
+            <span v-if="blockHabits.has(segment.key)" class="absolute right-1 z-[1]" :class="wide ? 'top-1' : 'bottom-1'">
               <span
                 v-if="blockHabits.get(segment.key)!.state === 'future' || !perDay(blockHabits.get(segment.key)!)"
                 class="m-1 block size-7 rounded-full shadow-[inset_0_0_0_2px_var(--rc)] opacity-35"
@@ -375,7 +396,7 @@ defineExpose({ scrollToStart })
         <div
           ref="lane"
           class="absolute inset-y-0 right-0"
-          :class="routineSegs.length ? 'left-[calc(clamp(5.5rem,30%,14rem)_+_0.5rem)]' : 'left-1'"
+          :class="routineSegs.length ? 'left-[calc(clamp(6.5rem,36%,14rem)_+_0.5rem)]' : 'left-1'"
           @click="onLaneClick"
           @pointerdown="drag.fromLane($event, 0)"
         >
@@ -428,6 +449,21 @@ defineExpose({ scrollToStart })
 <style scoped>
 .rail {
   background: var(--rc);
+}
+
+/* Beside a phone's habit check a narrow block shows only when it starts. */
+.routine-label {
+  container-type: inline-size;
+}
+
+.beside-check .end {
+  display: none;
+}
+
+@container (min-width: 7.75rem) {
+  .beside-check .end {
+    display: inline;
+  }
 }
 
 .toggle {

@@ -62,7 +62,8 @@ const time = computed(() => {
   return `${item.start}–${item.end}`
 })
 
-const title = computed(() => (props.compact ? softHyphenate(props.item.title, 8) : props.item.title))
+// A phone's week column holds about six letters a line: «Встре-ча», not «Встре» and «ча».
+const title = computed(() => (props.compact ? softHyphenate(props.item.title, 6, 2) : props.item.title))
 const label = computed(() => [props.item.title, time.value].filter(Boolean).join(', '))
 
 const look = computed(() => {

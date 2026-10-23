@@ -56,7 +56,6 @@ function time(item: CalendarItem): string {
 }
 
 function title(item: CalendarItem): string {
-  if (item.type === 'income') return t('calendar.income', { name: item.title })
   if (item.type === 'goal') return t('calendar.deadline', { title: item.title })
   if (item.type === 'lent') return t('calendar.lentDue', { name: item.title })
   return item.title

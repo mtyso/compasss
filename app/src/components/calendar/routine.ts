@@ -89,12 +89,17 @@ export function dayTotals(parts: DayBlock[]): DayTotals {
   return { kinds, free: freeMinutes(parts) }
 }
 
-/** «Сон 8 ч · Работа 9 ч · Свободно 5 ч». */
-export function totalsLine(totals: DayTotals, t: Translate): string {
+/** «Сон 8 ч», «Работа 9 ч», «Свободно 5 ч»: the page keeps each part on one line. */
+export function totalsParts(totals: DayTotals, t: Translate): string[] {
   return [
     ...totals.kinds.map(({ kind, minutes }) => `${t(`routine.kinds.${kind}`)} ${durationLabel(minutes, t)}`),
     t('routine.free', { time: durationLabel(totals.free, t) }),
-  ].join(' · ')
+  ]
+}
+
+/** «Сон 8 ч · Работа 9 ч · Свободно 5 ч». */
+export function totalsLine(totals: DayTotals, t: Translate): string {
+  return totalsParts(totals, t).join(' · ')
 }
 
 /** «09:00–18:00 · По будням · привычка Спорт»; the rest of a night is «до 07:00 · Каждый день». */
