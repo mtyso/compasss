@@ -31,6 +31,15 @@ class FcmClient
     /** Firebase asked to slow down (429, 5xx): nothing is sent before this moment. */
     private const PAUSE_KEY = 'fcm:pause_until';
 
+    /** Never wait longer than this between tries, whatever Retry-After says: a reminder lives 15 minutes. */
+    private const PAUSE_MAX_SECONDS = 300;
+
+    /** When Firebase stopped answering (busy, down, unreachable); cleared by the next message it takes. */
+    private const FAILING_KEY = 'fcm:failing_since';
+
+    /** No answer for this long counts as broken: the bot takes over while a reminder can still make it. */
+    private const GIVE_UP_MINUTES = 10;
+
     /** @var array{project_id: string, client_email: string, private_key: string, private_key_id?: string}|null */
     private ?array $key = null;
 
@@ -62,13 +71,21 @@ class FcmClient
                 // The cached token expired early or was revoked: one fresh try.
                 $response = $this->post($url, $body, $this->accessToken(fresh: true));
             }
-        } catch (ConnectionException) {
-            return PushResult::Retry;
+        } catch (ConnectionException $e) {
+            return $this->retry($e->getMessage());
         } catch (RuntimeException $e) {
             return $this->broken($e->getMessage());
         }
 
-        return $response->successful() ? PushResult::Sent : $this->failure($response);
+        if ($response->successful()) {
+            // Firebase works again, e.g. after a new key was uploaded and «Прислать проверочное» went through.
+            Cache::forget(self::FAILING_KEY);
+            Cache::forget(self::BROKEN_KEY);
+
+            return PushResult::Sent;
+        }
+
+        return $this->failure($response);
     }
 
     /** @return array<string, mixed> */
@@ -90,8 +107,8 @@ class FcmClient
     }
 
     /**
-     * What Firebase's refusal means. Only an explicit code drops a phone: a wrong project or a bug in our
-     * message must not wipe the tokens.
+     * What Firebase's refusal means. Only a token Firebase does not know drops a phone: a wrong project or a
+     * bug in our message must not wipe the tokens.
      */
     private function failure(Response $response): PushResult
     {
@@ -104,18 +121,40 @@ class FcmClient
 
         if ($status === 429 || $status >= 500) {
             $after = $response->header('Retry-After');
-            Cache::put(self::PAUSE_KEY, now()->getTimestamp() + max(60, is_numeric($after) ? (int) $after : 60), 3600);
+            $wait = min(self::PAUSE_MAX_SECONDS, max(60, is_numeric($after) ? (int) $after : 60));
+            Cache::put(self::PAUSE_KEY, now()->getTimestamp() + $wait, 3600);
 
-            return PushResult::Retry;
+            return $this->retry("FCM {$status} ".($code ?? $error['status'] ?? ''));
         }
 
         return match (true) {
-            $code === 'UNREGISTERED', $code === 'SENDER_ID_MISMATCH' => PushResult::Dead,
+            $code === 'UNREGISTERED' => PushResult::Dead,
             $status === 400 && $badToken => PushResult::Dead,
+            // The app was built with google-services.json from another Firebase project than the server's key.
+            $code === 'SENDER_ID_MISMATCH' => $this->broken('FCM SENDER_ID_MISMATCH: the server key and the app\'s google-services.json come from different Firebase projects'),
             // 401 again, 403 (API off, no permission), 404 for the project itself: the setup, not the phone.
             in_array($status, [401, 403, 404], true) => $this->broken("FCM {$status} ".($code ?? $error['status'] ?? '').': '.($error['message'] ?? '')),
             default => $this->rejected($status, $code ?? ($error['status'] ?? null), (string) ($error['message'] ?? '')),
         };
+    }
+
+    /** Busy or unreachable: the next minute tries again, until it has gone on too long (GIVE_UP_MINUTES). */
+    private function retry(string $why): PushResult
+    {
+        $since = Cache::get(self::FAILING_KEY);
+        if (! is_int($since)) {
+            Cache::put(self::FAILING_KEY, now()->getTimestamp(), 3600);
+            Log::warning("FCM did not take a message, trying again: {$why}");
+
+            return PushResult::Retry;
+        }
+        if (now()->getTimestamp() - $since >= self::GIVE_UP_MINUTES * 60) {
+            Cache::forget(self::FAILING_KEY);
+
+            return $this->broken('Firebase has not taken a message for '.self::GIVE_UP_MINUTES." minutes: {$why}");
+        }
+
+        return PushResult::Retry;
     }
 
     private function broken(string $why): PushResult
@@ -142,11 +181,13 @@ class FcmClient
     /** An OAuth access token for an hour, signed with the service account key and cached until near its end. */
     private function accessToken(bool $fresh = false): string
     {
-        if (! $fresh && is_string($cached = Cache::get(self::ACCESS_KEY))) {
+        // Per key: a new key file starts with its own token, not one Google issued for the old account.
+        $key = $this->key();
+        $cacheKey = self::ACCESS_KEY.':'.($key['private_key_id'] ?? sha1($key['client_email']));
+        if (! $fresh && is_string($cached = Cache::get($cacheKey))) {
             return $cached;
         }
 
-        $key = $this->key();
         $now = now()->getTimestamp();
         $header = self::base64url((string) json_encode(array_filter(['alg' => 'RS256', 'typ' => 'JWT', 'kid' => $key['private_key_id'] ?? null])));
         $claims = self::base64url((string) json_encode([
@@ -176,7 +217,7 @@ class FcmClient
             throw new RuntimeException("Google OAuth {$response->status()}: ".$response->json('error').' '.$response->json('error_description'));
         }
 
-        Cache::put(self::ACCESS_KEY, $token, max(60, (int) $response->json('expires_in', 3600) - 300));
+        Cache::put($cacheKey, $token, max(60, (int) $response->json('expires_in', 3600) - 300));
 
         return $token;
     }

@@ -60,10 +60,9 @@ class PushNotifier
 
         $sent = 0;
         foreach ($this->users() as $user) {
-            // With both channels the bot claims the plain key and the phone its own (Reminders::due).
-            $prefix = count($this->channels->for($user)) > 1 ? 'p:' : '';
-            foreach ($this->reminders->due($user, $now, $prefix) as $reminder) {
-                $key = $prefix.$reminder['key'];
+            // The phone always claims its own key; with one channel the bot's claim counts too (Channels).
+            foreach ($this->reminders->due($user, $now, $this->channels->claimPrefixes($user, 'push')) as $reminder) {
+                $key = Channels::CLAIM_PREFIX['push'].$reminder['key'];
                 if (! $this->reminders->claim($user, $key, $now)) {
                     continue;
                 }

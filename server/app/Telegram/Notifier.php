@@ -73,7 +73,7 @@ class Notifier
     {
         $sent = 0;
         foreach ($this->users() as $user) {
-            foreach ($this->reminders->due($user, $now) as $reminder) {
+            foreach ($this->reminders->due($user, $now, $this->channels->claimPrefixes($user, 'telegram')) as $reminder) {
                 if (! $this->reminders->claim($user, $reminder['key'], $now)) {
                     continue;
                 }

@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Notify\Channels;
 use App\Push\FcmClient;
 use App\Push\PushNotifier;
+use App\Push\PushResult;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -26,12 +28,16 @@ class PushDigest extends Command
 
         $now = now();
         foreach ($push->users()->filter(fn ($u) => $u->accounts()->whereNull('archived_at')->exists()) as $user) {
-            match ($kind) {
+            $result = match ($kind) {
                 'morning' => $push->morning($user, $now),
                 // A Sunday that is the 1st gets the month's report at the same hour instead, as in the bot.
                 'weekly' => $now->copy()->timezone(config('app.timezone'))->day !== 1 ? $push->weekly($user, $now) : null,
                 'monthly' => $push->monthly($user, $now),
             };
+            // No phone took it (busy, gone, refused): bot:digest, scheduled right after, sends it instead.
+            if ($result !== null && $result !== PushResult::Sent) {
+                Channels::handBack($user, $kind);
+            }
         }
 
         return self::SUCCESS;

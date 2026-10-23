@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Push\FcmClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Where a user's notifications go (docs/PLAN.md, D36): the bot, the phone, or both, as the setting
@@ -16,12 +17,17 @@ use Illuminate\Support\Collection;
  *
  * Each channel marks what it delivered in `insights.sent_via`. With one channel, an insight delivered any
  * way is done, so switching channels does not send the day's advice again; with both, each sends its own.
+ * Calendar reminders work the same way through their claims (claimPrefixes), and a digest the phone could
+ * not take goes to the bot in the same minute (handBack).
  */
 class Channels
 {
     public const ALL = ['telegram', 'push'];
 
     public const VIA = ['telegram', 'push', 'both'];
+
+    /** How each channel claims a calendar reminder (App\Calendar\Reminders): the bot the key, the phone «p:» + key. */
+    public const CLAIM_PREFIX = ['telegram' => '', 'push' => 'p:'];
 
     public function __construct(private FcmClient $fcm) {}
 
@@ -70,6 +76,32 @@ class Channels
         $sent = (array) $insight->sent_via;
 
         return ! in_array($channel, $sent, true) && ($sent === [] || count($channels) > 1);
+    }
+
+    /**
+     * The claims that mean a reminder is done for this channel: its own, and with one channel the other's
+     * too, so a switch of channels inside a reminder's window does not bring it again.
+     *
+     * @return list<string>
+     */
+    public function claimPrefixes(User $user, string $channel): array
+    {
+        return count($this->for($user)) > 1 ? [self::CLAIM_PREFIX[$channel]] : array_values(self::CLAIM_PREFIX);
+    }
+
+    /**
+     * The morning summary, the week or the month did not reach any phone: push:digest runs just before
+     * bot:digest, which sends it instead (BotDigest).
+     */
+    public static function handBack(User $user, string $digest): void
+    {
+        Cache::put("notify:handback:{$digest}:{$user->id}", true, now()->addMinutes(30));
+    }
+
+    /** Whether the phone handed this digest back; asking takes it, so it is sent once. */
+    public static function takeBack(User $user, string $digest): bool
+    {
+        return Cache::pull("notify:handback:{$digest}:{$user->id}") === true;
     }
 
     /** @param  iterable<Insight>  $insights */

@@ -41,13 +41,20 @@ beforeEach(function () {
         'firebase.credentials' => pushKey()['path'],
         'firebase.project_id' => null,
     ]);
-    // What Firebase answers next, one per message; then «sent».
+    // What Firebase answers next, one per message; then «sent». Down: no answer at all, as when unreachable.
     $this->fcmAnswers = [];
+    $this->fcmDown = false;
+    $this->fcmTries = 0;
     Http::fake(function (HttpRequest $request) {
         if (str_starts_with($request->url(), 'https://oauth2.googleapis.com/')) {
             return Http::response(['access_token' => 'ya29.test', 'expires_in' => 3599, 'token_type' => 'Bearer']);
         }
         if (str_starts_with($request->url(), 'https://fcm.googleapis.com/')) {
+            $this->fcmTries++;
+            if ($this->fcmDown) {
+                return Http::failedConnection()($request);
+            }
+
             return array_shift($this->fcmAnswers) ?? Http::response(['name' => 'projects/kompas-test/messages/0:1']);
         }
 
@@ -327,7 +334,7 @@ it('pushes the morning summary with the night\'s advice, the week on Sunday and 
     $advice = pushInsight();
     $quiet = pushInsight(['rule' => 'small_things', 'severity' => 'info', 'payload' => ['count' => 12, 'total_uzs' => 240_000]]);
 
-    pushAt('2026-10-24 08:00', 'advisor:run morning', 'bot:digest morning', 'push:digest morning', 'bot:notify', 'push:notify');
+    pushAt('2026-10-24 08:00', 'advisor:run morning', 'push:digest morning', 'bot:digest morning', 'bot:notify', 'push:notify');
     expect(pushChat())->toBe([])
         ->and(pushSent())->toHaveCount(1);
     $morning = pushSent()[0];
@@ -345,17 +352,85 @@ it('pushes the morning summary with the night\'s advice, the week on Sunday and 
     $spend(500_000, '2026-10-15 12:00');
     $spend(300_000, '2026-10-24 12:00');
 
-    pushAt('2026-10-25 20:00', 'bot:digest weekly', 'push:digest weekly');
+    pushAt('2026-10-25 20:00', 'push:digest weekly', 'bot:digest weekly');
     expect(pushSent())->toHaveCount(2)
         ->and(pushSent()[1]['notification'])->toBe(['title' => pushNb('Неделя: потрачено 300 000 сум'), 'body' => pushNb('На 200 000 сум меньше, чем неделей раньше.')])
         ->and(pushSent()[1]['data'])->toBe(['url' => '/money']);
 
     // Sunday the 1st: one notification, the month's.
-    pushAt('2026-11-01 20:00', 'bot:digest weekly', 'push:digest weekly', 'bot:digest monthly', 'push:digest monthly');
+    pushAt('2026-11-01 20:00', 'push:digest weekly', 'bot:digest weekly', 'push:digest monthly', 'bot:digest monthly');
     expect(pushSent())->toHaveCount(3)
         ->and(pushSent()[2]['notification']['title'])->toBe('📊 Итоги месяца: Октябрь')
         ->and(pushSent()[2]['data'])->toBe(['url' => '/money/report/2026-10'])
         ->and(pushChat())->toBe([]);
+});
+
+it('hands a digest no phone took to the bot in the same minute', function () {
+    pushPhone();
+    pushVia('push');
+    $this->user->tasks()->create(['title' => 'Позвонить в банк', 'due_on' => '2026-10-24']);
+
+    $this->fcmAnswers = [pushFcmError(503, 'UNAVAILABLE', 'UNAVAILABLE')];
+    pushAt('2026-10-24 08:00', 'advisor:run morning', 'push:digest morning', 'bot:digest morning');
+    expect(pushSent())->toHaveCount(1)
+        ->and(pushChat())->toHaveCount(1)
+        ->and(json_encode(pushChat()[0], JSON_UNESCAPED_UNICODE))->toContain('Позвонить в банк');
+
+    // The next morning the phone takes it, and the bot stays quiet.
+    pushAt('2026-10-25 08:00', 'advisor:run morning', 'push:digest morning', 'bot:digest morning');
+    expect(pushSent())->toHaveCount(2)
+        ->and(pushChat())->toHaveCount(1);
+});
+
+it('keeps each channel\'s claim on a reminder when the choice changes inside its window', function () {
+    pushPhone();
+    pushVia('push');
+    $this->postJson('/api/events', ['title' => 'Встреча с дилером', 'starts_on' => '2026-10-23', 'start_time' => '16:00', 'end_time' => '17:00', 'remind_before' => 10], $this->auth)->assertCreated();
+    $this->postJson('/api/events', ['title' => 'Звонок поставщику', 'starts_on' => '2026-10-23', 'start_time' => '17:00', 'end_time' => '17:30', 'remind_before' => 10], $this->auth)->assertCreated();
+
+    // On the phone, then both: the bot, just added, brings it too; the phone does not ring again.
+    pushAt('2026-10-23 15:50');
+    pushVia('both');
+    pushAt('2026-10-23 15:52');
+    expect(pushSent())->toHaveCount(1)
+        ->and(pushChat())->toHaveCount(1)
+        ->and(json_encode(pushChat()[0], JSON_UNESCAPED_UNICODE))->toContain('Встреча с дилером');
+
+    // On the phone, then the bot only: what the phone brought counts.
+    pushVia('push');
+    pushAt('2026-10-23 16:50');
+    pushVia('telegram');
+    pushAt('2026-10-23 16:52');
+    expect(pushSent())->toHaveCount(2)
+        ->and(pushSent()[1]['notification']['title'])->toBe('⏰ Звонок поставщику')
+        ->and(pushChat())->toHaveCount(1);
+});
+
+it('gives up on a Firebase that does not answer for ten minutes, while the bot can still bring the reminder', function () {
+    pushPhone();
+    pushVia('push');
+    $this->postJson('/api/events', ['title' => 'Встреча с дилером', 'starts_on' => '2026-10-23', 'start_time' => '14:45', 'end_time' => '15:00', 'remind_before' => 10], $this->auth)->assertCreated();
+
+    // Asked to wait 20 minutes: waits five at most, a reminder lives fifteen.
+    $this->fcmAnswers = [pushFcmError(429, 'RESOURCE_EXHAUSTED', 'QUOTA_EXCEEDED', ['headers' => ['Retry-After' => '1200']])];
+    pushAt('2026-10-23 14:35');
+    foreach (['14:36', '14:37', '14:38', '14:39'] as $minute) {
+        pushAt("2026-10-23 {$minute}");
+    }
+    expect($this->fcmTries)->toBe(1);
+
+    // Then no answer at all: tried every minute, until ten minutes have gone by since the first miss.
+    $this->fcmDown = true;
+    foreach (['14:40', '14:41', '14:42', '14:43', '14:44'] as $minute) {
+        pushAt("2026-10-23 {$minute}");
+    }
+    expect($this->fcmTries)->toBe(6)
+        ->and(pushChat())->toBe([]);
+    pushAt('2026-10-23 14:45');
+    pushAt('2026-10-23 14:46');
+    expect(pushChat())->toHaveCount(1)
+        ->and(json_encode(pushChat()[0], JSON_UNESCAPED_UNICODE))->toContain('Встреча с дилером')
+        ->and($this->getJson('/api/me', $this->auth)->json('push.devices'))->toBe(1);
 });
 
 it('sends a test notification to see the whole way works', function () {
@@ -363,6 +438,21 @@ it('sends a test notification to see the whole way works', function () {
     $this->postJson('/api/push/test', [], $this->auth)->assertOk()->assertJsonPath('sent', true);
     expect(pushSent()[0]['notification'])->toBe(['title' => 'Уведомления работают', 'body' => 'Так будут приходить напоминания, советы и итоги.'])
         ->and(pushSent()[0]['data'])->toBe(['url' => '/more']);
+
+    // A key from another Firebase project than the app's: the phone is kept, the bot takes over...
+    pushVia('push');
+    $this->fcmAnswers = [pushFcmError(403, 'PERMISSION_DENIED', 'SENDER_ID_MISMATCH')];
+    $this->postJson('/api/push/test', [], $this->auth)->assertStatus(502);
+    $waiting = pushInsight();
+    pushAt('2026-10-23 14:21');
+    expect(DeviceToken::count())->toBe(1)
+        ->and($waiting->fresh()->sent_via)->toBe(['telegram']);
+
+    // ...until the right key is in and the test goes through: the phone takes notifications again at once.
+    $this->postJson('/api/push/test', [], $this->auth)->assertOk();
+    $next = pushInsight();
+    pushAt('2026-10-23 14:22');
+    expect($next->fresh()->sent_via)->toBe(['push']);
 
     $this->fcmAnswers = [pushFcmError(404, 'NOT_FOUND', 'UNREGISTERED')];
     $this->postJson('/api/push/test', [], $this->auth)->assertStatus(410)->assertJsonPath('push.devices', 0);

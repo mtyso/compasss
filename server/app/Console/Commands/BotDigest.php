@@ -29,8 +29,9 @@ class BotDigest extends Command
             return self::SUCCESS;
         }
 
-        // Someone who takes notifications on the phone instead gets them from push:digest (D36).
-        $users = BotUsers::reachable()->filter(fn ($u) => $channels->wants($u, 'telegram') && $u->accounts()->whereNull('archived_at')->exists());
+        // Someone who takes notifications on the phone instead gets them from push:digest (D36), unless no
+        // phone took it a moment ago (push:digest runs first).
+        $users = BotUsers::reachable()->filter(fn ($u) => ($channels->wants($u, 'telegram') || Channels::takeBack($u, $kind)) && $u->accounts()->whereNull('archived_at')->exists());
 
         foreach ($users as $user) {
             match ($kind) {
