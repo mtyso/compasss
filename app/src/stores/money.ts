@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { api } from '@/lib/api'
 import type { Currency, Locale } from '@/lib/format'
 
-export type AccountType = 'card' | 'cash' | 'savings' | 'deposit' | 'debt' | 'other'
+export type AccountType = 'card' | 'cash' | 'savings' | 'deposit' | 'debt' | 'lent' | 'other'
 export type TransactionType = 'expense' | 'income' | 'transfer'
 export type CategoryKind = 'expense' | 'income'
 export type Necessity = 'essential' | 'flexible'
@@ -17,6 +17,8 @@ export interface Account {
   balance: number
   spendable: boolean
   is_cushion: boolean
+  /** Money lent (`lent`): the day it was promised back. */
+  due_on: string | null
   sort: number
   archived: boolean
 }

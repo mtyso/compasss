@@ -74,6 +74,15 @@ export function formatDayMonth(day: string, locale: Locale = 'ru'): string {
   return new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, day: 'numeric', month: 'long' }).format(new Date(`${day}T12:00:00+05:00`))
 }
 
+/** «мая 2027» as it reads after «до» (Russian takes the genitive), «May 2027» in Uzbek, for a month as YYYY-MM. */
+export function formatMonthUntil(month: string, locale: Locale = 'ru'): string {
+  if (locale === 'uz') return formatMonthTitle(month, locale)
+  const genitive = new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, day: 'numeric', month: 'long' })
+    .format(new Date(`${month}-15T12:00:00+05:00`))
+    .replace(/^\d+\s*/, '')
+  return `${genitive} ${month.slice(0, 4)}`
+}
+
 /** «Октябрь 2026», «Oktabr 2026» for a month given as YYYY-MM. */
 export function formatMonthTitle(month: string, locale: Locale = 'ru'): string {
   if (locale === 'uz') {

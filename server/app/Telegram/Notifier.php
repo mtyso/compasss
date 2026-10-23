@@ -53,7 +53,7 @@ class Notifier
     /** Besides those severities: the evening «nothing recorded today» and every payment reminder. */
     public static function pushes(Insight $insight): bool
     {
-        return in_array($insight->severity, self::PUSH_SEVERITIES, true) || in_array($insight->rule, ['forgot_to_record', 'payment_due'], true);
+        return in_array($insight->severity, self::PUSH_SEVERITIES, true) || in_array($insight->rule, ['forgot_to_record', 'payment_due', 'lent_due'], true);
     }
 
     /** From the evening (22:00 by default) until the morning summary. */

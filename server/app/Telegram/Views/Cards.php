@@ -288,6 +288,8 @@ class Cards
                     'mark_one_off' => Keyboard::callback('☝️ '.__('bot.buttons.one_off', [], $l), "ins:oneoff:{$insight->id}", 'primary'),
                     'contribute' => Keyboard::callback('🎯 '.__('bot.buttons.contribute', [], $l), "ins:save:{$insight->id}", 'success'),
                     'pay' => Keyboard::callback('✅ '.__('bot.buttons.paid', ['name' => $insight->payload['name'] ?? ''], $l), "ins:pay:{$insight->id}", 'success'),
+                    'returned' => Keyboard::callback('✅ '.__('bot.buttons.returned', [], $l), "ins:returned:{$insight->id}", 'success'),
+                    'roll' => Keyboard::callback('➡️ '.__('bot.buttons.roll', [], $l), "ins:roll:{$insight->id}", 'primary'),
                     default => null,
                 }])
                 ->row([

@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\TelegramLoginController;
 use App\Http\Controllers\Auth\TelegramWebAppController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DebtController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\HabitController;
 use App\Http\Controllers\IncomeScheduleController;
@@ -60,6 +61,12 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::apiResource('habits', HabitController::class)->except('show')->parameters(['habits' => 'id']);
     Route::post('/habits/{id}/restore', [HabitController::class, 'restore']);
     Route::put('/habits/{id}/logs/{date}', [HabitController::class, 'log']);
+
+    Route::get('/debts', [DebtController::class, 'index']);
+    Route::post('/debts/lend', [DebtController::class, 'lend']);
+    Route::post('/debts/borrow', [DebtController::class, 'borrow']);
+    Route::post('/debts/plan', [DebtController::class, 'plan']);
+    Route::post('/debts/{id}/settle', [DebtController::class, 'settle'])->whereNumber('id');
 
     Route::get('/goals', [GoalController::class, 'index']);
     Route::post('/goals', [GoalController::class, 'store']);

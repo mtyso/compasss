@@ -1,6 +1,6 @@
 import type { Component } from 'vue'
 import {
-  CalendarCheck, CalendarClock, Coffee, Flag, Gauge, HandCoins, PartyPopper, PenLine, PieChart, PiggyBank, Repeat, Shield, ShoppingBag, Target, TrendingUp, Trophy,
+  CalendarCheck, CalendarClock, Coffee, Flag, Gauge, HandCoins, Handshake, PartyPopper, PenLine, PieChart, PiggyBank, Repeat, Shield, ShoppingBag, Target, TrendingUp, Trophy,
 } from 'lucide-vue-next'
 import type { Severity } from '@/stores/advisor'
 
@@ -22,6 +22,7 @@ export const RULE_ICONS: Record<string, Component> = {
   forgot_to_record: PenLine,
   payment_due: CalendarCheck,
   subscription_found: Repeat,
+  lent_due: Handshake,
 }
 
 /** Icon colour by severity; an alert also tints its panel, so it is the one that stands out. */
