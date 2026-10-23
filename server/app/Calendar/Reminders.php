@@ -27,7 +27,9 @@ class Reminders
      * the remind moment, so an event moved after its reminder went out reminds again at the new time. An
      * exception counts as its series, so changing only the title of one occurrence does not remind again.
      *
-     * @return Collection<int, array{key: string, kind: string, title: string, date: string, start: string|null, end: string|null, all_day: bool, remind_at: Carbon, remind_before: int}>
+     * `block_kind` is the routine block's kind (sleep, work…) for its icon, null for an event.
+     *
+     * @return Collection<int, array{key: string, kind: string, block_kind: string|null, title: string, date: string, start: string|null, end: string|null, all_day: bool, remind_at: Carbon, remind_before: int}>
      */
     public function due(User $user, Carbon $now): Collection
     {
@@ -101,6 +103,7 @@ class Reminders
                     $due[] = [
                         'key' => 'e'.($event->series_id ?? $event->id).":{$at->format('Y-m-d\TH:i')}",
                         'kind' => 'event',
+                        'block_kind' => null,
                         'title' => $event->title,
                         'date' => $occurrence['date'],
                         'start' => $event->start_time,
@@ -130,6 +133,7 @@ class Reminders
                     $due[] = [
                         'key' => "r{$block->id}:{$at->format('Y-m-d\TH:i')}",
                         'kind' => 'routine',
+                        'block_kind' => $block->kind,
                         'title' => $block->title,
                         'date' => $date,
                         'start' => $block->start_time,

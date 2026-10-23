@@ -38,7 +38,7 @@ it('is due from its time for fifteen minutes', function () {
         ->and(remindersDueAt('2026-10-23 10:35'))->toBe([]);
 
     $reminder = $this->reminders->due($this->user, Carbon::parse('2026-10-23 10:20:40', 'Asia/Tashkent'))->first();
-    expect($reminder)->toMatchArray(['key' => $key, 'kind' => 'event', 'title' => 'Встреча', 'date' => '2026-10-23', 'start' => '10:30', 'end' => '11:30', 'all_day' => false, 'remind_before' => 10])
+    expect($reminder)->toMatchArray(['key' => $key, 'kind' => 'event', 'block_kind' => null, 'title' => 'Встреча', 'date' => '2026-10-23', 'start' => '10:30', 'end' => '11:30', 'all_day' => false, 'remind_before' => 10])
         ->and($reminder['remind_at']->format('Y-m-d H:i'))->toBe('2026-10-23 10:20');
 });
 
@@ -81,7 +81,7 @@ it('reminds of a routine block as it starts on its weekdays', function () {
 
     $due = $this->reminders->due($this->user, Carbon::parse('2026-10-23 09:01', 'Asia/Tashkent'));
     expect($due->pluck('key')->all())->toBe(["r{$work['id']}:2026-10-23T09:00"])
-        ->and($due->first())->toMatchArray(['kind' => 'routine', 'title' => 'Работа', 'date' => '2026-10-23', 'start' => '09:00', 'end' => '18:00', 'all_day' => false])
+        ->and($due->first())->toMatchArray(['kind' => 'routine', 'block_kind' => 'work', 'title' => 'Работа', 'date' => '2026-10-23', 'start' => '09:00', 'end' => '18:00', 'all_day' => false])
         ->and(remindersDueAt('2026-10-23 13:00'))->toBe([])
         // Saturday: not one of its days. Just after midnight: Friday's night shift.
         ->and(remindersDueAt('2026-10-24 09:00'))->toBe([])
