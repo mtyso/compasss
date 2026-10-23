@@ -35,6 +35,7 @@ return [
         'mute' => 'Не присылать такое',
         'returned' => 'Вернул',
         'roll' => 'Перенести платёж',
+        'calendar' => 'Календарь',
     ],
 
     'record' => [
@@ -88,6 +89,9 @@ return [
         'payment_line' => ':name — :amount, :date',
         'overdue' => 'просрочен',
         'no_paydays' => 'Дни дохода не заданы, считаю до конца месяца.',
+        'plan' => 'План дня',
+        'plan_now' => 'Сейчас: :title, до :time',
+        'plan_next' => 'Дальше: :title, в :time',
         'tasks' => 'Дела на сегодня',
         'task_overdue' => 'просрочено',
         'tasks_more' => 'и ещё :count',
@@ -97,6 +101,19 @@ return [
         'habit_over' => ':value при лимите :target',
         'streak_days' => ':count день подряд|:count дня подряд|:count дней подряд',
         'streak_weeks' => ':count неделя подряд|:count недели подряд|:count недель подряд',
+    ],
+
+    'calendar' => [
+        'when' => ':day, :time',
+        'today' => 'Сегодня',
+        'tomorrow' => 'Завтра',
+        'all_day' => 'весь день',
+        'in_minutes' => 'через :m мин',
+        'in_hours' => 'через :h ч',
+        'in_hours_minutes' => 'через :h ч :m мин',
+        'now' => 'начинается сейчас',
+        'started' => 'уже началось',
+        'routine' => ':time · распорядок дня',
     ],
 
     'things' => [

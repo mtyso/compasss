@@ -34,6 +34,7 @@ return [
         'useful' => 'Foydali',
         'mute' => 'Bunday yubormang',
         'returned' => 'Qaytardi',
+        'calendar' => 'Kalendar',
         'roll' => "To'lovni o'tkazish",
     ],
 
@@ -88,6 +89,9 @@ return [
         'payment_line' => ':name — :amount, :date',
         'overdue' => "muddati o'tgan",
         'no_paydays' => 'Daromad kunlari belgilanmagan, oy oxirigacha hisoblayman.',
+        'plan' => 'Kun rejasi',
+        'plan_now' => 'Hozir: :title, :time gacha',
+        'plan_next' => 'Keyin: :title, soat :time da',
         'tasks' => 'Bugungi ishlar',
         'task_overdue' => "muddati o'tgan",
         'tasks_more' => 'yana :count ta',
@@ -97,6 +101,19 @@ return [
         'habit_over' => ':value, chegara :target',
         'streak_days' => ':count kun ketma-ket',
         'streak_weeks' => ':count hafta ketma-ket',
+    ],
+
+    'calendar' => [
+        'when' => ':day, :time',
+        'today' => 'Bugun',
+        'tomorrow' => 'Ertaga',
+        'all_day' => "kun bo'yi",
+        'in_minutes' => ':m daqiqadan keyin',
+        'in_hours' => ':h soatdan keyin',
+        'in_hours_minutes' => ':h soat :m daqiqadan keyin',
+        'now' => 'hozir boshlanadi',
+        'started' => 'allaqachon boshlandi',
+        'routine' => ':time · kun tartibi',
     ],
 
     'things' => [
