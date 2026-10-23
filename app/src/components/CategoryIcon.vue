@@ -29,7 +29,7 @@ const glyph = computed(() => ({ sm: 'size-[18px]', md: 'size-5', lg: 'size-[22px
 </script>
 
 <template>
-  <span class="grid shrink-0 place-items-center rounded-full text-white" :class="box" :style="{ backgroundColor: hex }">
+  <span class="disc grid shrink-0 place-items-center rounded-full text-white" :class="box" :style="{ backgroundColor: hex }">
     <component :is="component" :class="glyph" :stroke-width="2" />
   </span>
 </template>

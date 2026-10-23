@@ -187,7 +187,7 @@ watch(
             <span v-if="index === 2" class="grid place-items-center">
               <button
                 type="button"
-                class="press grid size-12 place-items-center rounded-full bg-money text-on-money shadow-fab"
+                class="press lit grid size-12 place-items-center rounded-full bg-money text-on-money"
                 :aria-label="$t('nav.add')"
                 @click="openQuickAdd"
               >

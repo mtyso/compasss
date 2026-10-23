@@ -138,7 +138,7 @@ async function seed(): Promise<void> {
               @click="openBlock(row.part.block)"
             >
               <template #leading>
-                <span class="grid size-10 place-items-center rounded-full text-white" :style="{ backgroundColor: routineColor(row.part.block.kind) }">
+                <span class="disc grid size-10 place-items-center rounded-full text-white" :style="{ backgroundColor: routineColor(row.part.block.kind) }">
                   <component :is="routineLook(row.part.block.kind).icon" class="size-5" :stroke-width="2" />
                 </span>
               </template>
