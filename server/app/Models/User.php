@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Money\DefaultCategories;
+use App\Push\FcmClient;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,6 +35,8 @@ class User extends Authenticatable
         // «Не показывать такое»: rules switched off
         'muted_rules' => ['array', 'max:20'],
         'muted_rules.*' => ['string', 'distinct', 'in:'.Insight::RULES_LIST],
+        // Where notifications go (D31, App\Notify\Channels): the bot, the phone or both; the bot when not set
+        'notify_via' => ['string', 'in:telegram,push,both'],
     ];
 
     protected static function booted(): void
@@ -110,6 +113,11 @@ class User extends Authenticatable
         return $this->hasMany(RoutineBlock::class);
     }
 
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
     /** A user setting with its default (docs/PLAN.md, 2.5: thresholds are settings). */
     public function setting(string $key, mixed $default = null): mixed
     {
@@ -132,6 +140,11 @@ class User extends Authenticatable
             'timezone' => $this->timezone,
             'base_currency' => $this->base_currency,
             'settings' => (object) ($this->settings ?? []),
+            // Whether the server can push at all, and how many phones take it (D31)
+            'push' => [
+                'available' => app(FcmClient::class)->configured(),
+                'devices' => $this->deviceTokens()->count(),
+            ],
         ];
     }
 }

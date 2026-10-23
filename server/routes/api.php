@@ -14,6 +14,7 @@ use App\Http\Controllers\HabitController;
 use App\Http\Controllers\IncomeScheduleController;
 use App\Http\Controllers\InsightController;
 use App\Http\Controllers\MeController;
+use App\Http\Controllers\PushController;
 use App\Http\Controllers\RateController;
 use App\Http\Controllers\RecurringPaymentController;
 use App\Http\Controllers\ReportController;
@@ -40,6 +41,9 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::post('/auth/logout', [TelegramLoginController::class, 'logout']);
     Route::get('/me', [MeController::class, 'show']);
     Route::patch('/me', [MeController::class, 'update']);
+    Route::post('/push/devices', [PushController::class, 'store']);
+    Route::delete('/push/devices', [PushController::class, 'destroy']);
+    Route::post('/push/test', [PushController::class, 'test'])->middleware('throttle:6,1');
 
     Route::apiResource('accounts', AccountController::class)->except('show')->parameters(['accounts' => 'id']);
     Route::apiResource('categories', CategoryController::class)->except('show')->parameters(['categories' => 'id']);

@@ -29,18 +29,21 @@ class Reminders
      *
      * `block_kind` is the routine block's kind (sleep, work…) for its icon, null for an event.
      *
+     * `$prefix` keeps a second channel's claims apart (D31): with notifications going both to the bot and the
+     * phone, the phone claims «p:» + key, so each channel sends every reminder once.
+     *
      * @return Collection<int, array{key: string, kind: string, block_kind: string|null, title: string, date: string, start: string|null, end: string|null, all_day: bool, remind_at: Carbon, remind_before: int}>
      */
-    public function due(User $user, Carbon $now): Collection
+    public function due(User $user, Carbon $now, string $prefix = ''): Collection
     {
         $since = $now->copy()->subMinutes(self::WINDOW_MINUTES);
         $due = collect([...$this->events($user, $since, $now), ...$this->routine($user, $since, $now)]);
         if ($due->isEmpty()) {
             return $due;
         }
-        $claimed = CalendarReminder::where('user_id', $user->id)->whereIn('key', $due->pluck('key'))->pluck('key')->all();
+        $claimed = CalendarReminder::where('user_id', $user->id)->whereIn('key', $due->pluck('key')->map(fn (string $key) => $prefix.$key))->pluck('key')->all();
 
-        return $due->reject(fn (array $r) => in_array($r['key'], $claimed, true))
+        return $due->reject(fn (array $r) => in_array($prefix.$r['key'], $claimed, true))
             ->sortBy(fn (array $r) => $r['remind_at']->format('Y-m-d H:i').' '.$r['key'])
             ->values();
     }
@@ -61,11 +64,14 @@ class Reminders
      */
     public function carryOver(User $user, int $from, int $to): void
     {
-        $rows = CalendarReminder::where('user_id', $user->id)->where('key', 'like', "e{$from}:%")->get()
-            ->map(fn (CalendarReminder $r) => ['user_id' => $user->id, 'key' => "e{$to}:".substr($r->key, strlen("e{$from}:")), 'sent_at' => $r->sent_at->toDateTimeString()])
-            ->all();
-        if ($rows) {
-            CalendarReminder::query()->insertOrIgnore($rows);
+        // The bot's claims and the phone's («p:», see due()).
+        foreach (['', 'p:'] as $prefix) {
+            $rows = CalendarReminder::where('user_id', $user->id)->where('key', 'like', "{$prefix}e{$from}:%")->get()
+                ->map(fn (CalendarReminder $r) => ['user_id' => $user->id, 'key' => "{$prefix}e{$to}:".substr($r->key, strlen("{$prefix}e{$from}:")), 'sent_at' => $r->sent_at->toDateTimeString()])
+                ->all();
+            if ($rows) {
+                CalendarReminder::query()->insertOrIgnore($rows);
+            }
         }
     }
 

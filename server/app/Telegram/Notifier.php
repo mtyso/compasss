@@ -5,6 +5,7 @@ namespace App\Telegram;
 use App\Calendar\Reminders;
 use App\Models\Insight;
 use App\Models\User;
+use App\Notify\Channels;
 use App\Telegram\Views\Cards;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -13,7 +14,8 @@ use Illuminate\Support\Collection;
  * The advisor's insights in the chat (docs/BOT.md). Alerts, warnings and good news go out on their own
  * within a minute, outside quiet hours; the rest waits for the morning summary or stays in the app.
  * An insight shown in the chat in any way gets 'telegram' in `sent_via` and is never sent again.
- * Calendar reminders go out here too (remind()), at the time the user chose.
+ * Calendar reminders go out here too (remind()), at the time the user chose. A user whose notifications
+ * go to the phone instead (App\Notify\Channels, D31) gets none of it here.
  */
 class Notifier
 {
@@ -23,33 +25,23 @@ class Notifier
     /** At most this many separate messages per user a minute: the rest come a minute later. */
     private const PER_RUN = 3;
 
-    public function __construct(private TelegramClient $telegram, private Cards $cards, private Reminders $reminders) {}
+    public function __construct(private TelegramClient $telegram, private Cards $cards, private Reminders $reminders, private Channels $channels) {}
 
     /**
-     * New insights of the last day not shown in the chat yet, most important first.
+     * New insights of the last day not shown in the chat yet, most important first. With notifications
+     * going one way only, an insight the phone already showed is not repeated here either.
      *
      * @return Collection<int, Insight>
      */
     public static function unsent(User $user, Carbon $now): Collection
     {
-        $rank = array_flip(Insight::SEVERITIES);
-
-        // A handful of rows a day: filtering `sent_via` here keeps the query the same on SQLite and MariaDB.
-        return $user->insights()
-            ->where('status', 'new')
-            ->where('created_at', '>=', $now->copy()->subDay())
-            ->get()
-            ->reject(fn (Insight $i) => in_array('telegram', (array) $i->sent_via, true))
-            ->sortBy(fn (Insight $i) => [$rank[$i->severity] ?? 9, $i->id])
-            ->values();
+        return app(Channels::class)->unsent($user, $now, 'telegram');
     }
 
     /** @param  iterable<Insight>  $insights */
     public static function markSent(iterable $insights): void
     {
-        foreach ($insights as $insight) {
-            $insight->update(['sent_via' => array_values(array_unique([...(array) $insight->sent_via, 'telegram']))]);
-        }
+        Channels::markSent($insights, 'telegram');
     }
 
     /** Besides those severities: the evening «nothing recorded today» and every payment reminder. */
@@ -80,7 +72,7 @@ class Notifier
     public function remind(Carbon $now): int
     {
         $sent = 0;
-        foreach (BotUsers::reachable() as $user) {
+        foreach ($this->users() as $user) {
             foreach ($this->reminders->due($user, $now) as $reminder) {
                 if (! $this->reminders->claim($user, $reminder['key'], $now)) {
                     continue;
@@ -106,7 +98,7 @@ class Notifier
         }
 
         $sent = 0;
-        foreach (BotUsers::reachable() as $user) {
+        foreach ($this->users() as $user) {
             $due = self::unsent($user, $now)->filter(fn (Insight $i) => self::pushes($i))->take(self::PER_RUN);
 
             foreach ($due as $insight) {
@@ -122,5 +114,11 @@ class Notifier
         }
 
         return $sent;
+    }
+
+    /** @return Collection<int, User> those the bot can write to whose notifications come here */
+    private function users(): Collection
+    {
+        return BotUsers::reachable()->filter(fn (User $user) => $this->channels->wants($user, 'telegram'))->values();
     }
 }

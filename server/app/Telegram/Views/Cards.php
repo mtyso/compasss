@@ -562,6 +562,21 @@ class Cards
      */
     public function reminder(array $reminder, User $user, ?Carbon $now = null): Card
     {
+        $text = $this->reminderText($reminder, $user, $now);
+
+        return Card::make()
+            ->heading($text['title'], 3)
+            ->paragraph(Card::e($text['body']));
+    }
+
+    /**
+     * The reminder's words, plain: the card above and the phone's notification say the same (D31).
+     *
+     * @param  array{kind: string, block_kind?: string|null, title: string, date: string, start: string|null, end: string|null, all_day: bool}  $reminder
+     * @return array{title: string, body: string}
+     */
+    public function reminderText(array $reminder, User $user, ?Carbon $now = null): array
+    {
         $l = $user->locale;
         $zone = config('app.timezone');
         $now = ($now ?? now())->copy()->timezone($zone);
@@ -570,9 +585,10 @@ class Cards
         $hours = $allDay ? __('bot.calendar.all_day', [], $l) : self::hours($reminder['start'], $reminder['end']);
 
         if ($reminder['kind'] === 'routine') {
-            return Card::make()
-                ->heading((self::ROUTINE_EMOJI[$reminder['block_kind'] ?? 'other'] ?? self::ROUTINE_EMOJI['other']).' '.$reminder['title'], 3)
-                ->paragraph(Card::e(__('bot.calendar.routine', ['time' => $hours], $l)));
+            return [
+                'title' => (self::ROUTINE_EMOJI[$reminder['block_kind'] ?? 'other'] ?? self::ROUTINE_EMOJI['other']).' '.$reminder['title'],
+                'body' => __('bot.calendar.routine', ['time' => $hours], $l),
+            ];
         }
 
         $when = __('bot.calendar.when', ['day' => match (true) {
@@ -592,17 +608,19 @@ class Cards
             };
         }
 
-        return Card::make()
-            ->heading('⏰ '.$reminder['title'], 3)
-            ->paragraph(Card::e($when));
+        return ['title' => '⏰ '.$reminder['title'], 'body' => $when];
     }
 
     /** «Календарь»: the reminder's day in the Mini App. */
     public function reminderKeyboard(array $reminder, User $user): Keyboard
     {
-        $path = $reminder['kind'] === 'routine' ? '/tasks/calendar/routine' : "/tasks/calendar?view=day&date={$reminder['date']}";
+        return Keyboard::make()->row([Keyboard::webApp('📅 '.__('bot.buttons.calendar', [], $user->locale), self::reminderPath($reminder))]);
+    }
 
-        return Keyboard::make()->row([Keyboard::webApp('📅 '.__('bot.buttons.calendar', [], $user->locale), $path)]);
+    /** The reminder's day in the calendar, or the routine: where its button and its push open. */
+    public static function reminderPath(array $reminder): string
+    {
+        return $reminder['kind'] === 'routine' ? '/tasks/calendar/routine' : "/tasks/calendar?view=day&date={$reminder['date']}";
     }
 
     /** «16:00–17:00», or «16:00» without an end. */
