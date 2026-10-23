@@ -1,6 +1,6 @@
 <?php
 
-// Push notifications on the phone (docs/PLAN.md, D31). Advice, reminders and the digests' titles reuse the
+// Push notifications on the phone (docs/PLAN.md, D36). Advice, reminders and the digests' titles reuse the
 // advisor's and the bot's texts, so the phone and the chat say the same.
 return [
     'morning_payments' => 'Сегодня платить: :names',

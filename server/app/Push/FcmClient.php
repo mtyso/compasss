@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Firebase Cloud Messaging, HTTP v1 (docs/PLAN.md, D31), with Laravel's HTTP client and openssl: no SDK.
+ * Firebase Cloud Messaging, HTTP v1 (docs/PLAN.md, D36), with Laravel's HTTP client and openssl: no SDK.
  * The service account key signs a JWT, Google swaps it for an access token for an hour (cached), and each
  * message goes to one phone. Nothing here sleeps: a busy Firebase is retried by the next minute's run.
  */

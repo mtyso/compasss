@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** A phone that takes push notifications (docs/PLAN.md, D31). */
+/** A phone that takes push notifications (docs/PLAN.md, D36). */
 class DeviceToken extends Model
 {
     use MassPrunable;

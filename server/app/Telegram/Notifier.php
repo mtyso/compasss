@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
  * within a minute, outside quiet hours; the rest waits for the morning summary or stays in the app.
  * An insight shown in the chat in any way gets 'telegram' in `sent_via` and is never sent again.
  * Calendar reminders go out here too (remind()), at the time the user chose. A user whose notifications
- * go to the phone instead (App\Notify\Channels, D31) gets none of it here.
+ * go to the phone instead (App\Notify\Channels, D36) gets none of it here.
  */
 class Notifier
 {

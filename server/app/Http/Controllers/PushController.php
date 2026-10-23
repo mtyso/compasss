@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 use Laravel\Sanctum\PersonalAccessToken;
 
 /**
- * The phones that take push notifications (docs/PLAN.md, D31). The app sends its Firebase token on every
+ * The phones that take push notifications (docs/PLAN.md, D36). The app sends its Firebase token on every
  * start, so a refreshed token replaces the old one and a phone in use is never pruned as stale.
  */
 class PushController extends Controller

@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * Notifications on the phone (docs/PLAN.md, D31), for those whose notifications go there
+ * Notifications on the phone (docs/PLAN.md, D36), for those whose notifications go there
  * (App\Notify\Channels). The same moments as the bot's: calendar reminders at their time, the advisor's
  * alerts, warnings and good news within a minute outside quiet hours, the morning summary, the weekly
  * totals and the month's report. A tap opens the screen the bot's button would.

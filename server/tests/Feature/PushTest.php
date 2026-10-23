@@ -7,7 +7,7 @@ use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 
-// Push notifications on the phone (docs/PLAN.md, D31): Firebase HTTP v1 with a service account key, the
+// Push notifications on the phone (docs/PLAN.md, D36): Firebase HTTP v1 with a service account key, the
 // phones a user signed in on, and «Куда присылать»: the bot, the phone or both, never neither.
 
 const PUSH_OWNER = 111222333;

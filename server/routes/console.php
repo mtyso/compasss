@@ -16,7 +16,7 @@ Schedule::command('advisor:run evening')->dailyAt('21:00')->timezone('Asia/Tashk
 
 // Bot messages (docs/BOT.md), after the advisor commands above so a summary carries what they found.
 // Times are settings in config/telegram.php; the evening «nothing recorded» comes from advisor:run evening.
-// Each comes to the bot or the phone (push:*), as the user chose (App\Notify\Channels, D31).
+// Each comes to the bot or the phone (push:*), as the user chose (App\Notify\Channels, D36).
 Schedule::command('bot:digest morning')->dailyAt(config('telegram.digest.morning_at'))->timezone('Asia/Tashkent');
 Schedule::command('push:digest morning')->dailyAt(config('telegram.digest.morning_at'))->timezone('Asia/Tashkent');
 Schedule::command('bot:digest weekly')->weeklyOn(0, config('telegram.digest.weekly_at'))->timezone('Asia/Tashkent');

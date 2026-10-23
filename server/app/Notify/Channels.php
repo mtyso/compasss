@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * Where a user's notifications go (docs/PLAN.md, D31): the bot, the phone, or both, as the setting
+ * Where a user's notifications go (docs/PLAN.md, D36): the bot, the phone, or both, as the setting
  * `notify_via` says (Telegram until the phone is switched on). A way that cannot deliver right now (no
  * phone signed in, Firebase not set up or refusing the key, the bot not set up) gives way to the other,
  * so a notification is never lost to a setting.

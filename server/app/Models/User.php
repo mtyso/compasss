@@ -35,7 +35,7 @@ class User extends Authenticatable
         // «Не показывать такое»: rules switched off
         'muted_rules' => ['array', 'max:20'],
         'muted_rules.*' => ['string', 'distinct', 'in:'.Insight::RULES_LIST],
-        // Where notifications go (D31, App\Notify\Channels): the bot, the phone or both; the bot when not set
+        // Where notifications go (D36, App\Notify\Channels): the bot, the phone or both; the bot when not set
         'notify_via' => ['string', 'in:telegram,push,both'],
     ];
 
@@ -140,7 +140,7 @@ class User extends Authenticatable
             'timezone' => $this->timezone,
             'base_currency' => $this->base_currency,
             'settings' => (object) ($this->settings ?? []),
-            // Whether the server can push at all, and how many phones take it (D31)
+            // Whether the server can push at all, and how many phones take it (D36)
             'push' => [
                 'available' => app(FcmClient::class)->configured(),
                 'devices' => $this->deviceTokens()->count(),

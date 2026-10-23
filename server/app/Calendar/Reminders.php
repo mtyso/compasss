@@ -29,7 +29,7 @@ class Reminders
      *
      * `block_kind` is the routine block's kind (sleep, work…) for its icon, null for an event.
      *
-     * `$prefix` keeps a second channel's claims apart (D31): with notifications going both to the bot and the
+     * `$prefix` keeps a second channel's claims apart (D36): with notifications going both to the bot and the
      * phone, the phone claims «p:» + key, so each channel sends every reminder once.
      *
      * @return Collection<int, array{key: string, kind: string, block_kind: string|null, title: string, date: string, start: string|null, end: string|null, all_day: bool, remind_at: Carbon, remind_before: int}>

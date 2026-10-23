@@ -29,7 +29,7 @@ class BotDigest extends Command
             return self::SUCCESS;
         }
 
-        // Someone who takes notifications on the phone instead gets them from push:digest (D31).
+        // Someone who takes notifications on the phone instead gets them from push:digest (D36).
         $users = BotUsers::reachable()->filter(fn ($u) => $channels->wants($u, 'telegram') && $u->accounts()->whereNull('archived_at')->exists());
 
         foreach ($users as $user) {

@@ -570,7 +570,7 @@ class Cards
     }
 
     /**
-     * The reminder's words, plain: the card above and the phone's notification say the same (D31).
+     * The reminder's words, plain: the card above and the phone's notification say the same (D36).
      *
      * @param  array{kind: string, block_kind?: string|null, title: string, date: string, start: string|null, end: string|null, all_day: bool}  $reminder
      * @return array{title: string, body: string}
