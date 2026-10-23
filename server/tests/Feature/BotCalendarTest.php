@@ -102,7 +102,7 @@ it('reminds about a routine block as it starts, in quiet hours too', function ()
 
     $sent = calSent();
     expect($sent)->toHaveCount(1)
-        ->and($sent[0]['rich_message']['html'])->toContain('⏰ Сон')->toContain('23:30–07:00 · распорядок дня')
+        ->and($sent[0]['rich_message']['html'])->toContain('<h3>😴 Сон</h3>')->toContain('23:30–07:00 · распорядок дня')
         ->and($sent[0]['reply_markup']['inline_keyboard'][0][0]['web_app']['url'])->toBe('https://kompas.example.uz/tasks/calendar/routine');
 });
 

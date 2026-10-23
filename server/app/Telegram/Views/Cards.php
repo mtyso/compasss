@@ -556,9 +556,9 @@ class Cards
 
     /**
      * A calendar reminder (App\Calendar\Reminders): what, and when, with «через 10 мин» while it is still
-     * ahead today. A routine block reminds as it starts, so it only needs its hours.
+     * ahead today. A routine block reminds as it starts, under its own icon, so it only needs its hours.
      *
-     * @param  array{kind: string, title: string, date: string, start: string|null, end: string|null, all_day: bool}  $reminder
+     * @param  array{kind: string, block_kind?: string|null, title: string, date: string, start: string|null, end: string|null, all_day: bool}  $reminder
      */
     public function reminder(array $reminder, User $user, ?Carbon $now = null): Card
     {
@@ -571,7 +571,7 @@ class Cards
 
         if ($reminder['kind'] === 'routine') {
             return Card::make()
-                ->heading('⏰ '.$reminder['title'], 3)
+                ->heading((self::ROUTINE_EMOJI[$reminder['block_kind'] ?? 'other'] ?? self::ROUTINE_EMOJI['other']).' '.$reminder['title'], 3)
                 ->paragraph(Card::e(__('bot.calendar.routine', ['time' => $hours], $l)));
         }
 
