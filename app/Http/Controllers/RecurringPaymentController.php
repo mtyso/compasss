@@ -3,16 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\RecurringPayment;
-use App\Models\Transaction;
-use App\Money\TransactionWriter;
+use App\Money\PaymentPayer;
+use App\Money\SubscriptionFinder;
 use App\Support\Money;
 use App\Support\MonthDay;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class RecurringPaymentController extends Controller
 {
@@ -55,7 +54,7 @@ class RecurringPaymentController extends Controller
     }
 
     /** «Оплачено» in one tap: records the expense and moves the due date a month ahead. */
-    public function pay(Request $request, TransactionWriter $writer, int $id): JsonResponse
+    public function pay(Request $request, PaymentPayer $payer, int $id): JsonResponse
     {
         $user = $request->user();
         $payment = $user->recurringPayments()->findOrFail($id);
@@ -66,33 +65,42 @@ class RecurringPaymentController extends Controller
             'occurred_at' => ['sometimes', 'date'],
         ]);
 
-        $transaction = DB::transaction(function () use ($writer, $user, $payment, $data) {
-            $transaction = new Transaction(['recurring_payment_id' => $payment->id]);
-            $writer->save($user, $transaction, [
-                'type' => 'expense',
-                'account_id' => $data['account_id'] ?? $payment->account_id,
-                'amount' => $data['amount'] ?? $this->amountIn($payment, $user->accounts()->find($data['account_id'] ?? $payment->account_id)?->currency),
-                'category_id' => $payment->category_id,
-                'note' => $payment->name,
-                'occurred_at' => $data['occurred_at'] ?? now()->toDateTimeString(),
-            ]);
-
-            $payment->update(['next_due_on' => MonthDay::nextMonth($payment->dueDate(), $payment->day_of_month)->toDateString()]);
-
-            return $transaction;
-        });
+        $transaction = $payer->pay(
+            $user,
+            $payment,
+            isset($data['account_id']) ? $user->accounts()->find($data['account_id']) : null,
+            $data['amount'] ?? null,
+            isset($data['occurred_at']) ? Carbon::parse($data['occurred_at'], config('app.timezone')) : null,
+        );
 
         return response()->json(['payment' => $payment->toApi(), 'transaction' => $transaction->toApi()]);
     }
 
-    /** The payment's amount for an account in the same currency; otherwise the app must send one. */
-    private function amountIn(RecurringPayment $payment, ?string $accountCurrency): int
+    /** «Пропустить в этот раз»: nothing to pay this month (a paused subscription), so the next date comes without an expense. */
+    public function skip(Request $request, int $id): JsonResponse
     {
-        if ($accountCurrency !== null && $accountCurrency !== $payment->currency) {
-            throw ValidationException::withMessages(['amount' => __('money.pay_amount_required')]);
-        }
+        $payment = $request->user()->recurringPayments()->findOrFail($id);
+        $payment->advance();
 
-        return $payment->amount;
+        return response()->json($payment->toApi());
+    }
+
+    /** Spending that repeats every month but is not a recurring payment yet (App\Money\SubscriptionFinder). */
+    public function suggestions(Request $request, SubscriptionFinder $finder): JsonResponse
+    {
+        return response()->json($finder->find($request->user(), now()));
+    }
+
+    /** «Не то»: the suggestion stops coming back, here and in the advice. */
+    public function dismissSuggestion(Request $request): Response
+    {
+        $key = $request->validate(['key' => ['required', 'string', 'max:120']])['key'];
+        $user = $request->user();
+        $dismissed = array_values(array_unique([...(array) $user->setting('dismissed_subscriptions', []), $key]));
+        $user->update(['settings' => [...($user->settings ?? []), 'dismissed_subscriptions' => $dismissed]]);
+        $user->insights()->where(['rule' => 'subscription_found', 'subject' => $key])->whereIn('status', ['new', 'seen'])->update(['status' => 'dismissed']);
+
+        return response()->noContent();
     }
 
     /** @return array<string, mixed> */

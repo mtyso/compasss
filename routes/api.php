@@ -47,7 +47,10 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::put('/budgets/{month}', [BudgetController::class, 'update']);
     Route::apiResource('income-schedules', IncomeScheduleController::class)->except('show')->parameters(['income-schedules' => 'id']);
     Route::apiResource('recurring-payments', RecurringPaymentController::class)->except('show')->parameters(['recurring-payments' => 'id']);
+    Route::get('/recurring-payments/suggestions', [RecurringPaymentController::class, 'suggestions']);
+    Route::post('/recurring-payments/suggestions/dismiss', [RecurringPaymentController::class, 'dismissSuggestion']);
     Route::post('/recurring-payments/{id}/pay', [RecurringPaymentController::class, 'pay']);
+    Route::post('/recurring-payments/{id}/skip', [RecurringPaymentController::class, 'skip']);
     Route::get('/today', TodayController::class);
 
     Route::apiResource('tasks', TaskController::class)->except('show')->parameters(['tasks' => 'id']);

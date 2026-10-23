@@ -53,6 +53,7 @@ return [
         'gone' => "Bu yozuv endi yo'q.",
         'saved' => 'Tayyor',
         'one_off' => 'bir martalik',
+        'counted_as_payment' => "«:name» to'lovi sifatida hisoblandi. Keyingisi — :date.",
     ],
 
     'question' => [

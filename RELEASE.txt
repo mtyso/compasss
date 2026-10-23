@@ -1,2 +1,2 @@
-source: c0f80bcc65b86814fcb8e142ff6d907598442868
-subject: Merge pull request #7 from mtyso/claude/project-thread-e6ru9q
+source: cf55c34c8fb4676cc9a5a74132e3adf50a88b218
+subject: Merge pull request #14 from mtyso/claude/etap-2-payments

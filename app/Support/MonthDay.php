@@ -48,4 +48,12 @@ final class MonthDay
 
         return self::in($next->year, $next->month, $day);
     }
+
+    /** The same day of the month before, e.g. the due date again when a payment is undone. */
+    public static function previousMonth(Carbon $date, int $day): Carbon
+    {
+        $before = $date->copy()->startOfMonth()->subMonth();
+
+        return self::in($before->year, $before->month, $day);
+    }
 }

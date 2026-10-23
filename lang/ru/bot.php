@@ -53,6 +53,7 @@ return [
         'gone' => 'Этой записи уже нет.',
         'saved' => 'Готово',
         'one_off' => 'разовая',
+        'counted_as_payment' => 'Засчитано как платёж «:name». Следующий — :date.',
     ],
 
     'question' => [
