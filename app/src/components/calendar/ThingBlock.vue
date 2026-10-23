@@ -116,8 +116,9 @@ onBeforeUnmount(cancelHold)
       look,
       // The task's check reaches past a short block to keep a 44px target; everything else stays inside.
       { 'overflow-hidden': !showTaskCheck },
-      flatTop ? 'rounded-t-none' : 'rounded-t-[0.375rem]',
-      flatBottom ? 'rounded-b-none' : 'rounded-b-[0.375rem]',
+      flatTop ? 'rounded-t-none' : 'rounded-t-[0.5rem]',
+      flatBottom ? 'rounded-b-none' : 'rounded-b-[0.5rem]',
+      { 'is-event': item.type === 'event' },
       { 'is-lifted': lifted },
     ]"
     :style="item.type === 'event' ? { backgroundColor: eventFill(item.color) } : undefined"
@@ -196,6 +197,15 @@ onBeforeUnmount(cancelHold)
   display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* An event is the one solid thing on the day: lit from above and lifted a hair off the routine under it. */
+.is-event {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0) 24px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 0 0 1px var(--c-bg);
 }
 
 .is-lifted {
