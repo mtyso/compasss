@@ -65,9 +65,31 @@ it('moves a repeating task to its next date and can put it back', function () {
     expect($rent)->toMatchArray(['due_on' => '2026-10-21', 'repeat' => ['unit' => 'month', 'every' => 1, 'day' => 21]]);
     $this->patchJson("/api/tasks/{$rent['id']}", ['due_on' => '2026-10-31'], $this->auth)->assertJsonPath('repeat.day', 31);
     $this->postJson("/api/tasks/{$rent['id']}/complete", [], $this->auth)->assertJsonPath('task.due_on', '2026-11-30');
+    // Due the 30th of November, its sheet saving the same date keeps the 31st; another day moves it.
+    $this->patchJson("/api/tasks/{$rent['id']}", ['due_on' => '2026-11-30', 'repeat' => ['unit' => 'month']], $this->auth)->assertJsonPath('repeat.day', 31);
+    $this->patchJson("/api/tasks/{$rent['id']}", ['due_on' => '2026-11-29'], $this->auth)->assertJsonPath('repeat.day', 29);
 
     // Taking the date away stops the repeat.
     $this->patchJson("/api/tasks/{$rent['id']}", ['due_on' => null], $this->auth)->assertJsonPath('repeat', null);
+});
+
+it('keeps the day of a yearly task through a short February', function () {
+    $birthday = newTask($this, ['title' => 'День рождения', 'due_on' => '2027-02-28', 'repeat' => ['unit' => 'year']]);
+    expect($birthday['repeat'])->toBe(['unit' => 'year', 'every' => 1, 'day' => 28]);
+
+    // Moved to the 29th of a leap year: it comes back on the 29th whenever there is one.
+    $this->patchJson("/api/tasks/{$birthday['id']}", ['due_on' => '2028-02-29'], $this->auth)->assertJsonPath('repeat.day', 29);
+    $this->travelTo(Carbon::parse('2028-02-29 12:00', 'Asia/Tashkent'));
+    $this->postJson("/api/tasks/{$birthday['id']}/complete", [], $this->auth)->assertJsonPath('task.due_on', '2029-02-28');
+    // Saved from the task's sheet on the 28th (it sends the date and the repeat): still the 29th.
+    $this->patchJson("/api/tasks/{$birthday['id']}", ['title' => 'ДР Азиза', 'due_on' => '2029-02-28', 'repeat' => ['unit' => 'year']], $this->auth)
+        ->assertJsonPath('repeat.day', 29);
+    $this->travelTo(Carbon::parse('2031-03-01 12:00', 'Asia/Tashkent'));
+    $this->postJson("/api/tasks/{$birthday['id']}/complete", [], $this->auth)
+        ->assertJsonPath('task.due_on', '2032-02-29')->assertJsonPath('task.repeat.day', 29);
+
+    // «Нет» under «Повтор» in the sheet (the date sent along) stops it.
+    $this->patchJson("/api/tasks/{$birthday['id']}", ['due_on' => '2032-02-29', 'repeat' => null], $this->auth)->assertJsonPath('repeat', null);
 });
 
 it('deletes softly and restores', function () {

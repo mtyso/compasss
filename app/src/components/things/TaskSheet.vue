@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Trash2, X } from 'lucide-vue-next'
 import GoalPicker from '@/components/goals/GoalPicker.vue'
+import RepeatPicker from '@/components/things/RepeatPicker.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
 import UiSheet from '@/components/ui/UiSheet.vue'
@@ -10,8 +11,7 @@ import { showToast } from '@/components/ui/toast'
 import { ApiError } from '@/lib/api'
 import { isoDate, shiftDate } from '@/lib/dates'
 import { haptics } from '@/lib/haptics'
-import { isoWeekday, weekdayNames } from '@/lib/tasks'
-import { useTasks, type Priority, type RepeatUnit, type Task, type TaskInput } from '@/stores/tasks'
+import { useTasks, type Priority, type RepeatInput, type Task, type TaskInput } from '@/stores/tasks'
 
 /**
  * Create or edit a task: title, note, date and time, priority and repeat. `task` edits an existing
@@ -23,18 +23,13 @@ const open = defineModel<boolean>('open', { required: true })
 const tasks = useTasks()
 const { t } = useI18n()
 
-type RepeatChoice = 'none' | RepeatUnit | 'custom'
-
 const title = ref('')
 const notes = ref('')
 const dueOn = ref<string | null>(null)
 const dueTime = ref<string | null>(null)
 const priority = ref<Priority>(0)
 const goalId = ref<number | null>(null)
-const repeatChoice = ref<RepeatChoice>('none')
-const every = ref(2)
-const unit = ref<RepeatUnit>('day')
-const days = ref<number[]>([])
+const repeat = ref<RepeatInput | null>(null)
 const saving = ref(false)
 const error = ref<string | null>(null)
 const titleInput = ref<HTMLInputElement | null>(null)
@@ -42,67 +37,44 @@ const titleInput = ref<HTMLInputElement | null>(null)
 const today = computed(() => isoDate())
 const tomorrow = computed(() => shiftDate(today.value, 1))
 const priorityOptions = computed(() => ([0, 1, 2] as const).map((value) => ({ value, label: t(`tasks.priorities.p${value}`) })))
-const unitOptions = computed(() => (['day', 'week', 'month', 'year'] as const).map((value) => ({ value, label: t(`tasks.units.${value}`) })))
-const weekdays = computed(() => weekdayNames(t))
-const repeatChoices = computed<{ value: RepeatChoice; label: string }[]>(() => [
-  { value: 'none', label: t('tasks.repeatNone') },
-  { value: 'day', label: t('things.repeat.day') },
-  { value: 'week', label: t('things.repeat.week') },
-  { value: 'month', label: t('things.repeat.month') },
-  { value: 'year', label: t('things.repeat.year') },
-  { value: 'custom', label: t('tasks.repeatCustom') },
-])
 
-watch(open, (value) => {
-  if (!value) return
-  const task = props.task
-  const draft = props.draft ?? {}
-  error.value = null
-  title.value = task?.title ?? draft.title ?? ''
-  notes.value = task?.notes ?? draft.notes ?? ''
-  dueOn.value = task ? task.due_on : (draft.due_on ?? null)
-  dueTime.value = task?.due_time ?? draft.due_time ?? null
-  priority.value = task?.priority ?? draft.priority ?? 0
-  goalId.value = task ? task.goal_id : (draft.goal_id ?? null)
-  const rule = task?.repeat ?? null
-  const simple = rule && rule.every === 1 && !(rule.days?.length)
-  repeatChoice.value = !rule ? 'none' : simple ? rule.unit : 'custom'
-  every.value = rule && !simple ? rule.every : 2
-  unit.value = rule?.unit ?? 'day'
-  days.value = rule?.days ? [...rule.days] : []
-})
+// Immediate: a sheet mounted already open (the calendar mounts it along with its task) fills at once.
+watch(
+  open,
+  (value) => {
+    if (!value) return
+    const task = props.task
+    const draft = props.draft ?? {}
+    error.value = null
+    title.value = task?.title ?? draft.title ?? ''
+    notes.value = task?.notes ?? draft.notes ?? ''
+    dueOn.value = task ? task.due_on : (draft.due_on ?? null)
+    dueTime.value = task?.due_time ?? draft.due_time ?? null
+    priority.value = task?.priority ?? draft.priority ?? 0
+    goalId.value = task ? task.goal_id : (draft.goal_id ?? null)
+    const rule = task?.repeat ?? null
+    repeat.value = rule && { unit: rule.unit, every: rule.every, ...(rule.days?.length ? { days: [...rule.days] } : {}) }
+  },
+  { immediate: true },
+)
 
 function onOpened(): void {
   if (!props.task) nextTick(() => titleInput.value?.focus({ preventScroll: true }))
 }
 
-function pickRepeat(choice: RepeatChoice): void {
-  haptics.selection()
-  repeatChoice.value = choice
-  // A repeat needs a date to repeat from.
-  if (choice !== 'none' && !dueOn.value) dueOn.value = today.value
-  if (choice === 'custom' && unit.value === 'week' && !days.value.length && dueOn.value) days.value = [isoWeekday(dueOn.value)]
-}
+// A repeat needs a date to repeat from.
+watch(repeat, (rule) => {
+  if (rule && !dueOn.value) dueOn.value = today.value
+})
 
 function pickDate(value: string | null): void {
   haptics.selection()
   dueOn.value = value
   if (!value) {
     dueTime.value = null
-    repeatChoice.value = 'none'
+    repeat.value = null
   }
 }
-
-function toggleDay(day: number): void {
-  haptics.selection()
-  days.value = days.value.includes(day) ? days.value.filter((d) => d !== day) : [...days.value, day].sort()
-}
-
-const repeat = computed<TaskInput['repeat']>(() => {
-  if (repeatChoice.value === 'none') return null
-  if (repeatChoice.value !== 'custom') return { unit: repeatChoice.value, every: 1 }
-  return { unit: unit.value, every: Math.max(1, every.value || 1), ...(unit.value === 'week' && days.value.length ? { days: days.value } : {}) }
-})
 
 const canSave = computed(() => title.value.trim() !== '')
 
@@ -185,41 +157,7 @@ async function remove(): Promise<void> {
 
       <section class="flex flex-col gap-2">
         <h3 class="field-label">{{ $t('tasks.repeat') }}</h3>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="choice in repeatChoices"
-            :key="choice.value"
-            type="button"
-            class="chip"
-            :class="{ 'chip-on': repeatChoice === choice.value }"
-            :aria-pressed="repeatChoice === choice.value"
-            @click="pickRepeat(choice.value)"
-          >
-            {{ choice.label }}
-          </button>
-        </div>
-        <Transition name="fade">
-          <div v-if="repeatChoice === 'custom'" class="flex flex-col gap-3">
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-ink-2">{{ $t('tasks.every') }}</span>
-              <input v-model.number="every" type="number" min="1" max="365" inputmode="numeric" class="field num w-20 !py-2 text-center font-semibold" />
-            </div>
-            <UiSegmented v-model="unit" size="sm" :options="unitOptions" :label="$t('tasks.repeat')" />
-            <div v-if="unit === 'week'" class="grid grid-cols-7 gap-1">
-              <button
-                v-for="(name, index) in weekdays"
-                :key="name"
-                type="button"
-                class="press rounded-control py-2 text-sm font-medium"
-                :class="days.includes(index + 1) ? 'bg-ink text-surface' : 'bg-surface-2 text-ink-2'"
-                :aria-pressed="days.includes(index + 1)"
-                @click="toggleDay(index + 1)"
-              >
-                {{ name }}
-              </button>
-            </div>
-          </div>
-        </Transition>
+        <RepeatPicker v-model="repeat" :start-date="dueOn" />
       </section>
 
       <GoalPicker v-model="goalId" />

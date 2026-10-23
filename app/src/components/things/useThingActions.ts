@@ -42,15 +42,16 @@ export function useThingActions() {
     }
   }
 
-  async function logHabit(habit: Habit, value = tapValue(habit)): Promise<void> {
+  /** Logs a habit for today, or for another day from the calendar (`date`). */
+  async function logHabit(habit: Habit, value = tapValue(habit), date = isoDate()): Promise<void> {
     const before = habit.today.state
     const wasAllDone = allHabitsDone()
     haptics.impact('light')
     try {
-      const fresh = await habits.log(habit, value)
+      const fresh = await habits.log(habit, value, date)
       if (fresh.today.state === 'over' && before !== 'over') haptics.notify('warning')
       else if (fresh.type !== 'limit' && fresh.today.state === 'done' && before !== 'done') haptics.notify('success')
-      if (!wasAllDone && allHabitsDone()) showToast({ message: t('habits.allDone'), tone: 'success' })
+      if (date === isoDate() && !wasAllDone && allHabitsDone()) showToast({ message: t('habits.allDone'), tone: 'success' })
     } catch {
       haptics.notify('error')
       showToast({ message: t('habits.failed'), tone: 'danger' })

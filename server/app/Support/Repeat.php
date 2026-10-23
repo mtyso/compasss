@@ -5,9 +5,10 @@ namespace App\Support;
 use Illuminate\Support\Carbon;
 
 /**
- * Repeat rules of tasks: {"unit": "day|week|month|year", "every": N, "days": [ISO weekdays], "day": D}.
- * `days` narrows a weekly rule to some weekdays; `day` is the day of month a monthly rule keeps to,
- * so «every month on the 31st» lands on the last day of shorter months and comes back to the 31st.
+ * Repeat rules of tasks and events: {"unit": "day|week|month|year", "every": N, "days": [ISO weekdays], "day": D}.
+ * `days` narrows a weekly rule to some weekdays; `day` is the day of month a monthly or yearly rule keeps to,
+ * so «every month on the 31st» lands on the last day of shorter months and comes back to the 31st, and a
+ * 29 February birthday comes back on the 29th in leap years.
  */
 final class Repeat
 {
@@ -38,7 +39,7 @@ final class Repeat
         return match ($rule['unit'] ?? 'day') {
             'week' => self::nextWeekly($date, $every, array_map('intval', $rule['days'] ?? [])),
             'month' => self::addMonths($date, $every, (int) ($rule['day'] ?? $date->day)),
-            'year' => $date->addYearsNoOverflow($every),
+            'year' => MonthDay::in($date->year + $every, $date->month, (int) ($rule['day'] ?? $date->day)),
             default => $date->addDays($every),
         };
     }

@@ -18,6 +18,13 @@ describe('softHyphenate', () => {
     expect(breaks('Благотворительность').join('-')).not.toContain('те-ль')
   })
 
+  it("splits short words into two-letter ends for a phone's week columns", () => {
+    const split = (word: string) => softHyphenate(word, 6, 2).split('­')
+    expect(split('Встреча')).toEqual(['Встре', 'ча'])
+    expect(split('друзьями')).toEqual(['друзья', 'ми'])
+    expect(split('Обед')).toEqual(['Обед'])
+  })
+
   it('handles Uzbek words', () => {
     const parts = breaks('Xayriya-ehsonlar')
     expect(parts.join('')).toBe('Xayriya-ehsonlar')

@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Archive, CheckCheck, ListChecks, Plus, Repeat } from 'lucide-vue-next'
+import { Archive, CalendarDays, CheckCheck, ListChecks, Plus, Repeat } from 'lucide-vue-next'
 import HabitRow from '@/components/things/HabitRow.vue'
 import HabitSheet from '@/components/things/HabitSheet.vue'
 import HabitValueSheet from '@/components/things/HabitValueSheet.vue'
@@ -176,6 +176,9 @@ function openNew(): void {
   <div class="page">
     <ScreenHeader :title="$t('tasks.title')">
       <template #trailing>
+        <UiIconButton :label="$t('tasks.calendar')" class="mr-1" @click="router.push({ name: 'calendar' })">
+          <CalendarDays class="size-[22px]" :stroke-width="1.9" />
+        </UiIconButton>
         <UiIconButton tone="filled" :label="tab === 'habits' ? $t('habits.new') : $t('tasks.new')" @click="openNew">
           <Plus class="size-5" :stroke-width="2.2" />
         </UiIconButton>

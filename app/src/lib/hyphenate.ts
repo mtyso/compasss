@@ -1,13 +1,14 @@
-// Soft hyphens for long words in narrow places (category tiles), where the browser may have no
-// hyphenation dictionary for Russian or Uzbek. A break is allowed after a vowel followed by a
-// consonant, or after ь/ъ/й followed by a consonant, keeping at least three letters and a vowel on
-// each side. A consonant that carries a soft or hard sign stays with it («тель-ность», not «те-льность»).
+// Soft hyphens for long words in narrow places (category tiles, a phone's week columns), where the
+// browser may have no hyphenation dictionary for Russian or Uzbek. A break is allowed after a vowel
+// followed by a consonant, or after ь/ъ/й followed by a consonant, keeping at least `minPart`
+// letters (three by default) and a vowel on each side. A consonant that carries a soft or hard sign
+// stays with it («тель-ность», not «те-льность»).
 // The browser shows a hyphen only if it actually breaks there.
 
 const VOWELS = /[аеёиоуыэюяaeiou]/i
 const SIGNS = /[ьъй]/i
 
-export function softHyphenate(text: string, minLength = 11): string {
+export function softHyphenate(text: string, minLength = 11, minPart = 3): string {
   return text.replace(/[\p{L}ʻ']+/gu, (word) => {
     if (word.length < minLength) return word
     let out = ''
@@ -19,7 +20,7 @@ export function softHyphenate(text: string, minLength = 11): string {
       const after = word[i + 2] ?? ''
       const breakable =
         (VOWELS.test(here) || SIGNS.test(here)) && /\p{L}/u.test(next) && !VOWELS.test(next) && !SIGNS.test(next) && !SIGNS.test(after)
-      if (breakable && left >= 3 && word.length - left >= 3 && VOWELS.test(word.slice(0, left)) && VOWELS.test(word.slice(left))) {
+      if (breakable && left >= minPart && word.length - left >= minPart && VOWELS.test(word.slice(0, left)) && VOWELS.test(word.slice(left))) {
         out += '­'
       }
     }

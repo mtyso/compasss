@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDayHeading, formatDayMonth, formatMoney, formatMonthTitle, formatMonthUntil, formatNumber } from './format'
+import {
+  formatDate,
+  formatDayHeading,
+  formatDayMonth,
+  formatDayMonthShort,
+  formatMoney,
+  formatMonthName,
+  formatMonthTitle,
+  formatMonthUntil,
+  formatNumber,
+} from './format'
 
 describe('formatMoney', () => {
   it('formats sums without fractions and groups thousands', () => {
@@ -55,6 +65,22 @@ describe('dates in words', () => {
   it('formats Russian dates with the browser', () => {
     expect(formatDayMonth('2026-11-10', 'ru')).toBe('10 ноября')
     expect(formatMonthTitle('2026-10', 'ru')).toBe('Октябрь 2026')
+  })
+})
+
+describe('short dates and month names', () => {
+  it('cuts the month short without the dot', () => {
+    expect(formatDayMonthShort('2026-10-27')).toBe('27 окт')
+    expect(formatDayMonthShort('2026-11-02')).toBe('2 нояб')
+    expect(formatDayMonthShort('2026-05-09')).toBe('9 мая')
+    expect(formatDayMonthShort('2026-10-27', 'uz')).toBe('27-okt')
+    expect(formatDayMonthShort('2026-11-02', 'uz')).toBe('2-noy')
+  })
+
+  it('names the month alone in the nominative', () => {
+    expect(formatMonthName('2026-10')).toBe('Октябрь')
+    expect(formatMonthName('2027-05')).toBe('Май')
+    expect(formatMonthName('2026-10', 'uz')).toBe('Oktabr')
   })
 })
 

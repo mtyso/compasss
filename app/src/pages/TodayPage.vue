@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Lightbulb, Plus, Repeat, Scale, Settings, Target, Wallet } from 'lucide-vue-next'
 import InsightCard from '@/components/advisor/InsightCard.vue'
+import TodayPlan from '@/components/calendar/TodayPlan.vue'
 import ContributeSheet from '@/components/goals/ContributeSheet.vue'
 import GoalRow from '@/components/goals/GoalRow.vue'
 import SectionBlock from '@/components/SectionBlock.vue'
@@ -194,6 +195,8 @@ function saveValue(value: number): void {
       </div>
 
       <div class="page-col">
+        <TodayPlan />
+
         <section v-if="habits.loaded" class="flex flex-col gap-3">
           <div class="flex items-baseline justify-between gap-3">
             <h2 class="section-title">

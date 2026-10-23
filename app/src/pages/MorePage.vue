@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarClock, ChartColumn, FingerprintPattern, HandCoins, Handshake, KeyRound, LayoutGrid, Lightbulb, LogOut, PieChart, Wallet } from 'lucide-vue-next'
+import { CalendarClock, CalendarDays, ChartColumn, Clock, FingerprintPattern, HandCoins, Handshake, KeyRound, LayoutGrid, Lightbulb, LogOut, PieChart, Wallet } from 'lucide-vue-next'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiRow from '@/components/ui/UiRow.vue'
@@ -37,6 +37,11 @@ const moneyLinks = [
   { name: 'payments', label: 'more.payments', icon: CalendarClock },
   { name: 'debts', label: 'more.debts', icon: Handshake },
   { name: 'advice', label: 'more.advice', icon: Lightbulb },
+] as const
+
+const planningLinks = [
+  { name: 'calendar', label: 'more.calendar', icon: CalendarDays },
+  { name: 'routine', label: 'more.routine', icon: Clock },
 ] as const
 
 // Switching the theme washes the new colours over the screen from the switch, where the browser
@@ -102,6 +107,17 @@ onMounted(async () => {
       <h2 class="section-title">{{ $t('more.money') }}</h2>
       <div class="group">
         <UiRow v-for="link in moneyLinks" :key="link.name" :to="{ name: link.name }" :title="$t(link.label)">
+          <template #leading>
+            <component :is="link.icon" class="size-[22px]" :stroke-width="1.9" />
+          </template>
+        </UiRow>
+      </div>
+    </section>
+
+    <section class="flex flex-col gap-2 md:hidden">
+      <h2 class="section-title">{{ $t('more.planning') }}</h2>
+      <div class="group">
+        <UiRow v-for="link in planningLinks" :key="link.name" :to="{ name: link.name }" :title="$t(link.label)">
           <template #leading>
             <component :is="link.icon" class="size-[22px]" :stroke-width="1.9" />
           </template>
