@@ -138,6 +138,11 @@ it('ties a phone to its sign-in, refreshes it, and lets it go on sign-out', func
         ->and(DeviceToken::sole()->personal_access_token_id)->toBe($this->user->tokens()->latest('id')->first()->id)
         ->and(DeviceToken::sole()->last_seen_at->toDateString())->toBe('2026-10-28');
 
+    // A new token from the same app (Firebase rotated it): it replaces the old one.
+    $this->postJson('/api/push/devices', ['token' => 'phone-1b'], $again)->assertOk()->assertJsonPath('push.devices', 1);
+    expect(DeviceToken::sole()->token)->toBe('phone-1b');
+    $this->postJson('/api/push/devices', ['token' => 'phone-1'], $again)->assertOk();
+
     $this->deleteJson('/api/push/devices', ['token' => 'phone-1'], $again)->assertOk()->assertJsonPath('push.devices', 0);
 
     $this->postJson('/api/push/devices', ['token' => 'phone-1'], $again)->assertOk();
@@ -431,6 +436,42 @@ it('gives up on a Firebase that does not answer for ten minutes, while the bot c
     expect(pushChat())->toHaveCount(1)
         ->and(json_encode(pushChat()[0], JSON_UNESCAPED_UNICODE))->toContain('Встреча с дилером')
         ->and($this->getJson('/api/me', $this->auth)->json('push.devices'))->toBe(1);
+});
+
+it('forgets a phone left on another Firebase project when a newer one takes the message', function () {
+    pushPhone('old-build');
+    $this->app['auth']->forgetGuards();
+    $tablet = ['Authorization' => 'Bearer '.$this->user->createToken('Chrome, Android')->plainTextToken];
+    $this->postJson('/api/push/devices', ['token' => 'new-build'], $tablet)->assertOk();
+    pushVia('push');
+
+    $this->fcmAnswers = [pushFcmError(403, 'PERMISSION_DENIED', 'SENDER_ID_MISMATCH')];
+    $insight = pushInsight();
+    pushAt('2026-10-23 14:21');
+    expect($insight->fresh()->sent_via)->toBe(['push'])
+        ->and(DeviceToken::pluck('token')->all())->toBe(['new-build'])
+        ->and(pushChat())->toBe([]);
+    pushInsight();
+    pushAt('2026-10-23 14:22');
+    expect(pushSent())->toHaveCount(3);
+});
+
+it('counts misses in a row, not two single ones far apart', function () {
+    pushPhone();
+    pushVia('push');
+    $this->user->tasks()->create(['title' => 'Позвонить в банк', 'due_on' => '2026-10-24']);
+
+    $this->fcmAnswers = [pushFcmError(503, 'UNAVAILABLE', 'UNAVAILABLE')];
+    pushAt('2026-10-24 08:00', 'advisor:run morning', 'push:digest morning', 'bot:digest morning');
+    expect(pushChat())->toHaveCount(1);
+
+    // Half an hour later one more miss: tried again a minute after, still on the phone.
+    $this->fcmAnswers = [pushFcmError(503, 'UNAVAILABLE', 'UNAVAILABLE')];
+    $insight = pushInsight();
+    pushAt('2026-10-24 08:30');
+    pushAt('2026-10-24 08:31');
+    expect($insight->fresh()->sent_via)->toBe(['push'])
+        ->and(pushChat())->toHaveCount(1);
 });
 
 it('sends a test notification to see the whole way works', function () {

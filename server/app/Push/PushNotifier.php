@@ -223,6 +223,7 @@ class PushNotifier
     private function deliver(User $user, PushMessage $message): PushResult
     {
         $results = [];
+        $mismatched = [];
         foreach ($user->deviceTokens()->get() as $device) {
             $result = $this->fcm->send($message, $device->token);
             if ($result === PushResult::Broken) {
@@ -231,7 +232,22 @@ class PushNotifier
             if ($result === PushResult::Dead) {
                 $device->delete();
             }
+            if ($result === PushResult::Mismatch) {
+                $mismatched[] = $device;
+            }
             $results[] = $result;
+        }
+
+        // A token from another Firebase project: left from an old build when another phone took the
+        // message; when none did (and none is just busy), the server's key and the app do not match.
+        if ($mismatched !== []) {
+            if (in_array(PushResult::Sent, $results, true)) {
+                foreach ($mismatched as $device) {
+                    $device->delete();
+                }
+            } elseif (! in_array(PushResult::Retry, $results, true)) {
+                return $this->fcm->broken('FCM SENDER_ID_MISMATCH: the server key and the app\'s google-services.json come from different Firebase projects');
+            }
         }
 
         foreach ([PushResult::Sent, PushResult::Retry, PushResult::Rejected] as $best) {

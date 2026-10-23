@@ -27,6 +27,11 @@ class PushController extends Controller
         $user = $request->user();
         $access = $user->currentAccessToken();
 
+        // One sign-in is one app on one phone: a new token (rotated, or an APK built for another Firebase
+        // project) replaces the one it had.
+        if ($access instanceof PersonalAccessToken) {
+            DeviceToken::where('personal_access_token_id', $access->id)->where('token', '!=', $data['token'])->delete();
+        }
         // Tied to this sign-in: signing out deletes it, and the database takes the phone's row with it.
         DeviceToken::updateOrCreate(['token' => $data['token']], [
             'user_id' => $user->id,

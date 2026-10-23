@@ -126,12 +126,14 @@ class FcmClient
 
             return $this->retry("FCM {$status} ".($code ?? $error['status'] ?? ''));
         }
+        // Firebase answered, so it is not out of reach.
+        Cache::forget(self::FAILING_KEY);
 
         return match (true) {
             $code === 'UNREGISTERED' => PushResult::Dead,
             $status === 400 && $badToken => PushResult::Dead,
             // The app was built with google-services.json from another Firebase project than the server's key.
-            $code === 'SENDER_ID_MISMATCH' => $this->broken('FCM SENDER_ID_MISMATCH: the server key and the app\'s google-services.json come from different Firebase projects'),
+            $code === 'SENDER_ID_MISMATCH' => PushResult::Mismatch,
             // 401 again, 403 (API off, no permission), 404 for the project itself: the setup, not the phone.
             in_array($status, [401, 403, 404], true) => $this->broken("FCM {$status} ".($code ?? $error['status'] ?? '').': '.($error['message'] ?? '')),
             default => $this->rejected($status, $code ?? ($error['status'] ?? null), (string) ($error['message'] ?? '')),
@@ -142,22 +144,22 @@ class FcmClient
     private function retry(string $why): PushResult
     {
         $since = Cache::get(self::FAILING_KEY);
-        if (! is_int($since)) {
-            Cache::put(self::FAILING_KEY, now()->getTimestamp(), 3600);
-            Log::warning("FCM did not take a message, trying again: {$why}");
-
-            return PushResult::Retry;
-        }
-        if (now()->getTimestamp() - $since >= self::GIVE_UP_MINUTES * 60) {
+        if (is_int($since) && now()->getTimestamp() - $since >= self::GIVE_UP_MINUTES * 60) {
             Cache::forget(self::FAILING_KEY);
 
             return $this->broken('Firebase has not taken a message for '.self::GIVE_UP_MINUTES." minutes: {$why}");
         }
+        if (! is_int($since)) {
+            Log::warning("FCM did not take a message, trying again: {$why}");
+        }
+        // Kept while the tries go on (at most a pause apart); a miss after a quiet spell starts afresh.
+        Cache::put(self::FAILING_KEY, is_int($since) ? $since : now()->getTimestamp(), self::PAUSE_MAX_SECONDS + 120);
 
         return PushResult::Retry;
     }
 
-    private function broken(string $why): PushResult
+    /** Push off for an hour: Channels hands everything to the bot meanwhile. */
+    public function broken(string $why): PushResult
     {
         Cache::put(self::BROKEN_KEY, true, now()->addMinutes(self::BROKEN_MINUTES));
         Log::error("Push is off for an hour, the bot sends instead: {$why}");
