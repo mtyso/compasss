@@ -103,9 +103,11 @@ function blockHeight(segment: { startMin: number; endMin: number }): number {
 function blockStyle(segment: Placed): Record<string, string> {
   const s = drag.state.value
   const moving = s && s.mode !== 'create' && s.key === segment.key ? s : null
+  // An overnight event is two blocks with one key: a stretch moves only its end, the last one.
+  const stretch = moving?.mode === 'resize' && !segment.toNext ? moving.minutes * ppm.value : 0
   return {
     top: `${segment.startMin * ppm.value}px`,
-    height: `${blockHeight(segment) + (moving?.mode === 'resize' ? moving.minutes * ppm.value : 0)}px`,
+    height: `${blockHeight(segment) + stretch}px`,
     left: `${(segment.col / segment.cols) * 100}%`,
     width: `calc(${((segment.span + 1) / segment.cols) * 100}% - 2px)`,
     ...(moving?.mode === 'move' ? { transform: `translate(${moving.dx}px, ${moving.dy}px)` } : {}),

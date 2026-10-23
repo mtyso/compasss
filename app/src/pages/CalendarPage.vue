@@ -20,7 +20,7 @@ import PaySheet from '@/components/plan/PaySheet.vue'
 import HabitValueSheet from '@/components/things/HabitValueSheet.vue'
 import TaskSheet from '@/components/things/TaskSheet.vue'
 import { hasOverlay } from '@/components/ui/overlays'
-import { defaultView, layerOf, nextHourDraft, periodTitle, rangeFor, shiftAnchor, toMinutes, weekDays } from '@/lib/calendar'
+import { defaultView, layerOf, newEventDay, nextHourDraft, periodTitle, rangeFor, shiftAnchor, toMinutes, weekDays } from '@/lib/calendar'
 import { isoDate, isoTime, shiftDate } from '@/lib/dates'
 import { prefersReducedMotion } from '@/lib/motion'
 import { readJson, writeJson } from '@/lib/storage'
@@ -174,9 +174,7 @@ const pickerOpen = ref(false)
 const layersOpen = ref(false)
 
 function add(): void {
-  const { from, to } = range.value
-  const day = view.value === 'day' ? anchor.value : from <= today.value && today.value <= to ? today.value : from
-  actions.newEvent(nextHourDraft(day, today.value, nowMin.value))
+  actions.newEvent(nextHourDraft(newEventDay(view.value, anchor.value, today.value), today.value, nowMin.value))
 }
 
 /* ---------- Loading and refreshing ---------- */
@@ -502,7 +500,7 @@ onBeforeUnmount(() => {
     />
     <ScopeSheet v-model:open="actions.scopeSheet.open" mode="edit" :allow-following="actions.scopeSheet.allowFollowing" @pick="actions.pickScope" />
     <RoutineSheet v-model:open="actions.routineSheet.open" :block="actions.routineSheet.block" />
-    <TaskSheet v-if="actions.taskSheet.task" v-model:open="actions.taskSheet.open" :task="actions.taskSheet.task" />
+    <TaskSheet v-model:open="actions.taskSheet.open" :task="actions.taskSheet.task" />
     <PaySheet v-model:open="actions.paySheet.open" :payment="actions.paySheet.payment" @edit="actions.editPayment" />
     <HabitValueSheet
       v-model:open="actions.valueSheet.open"

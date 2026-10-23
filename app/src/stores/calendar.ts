@@ -244,8 +244,8 @@ export const useCalendar = defineStore('calendar', () => {
   /** Ranges on their way, with the number of their latest request: an older answer is dropped. */
   const pending = reactive(new Map<string, number>())
   let requests = 0
-  /** A change came in while `current` was loading: load it again once that answer is in. */
-  let reloadAfter = false
+  /** Counts the changes: an answer to a request made before the latest one is never cached. */
+  let generation = 0
 
   const feed = computed<CalendarFeed | null>(() => (current.value ? feeds.value.get(current.value) : undefined) ?? shown.value)
   /** The range on screen is not in the cache yet and is on its way (`feed` may still hold the one shown before). */
@@ -255,15 +255,21 @@ export const useCalendar = defineStore('calendar', () => {
 
   async function load(key: string): Promise<void> {
     const id = ++requests
+    const asked = generation
     pending.set(key, id)
     const [from, to] = key.split(':')
+    let stale = false
     try {
       const data = await api<CalendarFeed>(`/calendar?from=${from}&to=${to}`)
-      // A newer request for the same range, or a refresh after a change, made this answer stale.
+      // A newer request for the same range made this answer stale.
       if (pending.get(key) !== id) return
-      // It may also predate a change made while it was on its way: when something is on screen already,
-      // keep that (with any tap flipped on it) until the reload below brings the changed feed.
-      if (reloadAfter && key === current.value && shown.value) return
+      if (asked !== generation) {
+        // It predates a change made while it was on its way: what is on screen (with any tap flipped on
+        // it) stays until the reload below brings the changed feed; an empty screen takes it meanwhile.
+        stale = true
+        if (key === current.value && !shown.value) shown.value = data
+        return
+      }
       feeds.value.set(key, data)
       if (key === current.value) {
         shown.value = feeds.value.get(key) ?? data
@@ -273,10 +279,7 @@ export const useCalendar = defineStore('calendar', () => {
       if (pending.get(key) === id && key === current.value) failed.value = true
     } finally {
       if (pending.get(key) === id) pending.delete(key)
-      if (reloadAfter && current.value && !pending.has(current.value)) {
-        reloadAfter = false
-        await load(current.value)
-      }
+      if (stale && key === current.value && !pending.has(key)) await load(key)
     }
   }
 
@@ -302,14 +305,12 @@ export const useCalendar = defineStore('calendar', () => {
   /** After a change: forgets every cached feed and reloads the one on screen. */
   async function refresh(): Promise<void> {
     feeds.value.clear()
+    generation++
     const key = current.value
     // Prefetches already on their way were answered before the change: their answers are dropped.
     for (const other of [...pending.keys()]) if (other !== key) pending.delete(other)
-    if (!key) return
-    if (pending.has(key)) {
-      reloadAfter = true
-      return
-    }
+    // The range on screen already on its way loads again when that answer comes.
+    if (!key || pending.has(key)) return
     await load(key)
   }
 
@@ -423,7 +424,7 @@ export const useCalendar = defineStore('calendar', () => {
     shown.value = null
     failed.value = false
     pending.clear()
-    reloadAfter = false
+    generation++
     blocks.value = []
     routineLoaded.value = false
   }

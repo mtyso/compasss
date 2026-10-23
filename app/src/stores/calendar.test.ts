@@ -107,6 +107,29 @@ describe('calendar store', () => {
     expect(calendarCalls).toHaveLength(3)
   })
 
+  it('never caches an answer from before a change, even for a range left meanwhile', async () => {
+    const calendar = useCalendar()
+    void calendar.show('2026-10-19', '2026-10-25')
+    await calendarCalls[0].answer('v1')
+    void calendar.show('2026-10-19', '2026-10-25')
+    void calendar.refresh()
+    // Paged on before that answer came.
+    void calendar.show('2026-10-26', '2026-11-01')
+    expect(calendarCalls).toHaveLength(3)
+
+    await calendarCalls[1].answer('before change')
+    expect(calendar.feeds.has('2026-10-19:2026-10-25')).toBe(false)
+    await calendarCalls[2].answer('w1')
+    expect(calendar.feed?.now).toBe('w1')
+    expect(calendarCalls).toHaveLength(3)
+
+    // Back: nothing stale to show from the cache, a fresh request.
+    void calendar.show('2026-10-19', '2026-10-25')
+    expect(calendarCalls).toHaveLength(4)
+    await calendarCalls[3].answer('v2')
+    expect(calendar.feed?.now).toBe('v2')
+  })
+
   it('drops prefetched answers that a change made stale', async () => {
     const calendar = useCalendar()
     void calendar.show('2026-10-19', '2026-10-25')

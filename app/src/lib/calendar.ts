@@ -424,6 +424,15 @@ export function eventDraft(day: string, startMin: number, endMin: number): Event
   return { starts_on: day, ends_on: end.date, start_time: fromMinutes(startMin), end_time: end.time }
 }
 
+/** The day «+» makes an event on: the day shown, today when it is on screen, otherwise the first day of the week, the month or the list. */
+export function newEventDay(view: CalendarView, anchor: string, today: string): string {
+  if (view === 'day') return anchor
+  // A month's grid starts with the end of the month before.
+  if (view === 'month') return today.slice(0, 7) === anchor.slice(0, 7) ? today : `${anchor.slice(0, 7)}-01`
+  const { from, to } = rangeFor(view, anchor)
+  return from <= today && today <= to ? today : from
+}
+
 /** «+» on the calendar: the next whole hour today, 09:00 on another day, an hour long. */
 export function nextHourDraft(day: string, today: string, nowMin: number): EventInput {
   const start = day === today ? Math.min(Math.ceil((nowMin + 1) / 60) * 60, 23 * 60) : 9 * 60

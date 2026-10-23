@@ -103,7 +103,16 @@ export function useCalendarOpen(feed: () => CalendarFeed | null, today: () => st
 
   /* ---------- Opening things ---------- */
 
+  /**
+   * An item with a change on its way (a tick, a drop) waits for the feed that has the change: acting on the
+   * old feed's data would tick a repeating task twice or move a block from where it was before.
+   */
+  function busy(item: CalendarItem): boolean {
+    return flips.has(item.key)
+  }
+
   async function openItem(item: CalendarItem): Promise<void> {
+    if (item.type !== 'habit' && busy(item)) return
     switch (item.type) {
       case 'event':
         return openEvent(item)
@@ -191,7 +200,7 @@ export function useCalendarOpen(feed: () => CalendarFeed | null, today: () => st
 
   function toggleTask(item: TaskItem): void {
     const task = tasks.byId.get(item.task_id)
-    if (item.projected || !task) return
+    if (item.projected || !task || busy(item)) return
     void withFlip(item, { done: !item.done }, () => actions.toggleTask(task))
   }
 
@@ -235,7 +244,8 @@ export function useCalendarOpen(feed: () => CalendarFeed | null, today: () => st
    */
   function dropEvent(drop: DragDrop): void {
     const event = feed()?.series[drop.item.event_id]
-    if (!event) return
+    // Let go before the last move is in the feed: the block goes back to where that move put it.
+    if (!event || busy(drop.item)) return
     const { input, patch } = shiftEvent(event, drop.item.date, drop)
     haptics.selection()
     flips.set(drop.item.key, { patch, settled: false })

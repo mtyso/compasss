@@ -38,20 +38,25 @@ const today = computed(() => isoDate())
 const tomorrow = computed(() => shiftDate(today.value, 1))
 const priorityOptions = computed(() => ([0, 1, 2] as const).map((value) => ({ value, label: t(`tasks.priorities.p${value}`) })))
 
-watch(open, (value) => {
-  if (!value) return
-  const task = props.task
-  const draft = props.draft ?? {}
-  error.value = null
-  title.value = task?.title ?? draft.title ?? ''
-  notes.value = task?.notes ?? draft.notes ?? ''
-  dueOn.value = task ? task.due_on : (draft.due_on ?? null)
-  dueTime.value = task?.due_time ?? draft.due_time ?? null
-  priority.value = task?.priority ?? draft.priority ?? 0
-  goalId.value = task ? task.goal_id : (draft.goal_id ?? null)
-  const rule = task?.repeat ?? null
-  repeat.value = rule && { unit: rule.unit, every: rule.every, ...(rule.days?.length ? { days: [...rule.days] } : {}) }
-})
+// Immediate: a sheet mounted already open (the calendar mounts it along with its task) fills at once.
+watch(
+  open,
+  (value) => {
+    if (!value) return
+    const task = props.task
+    const draft = props.draft ?? {}
+    error.value = null
+    title.value = task?.title ?? draft.title ?? ''
+    notes.value = task?.notes ?? draft.notes ?? ''
+    dueOn.value = task ? task.due_on : (draft.due_on ?? null)
+    dueTime.value = task?.due_time ?? draft.due_time ?? null
+    priority.value = task?.priority ?? draft.priority ?? 0
+    goalId.value = task ? task.goal_id : (draft.goal_id ?? null)
+    const rule = task?.repeat ?? null
+    repeat.value = rule && { unit: rule.unit, every: rule.every, ...(rule.days?.length ? { days: [...rule.days] } : {}) }
+  },
+  { immediate: true },
+)
 
 function onOpened(): void {
   if (!props.task) nextTick(() => titleInput.value?.focus({ preventScroll: true }))

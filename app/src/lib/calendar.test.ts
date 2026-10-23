@@ -25,6 +25,7 @@ import {
   monthGrid,
   monthRowBars,
   moreCounts,
+  newEventDay,
   nextHourDraft,
   periodTitle,
   rangeFor,
@@ -438,6 +439,16 @@ describe('creating and moving events', () => {
   it('drafts a new event, ending at midnight on the next day', () => {
     expect(eventDraft(today, 570, 630)).toEqual({ starts_on: today, ends_on: today, start_time: '09:30', end_time: '10:30' })
     expect(eventDraft(today, 1380, 1440)).toEqual({ starts_on: today, ends_on: '2026-10-24', start_time: '23:00', end_time: '00:00' })
+  })
+
+  it('puts «+» on the day shown, today when it is on screen, else the first day shown', () => {
+    expect(newEventDay('day', '2026-11-03', today)).toBe('2026-11-03')
+    expect(newEventDay('week', '2026-10-21', today)).toBe(today)
+    expect(newEventDay('week', '2026-11-04', today)).toBe('2026-11-02')
+    expect(newEventDay('month', '2026-10-01', today)).toBe(today)
+    // December's grid starts on Monday 30 November.
+    expect(newEventDay('month', '2026-12-01', today)).toBe('2026-12-01')
+    expect(newEventDay('list', '2026-10-20', today)).toBe(today)
   })
 
   it('drafts «+» at the next whole hour today and at 09:00 on another day', () => {
