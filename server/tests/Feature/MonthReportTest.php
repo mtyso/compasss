@@ -119,3 +119,16 @@ it('does not count a month seen from the middle as usual', function () {
         ->assertJsonPath('prev.expense_uzs', 300_000);
     $this->getJson('/api/reports/month?month=2026-09', $this->auth)->assertJsonPath('tracked', false);
 });
+
+it('has no usual level when the months before had nothing spent', function () {
+    // Salary noted from August, spending only from October.
+    reportOp($this, 'income', 10_000_000, '2026-08-03 09:00', 'salary');
+    reportOp($this, 'income', 10_000_000, '2026-09-03 09:00', 'salary');
+    reportOp($this, 'expense', 2_500_000, '2026-10-12 18:00', 'groceries');
+
+    $this->getJson('/api/reports/month', $this->auth)->assertOk()
+        ->assertJsonPath('history', ['2026-09', '2026-08'])
+        ->assertJsonPath('usual_uzs', null)
+        ->assertJsonPath('categories.0.total_uzs', 2_500_000)
+        ->assertJsonPath('categories.0.usual_uzs', null);
+});

@@ -9,7 +9,7 @@ export interface ReportCategory {
   category_id: number
   total_uzs: number
   one_off_uzs: number
-  /** Null until the app has a whole month before this one. */
+  /** Null until the app has a whole month before this one with some spending; 0 for a category new this month. */
   usual_uzs: number | null
   limit_uzs: number | null
 }
@@ -44,6 +44,7 @@ export interface MonthReport {
   one_off_uzs: number
   saved_uzs: number
   rate: number | null
+  /** Regular spending in a usual month; null until there is a whole earlier month with some spending. */
   usual_uzs: number | null
   history: string[]
   prev: { month: string; income_uzs: number; expense_uzs: number; rate: number | null } | null
