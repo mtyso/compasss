@@ -9,6 +9,7 @@ import UiButton from '@/components/ui/UiButton.vue'
 import UiToastHost from '@/components/ui/UiToastHost.vue'
 import { showToast } from '@/components/ui/toast'
 import { haptics } from '@/lib/haptics'
+import { installScreenTransitions, screenTransitions } from '@/lib/viewTransition'
 import { useAuth } from '@/stores/auth'
 import { useMoney, useQuickAdd } from '@/stores/money'
 
@@ -85,6 +86,9 @@ function onEnter(): void {
   if (scroller.value) scroller.value.scrollTop = restore
 }
 
+// Where the browser can, both screens move at once and shared elements fly between them.
+onBeforeUnmount(installScreenTransitions(router, () => transition.value, onEnter))
+
 /** Tapping the tab you are already on scrolls back to the top, as on Android. */
 function onTab(to: string): void {
   if (activeTab.value !== to) haptics.selection()
@@ -135,21 +139,23 @@ watch(
             :class="{ 'is-on': isActive(link) }"
             :aria-current="isActive(link) ? 'page' : undefined"
           >
-            <component :is="link.icon" class="size-[18px] shrink-0" :stroke-width="isActive(link) ? 2.2 : 1.9" />
-            <span class="truncate">{{ $t(link.label) }}</span>
+            <span class="side-pill" :class="{ 'vt-side-pill': isActive(link) }" aria-hidden="true" />
+            <component :is="link.icon" class="relative size-[18px] shrink-0" :stroke-width="isActive(link) ? 2.2 : 1.9" />
+            <span class="relative truncate">{{ $t(link.label) }}</span>
           </RouterLink>
         </template>
       </nav>
 
       <RouterLink :to="{ name: 'more' }" class="side-link !h-auto !py-2" :class="{ 'is-on': isActive({ name: 'more', also: ['pin-setup'] }) }">
-        <span class="grid size-8 shrink-0 place-items-center rounded-full bg-money text-sm font-semibold text-on-money">
+        <span class="side-pill" :class="{ 'vt-side-pill': isActive({ name: 'more', also: ['pin-setup'] }) }" aria-hidden="true" />
+        <span class="relative grid size-8 shrink-0 place-items-center rounded-full bg-money text-sm font-semibold text-on-money">
           {{ auth.user?.name.charAt(0).toUpperCase() ?? '·' }}
         </span>
-        <span class="flex min-w-0 flex-1 flex-col">
+        <span class="relative flex min-w-0 flex-1 flex-col">
           <span class="truncate text-sm font-semibold text-ink">{{ auth.user?.name }}</span>
           <span class="truncate text-caption text-ink-3">{{ $t('ui.settings') }}</span>
         </span>
-        <Settings class="size-[18px] shrink-0 text-ink-3" :stroke-width="1.9" />
+        <Settings class="relative size-[18px] shrink-0 text-ink-3" :stroke-width="1.9" />
       </RouterLink>
     </aside>
 
@@ -163,7 +169,8 @@ watch(
         class="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-[var(--shell-top)] pb-10 md:px-10 md:pt-6 md:pb-16"
       >
         <RouterView v-slot="{ Component, route: current }">
-          <Transition :name="transition" mode="out-in" @enter="onEnter">
+          <component :is="Component" v-if="screenTransitions" :key="current.path" />
+          <Transition v-else :name="transition" mode="out-in" @enter="onEnter">
             <component :is="Component" :key="current.path" />
           </Transition>
         </RouterView>
@@ -195,7 +202,7 @@ watch(
               @click="onTab(tab.to)"
             >
               <span class="relative grid h-8 w-14 place-items-center">
-                <span class="pill absolute inset-0 rounded-full bg-ink/[0.08]" :class="{ on: activeTab === tab.to }" />
+                <span class="pill absolute inset-0 rounded-full bg-ink/[0.08]" :class="{ on: activeTab === tab.to, 'vt-tab-pill': activeTab === tab.to }" />
                 <component :is="tab.icon" class="relative size-[22px]" :stroke-width="activeTab === tab.to ? 2.2 : 1.8" />
               </span>
               {{ $t(tab.label) }}
@@ -215,6 +222,7 @@ watch(
 }
 
 .side-link {
+  position: relative;
   display: flex;
   height: 2.5rem;
   flex-shrink: 0;
@@ -230,15 +238,29 @@ watch(
     color var(--dur-fast) var(--ease-standard);
 }
 
-.side-link:hover {
-  background-color: color-mix(in srgb, var(--c-ink) 5%, transparent);
-  color: var(--c-ink);
+@media (hover: hover) {
+  .side-link:hover {
+    background-color: color-mix(in srgb, var(--c-ink) 5%, transparent);
+    color: var(--c-ink);
+  }
 }
 
 .side-link.is-on {
-  background-color: color-mix(in srgb, var(--c-ink) 8%, transparent);
   color: var(--c-ink);
   font-weight: 600;
+}
+
+/* The highlight of the current screen is its own layer, so a screen change can slide it along. */
+.side-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: color-mix(in srgb, var(--c-ink) 8%, transparent);
+  opacity: 0;
+}
+
+.is-on > .side-pill {
+  opacity: 1;
 }
 
 /* Active tab: the pill grows out from the icon, like Android's navigation bar. */

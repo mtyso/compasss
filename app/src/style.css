@@ -161,6 +161,8 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
   --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+  /* A screen sliding over another: fast off the mark, long soft landing (the iOS sheet curve). */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-spring: linear(0, 0.017, 0.06, 0.121, 0.192, 0.269, 0.346, 0.422, 0.495, 0.562, 0.624, 0.68, 0.73, 0.774, 0.813, 0.846, 0.875, 0.899, 0.919, 0.937, 0.951, 0.962, 0.972, 0.98, 0.986, 0.99, 0.994, 0.997, 0.999, 1, 1.002, 1.002, 1.003, 1.003, 1.002, 1.002, 1);
   --ease-pop: linear(0, 0.022, 0.08, 0.161, 0.257, 0.359, 0.461, 0.56, 0.651, 0.734, 0.806, 0.868, 0.919, 0.96, 0.992, 1.016, 1.034, 1.045, 1.051, 1.054, 1.054, 1.051, 1.047, 1.042, 1.037, 1.031, 1.026, 1.021, 1.016, 1.012, 1.008, 1.005, 1.003, 1.001, 1, 0.998, 0.998, 0.997, 0.997, 0.998, 0.998, 1);
 
@@ -535,6 +537,136 @@
 
   .skeleton::after {
     animation: none;
+  }
+}
+
+/*
+ * Screen changes through View Transitions (lib/viewTransition.ts sets html[data-vt]). Only the
+ * screen area moves; the bars stay put and their highlight slides to the new place. On a phone a
+ * deeper screen slides over the one it came from, the way Android and iOS stack screens; on a wide
+ * screen it only drifts in, since a full-width slide across a desktop is too much travel.
+ */
+html[data-vt] [data-scroller] {
+  view-transition-name: page;
+}
+
+/* An element that exists on both screens (a goal's icon) flies from one place to the other. */
+html[data-vt] .vt-shared {
+  view-transition-name: var(--vt);
+}
+
+/* The highlight of the current tab (bottom bar) or screen (sidebar) slides to the new one. */
+html[data-vt] .vt-tab-pill {
+  view-transition-name: tab-pill;
+}
+html[data-vt] .vt-side-pill {
+  view-transition-name: side-pill;
+}
+
+html[data-vt]::view-transition-group(*) {
+  animation-duration: 440ms;
+  animation-timing-function: var(--ease-sheet);
+}
+
+html[data-vt]::view-transition-old(page),
+html[data-vt]::view-transition-new(page) {
+  /* A screen is drawn on the page colour, so one sliding over another covers it. */
+  background-color: var(--c-bg);
+  mix-blend-mode: normal;
+  animation-duration: 440ms;
+  animation-timing-function: var(--ease-sheet);
+  animation-fill-mode: both;
+}
+
+html[data-vt='push']::view-transition-old(page) {
+  animation-name: vt-behind;
+}
+html[data-vt='push']::view-transition-new(page) {
+  animation-name: vt-over;
+  box-shadow: 0 0 32px rgb(0 0 0 / 0.08);
+}
+html[data-vt='pop']::view-transition-old(page) {
+  z-index: 1;
+  animation-name: vt-off;
+  box-shadow: 0 0 32px rgb(0 0 0 / 0.08);
+}
+html[data-vt='pop']::view-transition-new(page) {
+  animation-name: vt-back;
+}
+
+/* Switching tabs: the old screen goes quickly, the new one settles in after it (fade through). */
+html[data-vt='through']::view-transition-old(page) {
+  animation: vt-fade-out 110ms var(--ease-exit) both;
+}
+html[data-vt='through']::view-transition-new(page) {
+  animation: vt-rise 300ms var(--ease-enter) 70ms both;
+}
+
+@keyframes vt-over {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes vt-behind {
+  to {
+    transform: translateX(-24%);
+    opacity: 0.55;
+  }
+}
+@keyframes vt-off {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes vt-back {
+  from {
+    transform: translateX(-24%);
+    opacity: 0.55;
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+}
+@keyframes vt-drift-in {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+}
+@keyframes vt-drift-out {
+  to {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+}
+
+@media (min-width: 48rem) {
+  html[data-vt='push']::view-transition-old(page),
+  html[data-vt='pop']::view-transition-old(page) {
+    box-shadow: none;
+    animation: vt-drift-out 140ms var(--ease-exit) both;
+  }
+  html[data-vt='push']::view-transition-new(page),
+  html[data-vt='pop']::view-transition-new(page) {
+    box-shadow: none;
+    animation: vt-drift-in 320ms var(--ease-enter) 60ms both;
+  }
+  html[data-vt='pop']::view-transition-new(page) {
+    animation-name: vt-drift-back;
+  }
+  @keyframes vt-drift-back {
+    from {
+      opacity: 0;
+      transform: translateX(-32px);
+    }
   }
 }
 
