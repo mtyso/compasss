@@ -88,6 +88,7 @@ final class MonthReport
             'history' => $history,
             'prev' => $prev === null ? null : ['month' => $previous, ...$prev, 'rate' => self::rate($prev['income_uzs'], $prev['expense_uzs'])],
             'categories' => $categories,
+            'days' => MonthSpending::byDay($user, $month),
             'budget' => $budgeted === [] ? null : [
                 'limit_uzs' => array_sum(array_column($budgeted, 'limit_uzs')),
                 'spent_uzs' => array_sum(array_column($budgeted, 'total_uzs')),

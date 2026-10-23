@@ -106,6 +106,21 @@ it('shows this month so far, a month before the records without comparisons, and
     $this->getJson('/api/reports/month?month=2026-12', $this->auth)->assertUnprocessable();
 });
 
+it('lists spending day by day, one-offs shown apart, every day of the month there', function () {
+    reportMonths($this);
+    reportOp($this, 'expense', 50_000, '2026-10-12 09:00', 'cafe');
+    reportOp($this, 'income', 300_000, '2026-10-12 11:00', 'salary');
+
+    $days = $this->getJson('/api/reports/month?month=2026-10', $this->auth)->assertOk()->json('days');
+
+    expect($days)->toHaveCount(31)
+        ->and($days[0])->toBe(['date' => '2026-10-01', 'expense_uzs' => 0, 'one_off_uzs' => 0])
+        ->and($days[11])->toBe(['date' => '2026-10-12', 'expense_uzs' => 950_000, 'one_off_uzs' => 0])
+        ->and($days[19]['expense_uzs'])->toBe(800_000)
+        ->and($days[24])->toBe(['date' => '2026-10-25', 'expense_uzs' => 1_500_000, 'one_off_uzs' => 1_500_000])
+        ->and(array_sum(array_column($days, 'expense_uzs')))->toBe(3_250_000);
+});
+
 it('does not count a month seen from the middle as usual', function () {
     reportOp($this, 'expense', 300_000, '2026-09-18 12:00', 'cafe');
     reportOp($this, 'expense', 500_000, '2026-10-18 12:00', 'cafe');
