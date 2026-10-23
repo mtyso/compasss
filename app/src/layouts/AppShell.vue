@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationNormalized } from 'vue-router'
 import { CalendarCheck, CalendarClock, CalendarDays, ChartColumn, HandCoins, Handshake, LayoutGrid, Lightbulb, PieChart, Plus, Scale, Settings, Sun, Target, Wallet, WalletCards } from 'lucide-vue-next'
@@ -100,6 +100,17 @@ function openQuickAdd(): void {
   quick.start()
 }
 
+// On a keyboard, N opens «Записать» from any screen, unless something is being typed or a sheet is open.
+function onKey(event: KeyboardEvent): void {
+  if (event.code !== 'KeyN' || event.repeat || event.metaKey || event.ctrlKey || event.altKey || quick.open) return
+  const target = event.target as HTMLElement | null
+  if (target?.closest('input, textarea, select, [contenteditable="true"]') || document.querySelector('[aria-modal="true"]')) return
+  event.preventDefault()
+  openQuickAdd()
+}
+onMounted(() => window.addEventListener('keydown', onKey))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+
 // «Операция удалена · Вернуть» after deleting from the sheet.
 watch(
   () => quick.deletedId,
@@ -123,9 +134,10 @@ watch(
         <span class="text-[1.0625rem] font-bold tracking-[-0.015em]">{{ $t('appName') }}</span>
       </RouterLink>
 
-      <UiButton block class="!h-11 !justify-start !rounded-[0.625rem] !px-3" @click="openQuickAdd">
+      <UiButton block class="!h-11 !justify-start !rounded-[0.625rem] !px-3 *:w-full" aria-keyshortcuts="N" @click="openQuickAdd">
         <template #icon><Plus class="size-5" :stroke-width="2.4" /></template>
-        {{ $t('nav.add') }}
+        <span class="flex-1 text-left">{{ $t('nav.add') }}</span>
+        <kbd class="key" aria-hidden="true">N</kbd>
       </UiButton>
 
       <nav class="no-scrollbar -mx-1 flex min-h-0 flex-1 flex-col overflow-y-auto px-1" :aria-label="$t('appName')">
@@ -248,6 +260,19 @@ watch(
 .side-link.is-on {
   color: var(--c-ink);
   font-weight: 600;
+}
+
+/* The shortcut on the main button, a small key cap in the button's own colour. */
+.key {
+  display: grid;
+  place-items: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 0.3125rem;
+  font: 600 0.6875rem/1 var(--font-sans);
+  color: color-mix(in srgb, var(--c-on-money) 85%, transparent);
+  background-color: color-mix(in srgb, var(--c-on-money) 14%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--c-on-money) 18%, transparent);
 }
 
 /* The highlight of the current screen is its own layer, so a screen change can slide it along. */
