@@ -22,8 +22,9 @@ const RADIUS = 19
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 const dash = computed(() => CIRCUMFERENCE * (1 - Math.min(1, share.value)))
 
-// A bump each time the value changes by a tap.
+// A bump each time the value changes by a tap, and a small burst of sparks the moment it is done.
 const bump = ref(false)
+const burst = ref(false)
 watch(
   () => props.habit.today.value,
   (value, previous) => {
@@ -32,6 +33,11 @@ watch(
     requestAnimationFrame(() => (bump.value = true))
   },
 )
+watch(done, (now, before) => {
+  if (!now || before || over.value) return
+  burst.value = false
+  requestAnimationFrame(() => (burst.value = true))
+})
 
 let holdTimer: number | undefined
 let held = false
@@ -66,8 +72,11 @@ onBeforeUnmount(cancel)
     @pointercancel="cancel"
     @contextmenu.prevent
     @click="click"
-    @animationend="bump = false"
+    @animationend.self="bump = false"
   >
+    <span v-if="burst" class="sparks" aria-hidden="true" @animationend="burst = false">
+      <i v-for="n in 8" :key="n" :style="{ '--a': `${n * 45}deg` }" />
+    </span>
     <template v-if="habit.type === 'check'">
       <span class="fill absolute inset-1 rounded-full" />
       <Check class="tick relative" :class="size === 'sm' ? 'size-4' : 'size-5'" :stroke-width="3" />
@@ -161,6 +170,44 @@ onBeforeUnmount(cancel)
   color: var(--c-danger);
 }
 
+/* Sparks: eight dots in the habit's colour fly out a little way and fade, once, in under half a second. */
+.sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sparks i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px;
+  border-radius: 999px;
+  background: var(--hc);
+  opacity: 0;
+  animation: spark 460ms var(--ease-enter) both;
+}
+
+.sparks i:nth-child(even) {
+  width: 3.5px;
+  height: 3.5px;
+  margin: -1.75px;
+  animation-delay: 40ms;
+}
+
+@keyframes spark {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--a)) translateY(-16px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateY(-34px) scale(0.4);
+  }
+}
+
 @keyframes habit-bump {
   0% {
     transform: scale(0.86);
@@ -173,6 +220,10 @@ onBeforeUnmount(cancel)
 @media (prefers-reduced-motion: reduce) {
   .habit-button.bump {
     animation: none;
+  }
+
+  .sparks {
+    display: none;
   }
 }
 </style>

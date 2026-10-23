@@ -54,7 +54,7 @@ function unmute(rule: string): void {
     <div class="group">
       <UiRow :to="{ name: 'can-afford' }" :title="$t('advice.canAfford')" :subtitle="$t('advice.canAffordHint')">
         <template #leading>
-          <span class="grid size-10 place-items-center rounded-full bg-money text-on-money"><Scale class="size-5" :stroke-width="2" /></span>
+          <span class="disc grid size-10 place-items-center rounded-full bg-money text-on-money"><Scale class="size-5" :stroke-width="2" /></span>
         </template>
       </UiRow>
     </div>

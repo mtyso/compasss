@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { formatMoney, type Currency } from '@/lib/format'
-import { tweenNumber } from '@/lib/motion'
 import { useSettings } from '@/stores/settings'
+import RollingDigits from './RollingDigits.vue'
 
 /**
  * A sum of money set the way it reads best: digits large, the currency and cents quieter, the
- * minus a real minus sign. With `animate`, changes count to the new value instead of jumping.
+ * minus a real minus sign. With `animate`, the digits roll to a new value like a counter instead
+ * of jumping, and with `intro` they also roll up from zero when the sum first appears.
  *
  * `sign`: 'auto' shows a minus for negatives; 'always' adds + for positives (income in a list);
  * 'expense' always shows a minus (a spending shown as a positive number).
@@ -17,32 +18,17 @@ const props = withDefaults(
     currency?: Currency
     sign?: 'auto' | 'always' | 'expense'
     animate?: boolean
+    intro?: boolean
     /** Hide the currency (when a heading around it already says it). */
     bare?: boolean
   }>(),
-  { currency: 'UZS', sign: 'auto', animate: false, bare: false },
+  { currency: 'UZS', sign: 'auto', animate: false, intro: false, bare: false },
 )
 
 const settings = useSettings()
-const shown = ref(props.amount)
-let stop: () => void = () => {}
-
-watch(
-  () => props.amount,
-  (to, from) => {
-    stop()
-    if (!props.animate || from === undefined) {
-      shown.value = to
-      return
-    }
-    const duration = Math.min(900, 380 + Math.log10(Math.abs(to - from) + 1) * 60)
-    stop = tweenNumber(shown.value, to, duration, (value) => (shown.value = Math.round(value)))
-  },
-)
-onBeforeUnmount(() => stop())
 
 const parts = computed(() => {
-  const value = shown.value
+  const value = props.amount
   const text = formatMoney(Math.abs(value), props.currency, settings.locale)
   const negative = props.sign === 'expense' ? value !== 0 : value < 0
   const prefix = negative ? '−' : props.sign === 'always' && value > 0 ? '+' : ''
@@ -62,7 +48,8 @@ const label = computed(() => `${parts.value.prefix}${formatMoney(Math.abs(props.
     <span aria-hidden="true" class="contents">
       <span v-if="parts.prefix" class="money-sign">{{ parts.prefix }}</span>
       <span v-if="parts.symbol && !bare" class="money-symbol">{{ parts.symbol }}</span>
-      <span>{{ parts.whole }}</span>
+      <RollingDigits v-if="animate" :text="parts.whole" :intro="intro" />
+      <span v-else>{{ parts.whole }}</span>
       <span v-if="parts.cents" class="money-minor">{{ parts.cents }}</span>
       <span v-if="parts.suffix && !bare" class="money-unit">{{ parts.suffix }}</span>
     </span>

@@ -58,7 +58,7 @@ function timeLabel(event: EventItem): string {
 
     <div v-if="lines.length" class="flex flex-col gap-2">
       <p v-for="line in lines" :key="line.key" class="flex items-center gap-2.5 text-[0.9375rem]">
-        <span class="grid size-6 shrink-0 place-items-center rounded-full text-white" :style="{ backgroundColor: routineColor(line.block.kind) }" aria-hidden="true">
+        <span class="disc grid size-6 shrink-0 place-items-center rounded-full text-white" :style="{ backgroundColor: routineColor(line.block.kind) }" aria-hidden="true">
           <component :is="routineLook(line.block.kind).icon" class="size-3.5" :stroke-width="2.2" />
         </span>
         <span class="min-w-0 truncate">

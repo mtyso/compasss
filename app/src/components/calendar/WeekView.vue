@@ -302,7 +302,7 @@ defineExpose({ scrollToStart })
             :style="{ top: `${nowMin * ppm}px` }"
             aria-hidden="true"
           >
-            <span class="absolute top-1/2 -left-1 size-2.5 -translate-y-1/2 rounded-full bg-danger" />
+            <span class="absolute top-1/2 -left-1 size-2.5 -translate-y-1/2 rounded-full bg-danger shadow-[0_0_0_3px_color-mix(in_srgb,var(--c-danger)_22%,transparent)]" />
           </div>
         </div>
       </div>

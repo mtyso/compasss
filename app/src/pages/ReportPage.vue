@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ArrowDownRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleCheck, ReceiptText, Target } from 'lucide-vue-next'
 import CategoryIcon from '@/components/CategoryIcon.vue'
+import DayBars from '@/components/money/DayBars.vue'
 import GoalIcon from '@/components/goals/GoalIcon.vue'
 import MoneyAmount from '@/components/ui/MoneyAmount.vue'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
@@ -11,7 +12,7 @@ import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiProgress from '@/components/ui/UiProgress.vue'
 import { api } from '@/lib/api'
-import { isoMonth, shiftMonth } from '@/lib/dates'
+import { isoDate, isoMonth, shiftMonth } from '@/lib/dates'
 import { formatMoney, formatMonthTitle } from '@/lib/format'
 import { againstUsual, movers, usualNow, type MonthReport, type ReportGoal } from '@/lib/report'
 import { useMoney } from '@/stores/money'
@@ -57,6 +58,8 @@ watch(month, load, { immediate: true })
 const uzs = (value: number) => formatMoney(value, 'UZS', settings.locale)
 const category = (id: number) => money.categoryById.get(id)
 const empty = computed(() => !!report.value && !report.value.income_uzs && !report.value.expense_uzs && !report.value.goals.length)
+
+const spentSomeDay = computed(() => !!report.value?.days?.some((day) => day.expense_uzs > 0))
 
 const vsUsual = computed(() => (report.value ? againstUsual(report.value) : null))
 const regular = computed(() => (report.value ? report.value.expense_uzs - report.value.one_off_uzs : 0))
@@ -163,6 +166,12 @@ function goalLine(goal: ReportGoal): string {
                   <dd v-if="report.one_off_uzs" class="text-caption text-ink-3">{{ $t('report.oneOff', { amount: uzs(report.one_off_uzs) }) }}</dd>
                 </div>
               </dl>
+            </section>
+
+            <!-- The month day by day -->
+            <section v-if="spentSomeDay" class="flex flex-col gap-3">
+              <h2 class="section-title">{{ $t('report.byDay') }}</h2>
+              <DayBars :days="report.days" :today="report.over ? null : isoDate()" :tracked="report.tracked" />
             </section>
 
             <!-- Spending against the usual level -->

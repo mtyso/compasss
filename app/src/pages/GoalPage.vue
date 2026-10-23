@@ -17,7 +17,6 @@ import MoneyAmount from '@/components/ui/MoneyAmount.vue'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
-import UiProgress from '@/components/ui/UiProgress.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import { showToast } from '@/components/ui/toast'
 import { isoDate } from '@/lib/dates'
@@ -228,13 +227,16 @@ function bought(debt: { id: number } | null): void {
     <template v-else-if="goal && detail">
       <!-- Where the goal stands: the sum, the bar, the status and the dates. -->
       <section class="flex flex-col gap-4">
-        <div class="flex items-center gap-3">
-          <GoalIcon :goal="goal" size="lg" />
-          <div class="flex min-w-0 flex-col">
+        <div class="flex items-center gap-4">
+          <GoalIcon :goal="goal" size="xl" :ring="goal.progress" class="vt-shared" :style="{ '--vt': `goal-${goal.id}` }" />
+          <div class="flex min-w-0 flex-col gap-0.5">
             <span class="text-[0.9375rem] font-medium text-ink-2">
               {{ $t(`goals.types.${goal.type}`) }}<template v-if="detail.is_main && active"> · {{ $t('goals.mainGoal') }}</template>
             </span>
-            <span class="font-semibold" :class="toneText[tone]">{{ text.status(goal) }}</span>
+            <span class="font-semibold">
+              <span :class="toneText[tone]">{{ text.status(goal) }}</span>
+              <span class="num text-ink-3"> · {{ Math.min(100, Math.floor(goal.progress * 100)) }}%</span>
+            </span>
           </div>
         </div>
 
@@ -245,8 +247,6 @@ function bought(debt: { id: number } | null): void {
           </span>
         </div>
         <p v-else class="text-[1.75rem] leading-tight font-semibold">{{ text.amounts(goal) }}</p>
-
-        <UiProgress :value="goal.progress" :tone="goal.done_at ? 'neutral' : 'goal'" />
 
         <dl class="grid grid-cols-2 gap-4 rounded-card bg-surface-2 px-4 py-3">
           <div v-if="goal.deadline" class="flex min-w-0 flex-col gap-0.5">

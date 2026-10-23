@@ -30,6 +30,13 @@ export interface ReportGoal {
   done: boolean
 }
 
+/** One day of the month; every day is there, a day without spending has zeros. */
+export interface ReportDay {
+  date: string
+  expense_uzs: number
+  one_off_uzs: number
+}
+
 export interface MonthReport {
   month: string
   first_month: string | null
@@ -49,6 +56,7 @@ export interface MonthReport {
   history: string[]
   prev: { month: string; income_uzs: number; expense_uzs: number; rate: number | null } | null
   categories: ReportCategory[]
+  days: ReportDay[]
   budget: { limit_uzs: number; spent_uzs: number; kept: number; count: number } | null
   goals: ReportGoal[]
   goals_added_uzs: number

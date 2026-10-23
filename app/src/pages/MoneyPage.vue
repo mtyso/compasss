@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChartColumn, ChevronLeft, ChevronRight, Handshake, Plus, ReceiptText } from 'lucide-vue-next'
 import CategoryIcon from '@/components/CategoryIcon.vue'
+import CategoryStrip from '@/components/money/CategoryStrip.vue'
 import AccountIcon from '@/components/money/AccountIcon.vue'
 import TransactionRow from '@/components/money/TransactionRow.vue'
 import MoneyAmount from '@/components/ui/MoneyAmount.vue'
@@ -190,6 +191,7 @@ watch([month, () => money.revision], load)
                   {{ $t('money.oneOffPart', { amount: formatMoney(summary.one_off_expense_uzs, 'UZS', settings.locale) }) }}
                 </span>
               </div>
+              <CategoryStrip :rows="spending.rows.map((row) => ({ id: row.category_id, color: row.category?.color, total: row.total }))" />
               <dl class="grid grid-cols-2 gap-4 rounded-card bg-surface-2 px-4 py-3">
                 <div class="flex min-w-0 flex-col gap-0.5">
                   <dt class="text-caption text-ink-3">{{ $t('money.earned') }}</dt>
