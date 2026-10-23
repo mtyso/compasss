@@ -24,6 +24,8 @@ it('steps daily, weekly, monthly and yearly rules', function (array $rule, strin
     'monthly on the 31st into November' => [['unit' => 'month', 'every' => 1, 'day' => 31], '2026-10-31', '2026-11-30'],
     'monthly on the 31st back to December' => [['unit' => 'month', 'every' => 1, 'day' => 31], '2026-11-30', '2026-12-31'],
     'yearly on 29 February' => [['unit' => 'year', 'every' => 1], '2028-02-29', '2029-02-28'],
+    'yearly on the 29th back to a leap year' => [['unit' => 'year', 'every' => 1, 'day' => 29], '2031-02-28', '2032-02-29'],
+    'every 2 years on the 31st' => [['unit' => 'year', 'every' => 2, 'day' => 31], '2026-12-31', '2028-12-31'],
 ]);
 
 it('moves an overdue task past today when it is completed', function () {

@@ -70,6 +70,19 @@ it('moves a repeating task to its next date and can put it back', function () {
     $this->patchJson("/api/tasks/{$rent['id']}", ['due_on' => null], $this->auth)->assertJsonPath('repeat', null);
 });
 
+it('keeps the day of a yearly task through a short February', function () {
+    $birthday = newTask($this, ['title' => 'День рождения', 'due_on' => '2027-02-28', 'repeat' => ['unit' => 'year']]);
+    expect($birthday['repeat'])->toBe(['unit' => 'year', 'every' => 1, 'day' => 28]);
+
+    // Moved to the 29th of a leap year: it comes back on the 29th whenever there is one.
+    $this->patchJson("/api/tasks/{$birthday['id']}", ['due_on' => '2028-02-29'], $this->auth)->assertJsonPath('repeat.day', 29);
+    $this->travelTo(Carbon::parse('2028-02-29 12:00', 'Asia/Tashkent'));
+    $this->postJson("/api/tasks/{$birthday['id']}/complete", [], $this->auth)->assertJsonPath('task.due_on', '2029-02-28');
+    $this->travelTo(Carbon::parse('2031-03-01 12:00', 'Asia/Tashkent'));
+    $this->postJson("/api/tasks/{$birthday['id']}/complete", [], $this->auth)
+        ->assertJsonPath('task.due_on', '2032-02-29')->assertJsonPath('task.repeat.day', 29);
+});
+
 it('deletes softly and restores', function () {
     $task = newTask($this, ['title' => 'Temp']);
     $this->deleteJson("/api/tasks/{$task['id']}", [], $this->auth)->assertNoContent();

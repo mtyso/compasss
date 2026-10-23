@@ -102,7 +102,7 @@ class TaskController extends Controller
                 $repeat['days'] = array_values(array_unique(array_map('intval', $data['repeat']['days'])));
                 sort($repeat['days']);
             }
-            if ($repeat['unit'] === 'month') {
+            if (in_array($repeat['unit'], ['month', 'year'], true)) {
                 $repeat['day'] = (int) substr($due, 8, 2);
             }
             // A repeating task needs a date to repeat from.
@@ -111,8 +111,8 @@ class TaskController extends Controller
         } elseif (array_key_exists('due_on', $data) && $data['due_on'] === null && $task?->repeat) {
             // Taking the date away stops the repeat too.
             $data['repeat'] = null;
-        } elseif (! empty($data['due_on']) && ($task?->repeat['unit'] ?? null) === 'month') {
-            // A monthly task moved to another day repeats on that day from now on.
+        } elseif (! empty($data['due_on']) && in_array($task?->repeat['unit'] ?? null, ['month', 'year'], true)) {
+            // A monthly or yearly task moved to another day repeats on that day from now on.
             $data['repeat'] = [...$task->repeat, 'day' => (int) substr($data['due_on'], 8, 2)];
         }
         if (array_key_exists('title', $data)) {
