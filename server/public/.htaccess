@@ -8,6 +8,12 @@ DirectoryIndex index.php
 
     RewriteEngine On
 
+    # Plain http to https on the production domain: the AHost account has no Force HTTPS switch,
+    # and the session cookie is secure-only, so sign-in over http would silently fail.
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP_HOST} ^(www\.)?compasss\.uz$ [NC]
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
