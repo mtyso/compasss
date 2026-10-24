@@ -8,7 +8,7 @@
 #   cd ~/apps/kompas && bash deploy/deploy-git.sh
 #
 # Что делает (каждый шаг останавливает скрипт при ошибке, пока сайт не тронут):
-#   1. проверки: PHP 8.4 по явному пути и его расширения, git, .env, отсутствие правок в отслеживаемых файлах;
+#   1. проверки: PHP 8.3 по явному пути и его расширения, git, .env, отсутствие правок в отслеживаемых файлах;
 #   2. git fetch origin release; если коммит тот же — «уже последняя версия» и выход;
 #   3. если между версиями есть новые миграции — дамп базы (старый код, сайт ещё работает) в BACKUP_PATH/predeploy/;
 #   4. php artisan down; git reset --hard origin/release (.env и storage/ не отслеживаются и переживают обновление;
@@ -23,7 +23,7 @@
 #   --no-backup    не снимать дамп перед миграциями
 #   --branch X     брать ветку X (по умолчанию release)
 #   --force        выкатить заново, даже если коммит не изменился
-# Окружение: PHP_BIN (по умолчанию /opt/alt/php84/usr/bin/php), HEALTH_URL (по умолчанию APP_URL из .env).
+# Окружение: PHP_BIN (по умолчанию /opt/alt/php83/usr/bin/php), HEALTH_URL (по умолчанию APP_URL из .env).
 
 set -euo pipefail
 
@@ -43,7 +43,7 @@ USE_DOWN=1
 USE_BACKUP=1
 FORCE=0
 ROOT="$PWD"
-PHP_BIN="${PHP_BIN:-/opt/alt/php84/usr/bin/php}"
+PHP_BIN="${PHP_BIN:-/opt/alt/php83/usr/bin/php}"
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -68,7 +68,10 @@ export GIT_TERMINAL_PROMPT=0
 
 step "Проверки"
 [ -x "$PHP_BIN" ] || fail "нет $PHP_BIN. Посмотрите ls /opt/alt и запустите так: PHP_BIN=/opt/alt/phpXX/usr/bin/php bash deploy/deploy-git.sh"
-"$PHP_BIN" -r 'exit(PHP_VERSION_ID >= 80400 ? 0 : 1);' || fail "$PHP_BIN — не PHP 8.4"
+"$PHP_BIN" -r 'exit(PHP_VERSION_ID >= 80300 ? 0 : 1);' || fail "$PHP_BIN — старше PHP 8.3"
+# alt-php84 на AHost принудительно грузит PECL psr: его интерфейсы ломают Guzzle и Monolog, artisan падает молча.
+"$PHP_BIN" -r 'exit(extension_loaded("psr") ? 1 : 0);' \
+    || fail "$PHP_BIN загружает расширение psr, с ним Laravel не работает. Нужен PHP 8.3: PHP_BIN=/opt/alt/php83/usr/bin/php"
 missing=""
 for ext in bcmath ctype curl dom fileinfo intl mbstring openssl pdo_mysql tokenizer xml; do
     "$PHP_BIN" -r "exit(extension_loaded('$ext') ? 0 : 1);" || missing="$missing $ext"
