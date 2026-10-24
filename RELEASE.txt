@@ -1,2 +1,2 @@
-source: 17768f1713c7be99404c789e28a7d777cb0d33da
-subject: Merge pull request #19 from mtyso/claude/project-thread-nwvwj2
+source: 6e1dadcbbe9084e2f3ac31505d92eb527fd1f533
+subject: Merge pull request #21 from mtyso/claude/project-thread-h0ad0r
