@@ -13,7 +13,7 @@
 | № | Решение |
 |---|---|
 | D1 | Платформы: Android-приложение, веб и Telegram-бот. iPhone позже из того же кода, без переписывания. |
-| D2 | Сервер: Laravel 13, PHP 8.4, MariaDB 11.4 на AHost (cPanel), как в emerich-dealers. Код без функций, специфичных для одной СУБД: локально можно MySQL 8.4 или SQLite. |
+| D2 | Сервер: Laravel 13, PHP 8.3, MariaDB 11.4 на AHost (cPanel), как в emerich-dealers. Было 8.4, но на AHost `alt-php84` принудительно грузит расширения `psr` и `xdebug`, и Laravel с ними падает (24.10.2026). Код без функций, специфичных для одной СУБД: локально можно MySQL 8.4 или SQLite. |
 | D3 | Клиент: одна SPA на Vue 3 + TypeScript + Vite + Tailwind 4 + Vue Router + Pinia + vue-i18n. Веб открывает её в браузере, Capacitor собирает из неё Android-приложение. Inertia не используем: SPA должна работать внутри приложения без сервера страниц. |
 | D4 | Монорепозиторий: `server/` (Laravel), `app/` (Vue + Capacitor), `deploy/` (скрипты выкладки), `docs/`. |
 | D5 | Один поддомен на AHost: Laravel отдаёт `/api/*` и `/telegram/webhook`, все остальные адреса отдают собранную SPA (`server/public/index.html`). |

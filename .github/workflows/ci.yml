@@ -7,7 +7,7 @@ on:
 
 jobs:
   server:
-    name: Server (PHP 8.4, MariaDB 11.4)
+    name: Server (PHP 8.3, MariaDB 11.4)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
+          php-version: '8.3'
           extensions: bcmath, intl, pdo_mysql
           coverage: none
       - name: Cache Composer packages
