@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { CalendarClock, CalendarDays, ChartColumn, Clock, FingerprintPattern, HandCoins, Handshake, KeyRound, LayoutGrid, Lightbulb, LogOut, PieChart, Wallet } from 'lucide-vue-next'
+import NotifySettings from '@/components/NotifySettings.vue'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiRow from '@/components/ui/UiRow.vue'
@@ -134,6 +135,8 @@ onMounted(async () => {
       <h2 class="section-title">{{ $t('more.theme') }}</h2>
       <UiSegmented :model-value="settings.theme" :options="themeOptions" :label="$t('more.theme')" @update:model-value="setTheme" />
     </section>
+
+    <NotifySettings v-if="auth.user" />
 
     <section v-if="auth.user" class="flex flex-col gap-2">
       <h2 class="section-title">{{ $t('more.account') }}</h2>

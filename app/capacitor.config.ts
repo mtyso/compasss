@@ -6,6 +6,10 @@ const config: CapacitorConfig = {
   appId: 'uz.kompas.app',
   appName: 'Компас',
   webDir: 'dist',
+  plugins: {
+    // A notification that comes while the app is open still shows, as it would on the lock screen.
+    PushNotifications: { presentationOptions: ['alert', 'sound'] },
+  },
 }
 
 export default config

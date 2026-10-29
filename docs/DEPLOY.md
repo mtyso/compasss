@@ -145,6 +145,27 @@ $PHP artisan telegram:setup
 1. GitHub → Settings → Secrets and variables → Actions → Variables → New repository variable: `API_URL` = `https://compasss.uz` (адрес сайта).
 2. Actions → Android → Run workflow (ветка `main`). Через 3–4 минуты в запуске, внизу в Artifacts, скачать `kompas-apk-…`, распаковать и поставить `kompas.apk` на телефон. Подробнее — [README](../README.md#приложение-на-телефон).
 
+### 11. Пуш-уведомления на телефон (Firebase)
+
+Необязательно: без этого шага все уведомления приходят в бот, как раньше. Firebase бесплатен (D17, D36 в [PLAN.md](PLAN.md)).
+
+1. [console.firebase.google.com](https://console.firebase.google.com) → **Create a project**, название `kompas`, Google Analytics не нужен.
+2. В проекте: значок Android (**Add app**), Android package name — ровно `uz.kompas.app`, остальное пропустить. Скачать `google-services.json`.
+3. Файл — в секрет GitHub: на компьютере перевести его в base64 и скопировать. Windows: открыть PowerShell, перейти в папку с файлом (`cd $HOME\Downloads`) и выполнить `[Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path .\google-services.json))) | Set-Clipboard`; macOS: `base64 -i ~/Downloads/google-services.json | pbcopy`. Если браузер сохранил файл как `google-services (1).json`, взять это имя. Затем GitHub → Settings → Secrets and variables → Actions → Secrets → New repository secret: `GOOGLE_SERVICES_JSON_BASE64`, вставить строку. Сам файл в репозиторий не кладётся.
+4. Ключ сервера: в Firebase → значок шестерёнки → **Project settings → Service accounts → Generate new private key**. Скачается JSON с закрытым ключом: это пароль от отправки пушей, в чат и в репозиторий он не попадает. Загрузить его на сервер через cPanel → File Manager в `~/apps/kompas/storage/app/private/` под именем `firebase-service-account.json` и в cPanel → Terminal:
+
+   ```bash
+   cd ~/apps/kompas
+   chmod 600 storage/app/private/firebase-service-account.json
+   $PHP artisan optimize
+   ```
+
+   Обновления сайта файл не трогают: `storage/` живёт только на сервере. На компьютере скачанный ключ после загрузки лучше удалить.
+5. Actions → Android → Run workflow и поставить новый APK (шаг 10.2): только в сборке с секретом из пункта 3 работает переключатель телефона.
+6. Проверка: в приложении Настройки → «Уведомления» → включить «На этот телефон», разрешить уведомления, затем «Прислать проверочное» — через несколько секунд приходит «Уведомления работают». Там же «Куда присылать»: Telegram, телефон или оба.
+
+Если ключ отозвали или удалили в Firebase, сервер это заметит при первой отправке и на час вернёт все уведомления в бот (потом попробует снова). Так же он поступает, если Firebase 10 минут не отвечает. Новый ключ: снова пункт 4, а затем «Прислать проверочное» — после удачной проверки уведомления сразу снова идут на телефон.
+
 ## Обновление
 
 После пуша в `main` дождаться зелёного запуска Actions → Release, потом в cPanel → Terminal:
@@ -178,3 +199,4 @@ cd ~/apps/kompas && bash deploy/deploy-git.sh
 - **Вернуть прежнюю версию руками.** В конце каждого обновления скрипт печатает готовую команду отката (`git reset --hard <прежний коммит>` и кэши). Миграции назад сами не откатываются: базу возвращает дамп.
 - **«На сервере изменены файлы кода».** Кто-то правил файлы прямо на сервере. Ветка `release` перезаписывается целиком, поэтому правки делаются в репозитории. Выбросить серверные правки: `git checkout -- .` и запустить скрипт ещё раз.
 - **Приложение или бот получают страницу проверки вместо ответа.** Анти-бот защита: тикет из шага 2.4.
+- **Пуши не приходят.** «Прислать проверочное» говорит, в чём дело: «На сервере ещё не настроен Firebase» — нет файла ключа из шага 11.4 или после загрузки не выполнен `optimize`; «Firebase не принял уведомление» — смотреть `storage/logs/laravel-<дата>.log`, строки `FCM` и `Push is off`: там причина. `SENDER_ID_MISMATCH` значит, что ключ сервера (шаг 11.4) и `google-services.json` в приложении (шаг 11.3) из разных проектов Firebase: скачать оба из одного проекта и пересобрать APK. `did not take a message` с `cURL error` — сервер не может достучаться до Google, это вопрос в поддержку AHost. Если переключатель телефона серый с подписью «Заработают в следующей сборке приложения…», APK собран без секрета `GOOGLE_SERVICES_JSON_BASE64`. Пока пуши не работают, всё приходит в бот.

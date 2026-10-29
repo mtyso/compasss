@@ -47,6 +47,40 @@ describe('auth store', () => {
     expect((statusCall[1].headers as Headers).get('X-Login-Secret')).toBe('s3cret')
   })
 
+  it('brings the account up to date, unless something newer was saved meanwhile', async () => {
+    localStorage.setItem('kompas.token', JSON.stringify('1|abc'))
+    localStorage.setItem('kompas.user', JSON.stringify(user))
+    const auth = useAuth()
+    const fresh = { ...user, push: { available: true, devices: 1 } }
+
+    fetchMock.mockResolvedValueOnce(json(fresh))
+    await auth.refreshUser()
+    expect(auth.user?.push).toEqual({ available: true, devices: 1 })
+    expect(JSON.parse(localStorage.getItem('kompas.user')!).push.devices).toBe(1)
+
+    // The answer comes after a setting was saved: the saved one stays.
+    let answer!: (r: Response) => void
+    fetchMock.mockReturnValueOnce(new Promise<Response>((resolve) => (answer = resolve)))
+    const refreshing = auth.refreshUser()
+    auth.setUser({ ...fresh, settings: { notify_via: 'both' } })
+    answer(json(fresh))
+    await refreshing
+    expect(auth.user?.settings.notify_via).toBe('both')
+
+    fetchMock.mockRejectedValueOnce(new TypeError('offline'))
+    await auth.refreshUser()
+    expect(auth.user?.settings.notify_via).toBe('both')
+
+    // A check page instead of the account, and another device's language: neither replaces what is here.
+    fetchMock.mockResolvedValueOnce(new Response('<html>challenge</html>', { status: 200, headers: { 'Content-Type': 'text/html' } }))
+    await auth.refreshUser()
+    expect(auth.user?.name).toBe('Elyor')
+    fetchMock.mockResolvedValueOnce(json({ ...fresh, locale: 'uz', settings: { notify_via: 'push' } }))
+    await auth.refreshUser()
+    expect(auth.user?.locale).toBe('ru')
+    expect(auth.user?.settings.notify_via).toBe('push')
+  })
+
   it('stops when the sign-in is declined in the bot', async () => {
     fetchMock
       .mockResolvedValueOnce(json({ id: 'req1', secret: 's', link: 'https://t.me/bot', expires_at: new Date(Date.now() + 300_000).toISOString() }, 201))

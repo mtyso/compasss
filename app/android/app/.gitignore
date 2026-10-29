@@ -1,3 +1,5 @@
 /build/*
 !/build/.npmkeep
 release.keystore
+# Firebase config: CI writes it from a secret (docs/DEPLOY.md)
+google-services.json

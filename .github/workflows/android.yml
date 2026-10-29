@@ -21,6 +21,10 @@ jobs:
       # variables → Actions → Variables. The web build does not need it (same origin).
       VITE_API_URL: ${{ vars.API_URL }}
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      # Push notifications (docs/DEPLOY.md): google-services.json from Firebase, base64, as a secret.
+      # Without it the APK builds and runs, with push switched off.
+      HAS_FIREBASE: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 != '' }}
+      VITE_PUSH_ENABLED: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,6 +44,12 @@ jobs:
           fi
       - run: npm run build
       - run: npx cap sync android
+      - name: Firebase config for push notifications
+        if: env.HAS_FIREBASE == 'true'
+        working-directory: app/android
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 -d > app/google-services.json
 
       - name: Build a signed release APK
         if: env.HAS_KEYSTORE == 'true'

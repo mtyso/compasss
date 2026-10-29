@@ -10,6 +10,7 @@ import { useGoals } from '@/stores/goals'
 import { useHabits } from '@/stores/habits'
 import { useMoney } from '@/stores/money'
 import { usePlan } from '@/stores/plan'
+import { usePush } from '@/stores/push'
 import { useSettings } from '@/stores/settings'
 import { useTasks } from '@/stores/tasks'
 
@@ -31,6 +32,7 @@ watch(
       useGoals().reset()
       useDebts().reset()
       useCalendar().reset()
+      usePush().reset()
       router.replace({ name: 'login' })
     }
   },
@@ -43,6 +45,16 @@ watch(
       router.replace({ name: 'lock', query: { next: current.fullPath } })
     }
   },
+)
+
+// Each start, once in: the phone's notification token goes to the server again (D36), so a rotated
+// one is known and a phone in use is never forgotten as stale.
+watch(
+  () => auth.signedIn && auth.unlocked,
+  (open) => {
+    if (open) void usePush().refresh()
+  },
+  { immediate: true },
 )
 
 // The bot writes in the account's language, so keep it in step with the app's.

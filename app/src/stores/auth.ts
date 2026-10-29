@@ -9,6 +9,12 @@ import { readJson, writeJson } from '@/lib/storage'
 import { telegramApp } from '@/lib/telegram'
 import type { Locale } from '@/lib/format'
 
+/** Push notifications (D36): whether the server can push at all, and how many phones take them. */
+export interface PushState {
+  available: boolean
+  devices: number
+}
+
 export interface User {
   id: number
   name: string
@@ -17,6 +23,8 @@ export interface User {
   timezone: string
   base_currency: string
   settings: Record<string, unknown>
+  /** Missing in a session saved before push existed. */
+  push?: PushState
 }
 
 interface LoginStart {
@@ -62,6 +70,8 @@ export const useAuth = defineStore('auth', () => {
   /** The server's reason when the Mini App sign-in was refused, e.g. a foreign account. */
   const loginError = ref<string | null>(null)
   let pending: (LoginStart & { timer: number | null }) | null = null
+  // Bumped by every change of the account on this device, so an older reply cannot undo a newer one.
+  let userVersion = 0
 
   setApiToken(token.value)
   setUnauthorizedHandler(() => forget('revoked'))
@@ -70,6 +80,7 @@ export const useAuth = defineStore('auth', () => {
   const pinAttemptsLeft = computed(() => MAX_PIN_ATTEMPTS - pinAttempts.value)
 
   function saveSession(newToken: string, newUser: User): void {
+    userVersion++
     token.value = newToken
     user.value = newUser
     setApiToken(newToken)
@@ -78,12 +89,34 @@ export const useAuth = defineStore('auth', () => {
   }
 
   function setUser(next: User): void {
+    userVersion++
     user.value = next
     writeJson(USER_KEY, next)
   }
 
+  /**
+   * The account as the server has it now: the copy saved at sign-in does not know about a phone switched on
+   * since, or a choice made on another device. Quiet when offline: the saved copy will do.
+   */
+  async function refreshUser(): Promise<void> {
+    if (!token.value) return
+    const asked = userVersion
+    try {
+      const next = await api<User | null>('/me')
+      // Something saved meanwhile (a setting, the phone switched on) answered with the newer account; a page
+      // that is not the account (a host's check page) is no answer at all.
+      if (asked !== userVersion || !token.value || !next || typeof next !== 'object' || !('id' in next)) return
+      // The language stays this device's: App.vue sends it to the server when the two differ, and another
+      // device's choice must not be sent back over it.
+      setUser({ ...next, locale: user.value?.locale ?? next.locale })
+    } catch {
+      // Tried again the next time.
+    }
+  }
+
   /** Drops everything this device knows about the session, without calling the server. */
   function forget(reason: 'pin' | 'revoked' | null = null): void {
+    userVersion++
     cancelLogin()
     token.value = null
     user.value = null
@@ -262,6 +295,7 @@ export const useAuth = defineStore('auth', () => {
     loginLink,
     loginError,
     setUser,
+    refreshUser,
     logout,
     forget,
     startLogin,
