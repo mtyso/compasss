@@ -18,7 +18,7 @@ export interface Insight {
   status: 'new' | 'seen' | 'useful' | 'dismissed'
   title: string
   body: string
-  action: 'mark_one_off' | 'contribute' | 'pay' | 'add_payment' | 'returned' | 'roll' | null
+  action: 'mark_one_off' | 'contribute' | 'pay' | 'add_payment' | 'returned' | 'roll' | 'no_spending' | null
   /** What the action works on: the payment to pay, the suggestion to add as one, or the money lent. */
   ref: number | string | null
   created_at: string
@@ -109,6 +109,8 @@ export const useAdvisor = defineStore('advisor', () => {
       await useMoney().changed()
       if (insight.action === 'pay') await plan.loadPayments().catch(() => {})
     }
+    // «Трат не было» changes the «записываю» streak under the limit.
+    if (insight.action === 'no_spending') await plan.loadToday().catch(() => undefined)
     if (insight.action === 'returned' || insight.action === 'roll') {
       await Promise.all([useDebts().overview ? useDebts().load() : undefined, useGoals().loaded ? useGoals().load() : undefined, plan.loadToday().catch(() => undefined)])
     }

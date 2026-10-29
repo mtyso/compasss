@@ -59,9 +59,31 @@ export interface PaymentSuggestion {
   next_due_on: string
 }
 
+/** A money streak (docs/PLAN.md, D38), counted like a habit's: spare days for the daily ones, none for periods. */
+export interface MoneyStreak {
+  current: number
+  best: number
+  previous_best: number
+  unit: 'day' | 'period'
+  spare: number
+  next: number | null
+}
+
+export interface MoneyStreaks {
+  /** Days within the daily limit; `covered`: today is over and a spare day will take it. Null without accounts. */
+  limit: (MoneyStreak & { today: 'within' | 'over'; covered: boolean }) | null
+  /** Days with an operation or «Трат не было». */
+  records: MoneyStreak & { today: 'kept' | 'open'; no_spending: boolean }
+  /** Pay periods with every goal's contribution made; `today` is null when the period asks for nothing. */
+  contributions: ContributionStreak
+}
+
+export type ContributionStreak = MoneyStreak & { today: 'kept' | 'open' | null }
+
 export interface Today {
   date: string
   limit: DailyLimit
+  streaks: MoneyStreaks
   has_accounts: boolean
   next_income: IncomeSchedule | null
   payments: RecurringPayment[]
@@ -99,6 +121,12 @@ export const usePlan = defineStore('plan', () => {
 
   async function loadToday(): Promise<void> {
     today.value = await api<Today>('/today')
+  }
+
+  /** «Трат не было» for a day (today or a week back), or taking it back. */
+  async function markNoSpending(date: string, value: boolean): Promise<void> {
+    const result = await api<{ records: MoneyStreaks['records'] }>(`/days/${date}/no-spending`, { method: 'PUT', body: JSON.stringify({ value }) })
+    if (today.value) today.value = { ...today.value, streaks: { ...today.value.streaks, records: result.records } }
   }
 
   async function loadBudget(month: string): Promise<Budget> {
@@ -188,6 +216,7 @@ export const usePlan = defineStore('plan', () => {
     payments,
     suggestions,
     loadToday,
+    markNoSpending,
     loadBudget,
     saveBudget,
     loadIncomes,

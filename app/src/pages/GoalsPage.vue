@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { CircleCheck, Plus, Target } from 'lucide-vue-next'
+import { CircleCheck, Flame, Plus, Target } from 'lucide-vue-next'
 import ContributeSheet from '@/components/goals/ContributeSheet.vue'
 import GoalRow from '@/components/goals/GoalRow.vue'
 import GoalSheet from '@/components/goals/GoalSheet.vue'
@@ -92,6 +92,10 @@ const mode = computed<GoalMode>({
           <p v-else class="flex items-center gap-2.5 font-medium">
             <CircleCheck class="size-5 shrink-0 text-money" :stroke-width="2.2" />
             {{ $t('goals.periodDone', { date: periodEnd }) }}
+          </p>
+          <p v-if="plan.streak?.current" class="flex items-center gap-1.5 text-caption font-medium text-money">
+            <Flame class="size-3.5 shrink-0" :stroke-width="2.4" aria-hidden="true" />
+            {{ $t('streaks.contributionsLine', { n: plan.streak.current }, plan.streak.current) }}
           </p>
           <p class="text-caption text-ink-3">
             {{ $t('goals.monthlyTotal') }} <MoneyAmount :amount="plan.monthly_uzs" class="font-medium text-ink-2" />

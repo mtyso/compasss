@@ -7,6 +7,7 @@ import HabitButton from '@/components/things/HabitButton.vue'
 import HabitSheet from '@/components/things/HabitSheet.vue'
 import HabitValueSheet from '@/components/things/HabitValueSheet.vue'
 import HabitYear from '@/components/things/HabitYear.vue'
+import SpareDots from '@/components/things/SpareDots.vue'
 import StreakScale from '@/components/things/StreakScale.vue'
 import { habitIcon } from '@/components/things/habitIcons'
 import { useThingActions } from '@/components/things/useThingActions'
@@ -150,14 +151,7 @@ function saveValue(value: number): void {
           </div>
         </div>
         <p class="flex items-center gap-2 text-caption text-ink-2">
-          <span class="flex gap-1" aria-hidden="true">
-            <span
-              v-for="n in spareMax"
-              :key="n"
-              class="size-2.5 rounded-full"
-              :style="n <= streak.spare ? { backgroundColor: 'var(--c-habit)' } : { boxShadow: 'inset 0 0 0 1.5px color-mix(in srgb, var(--c-ink) 25%, transparent)' }"
-            />
-          </span>
+          <SpareDots :spare="streak.spare" :max="spareMax" color="var(--c-habit)" />
           {{ spareText }}
         </p>
         <StreakScale :streak="streak" />

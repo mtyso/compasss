@@ -20,6 +20,7 @@ import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import LimitCard from '@/components/plan/LimitCard.vue'
+import MoneyStreakLine from '@/components/plan/MoneyStreakLine.vue'
 import PaySheet from '@/components/plan/PaySheet.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
 import { isoDate } from '@/lib/dates'
@@ -150,7 +151,10 @@ function saveValue(value: number): void {
           <UiEmpty v-if="!today.has_accounts" :icon="Wallet" tone="money" :title="$t('today.limit')" :text="$t('today.limitEmpty')">
             <UiButton :to="{ name: 'account-new' }" size="sm">{{ $t('quickAdd.addAccount') }}</UiButton>
           </UiEmpty>
-          <LimitCard v-else :limit="today.limit" :income-name="today.next_income?.name" />
+          <template v-else>
+            <LimitCard :limit="today.limit" :income-name="today.next_income?.name" />
+            <MoneyStreakLine :streaks="today.streaks" />
+          </template>
 
           <section class="flex flex-col gap-3">
             <div class="flex items-baseline justify-between gap-3">
