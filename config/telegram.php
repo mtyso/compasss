@@ -27,6 +27,8 @@ return [
     // summary the advisor's insights wait, and the summary then carries them.
     'digest' => [
         'morning_at' => env('TELEGRAM_MORNING_AT', '08:00'),
+        // Not before advisor:run evening (21:00), whose «ничего не записано» it carries.
+        'evening_at' => env('TELEGRAM_EVENING_AT', '21:00'),
         'weekly_at' => env('TELEGRAM_WEEKLY_AT', '20:00'),
         'quiet_from' => env('TELEGRAM_QUIET_FROM', '22:00'),
     ],

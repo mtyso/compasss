@@ -36,6 +36,10 @@ return [
         'returned' => 'Вернул',
         'roll' => 'Перенести платёж',
         'calendar' => 'Календарь',
+        'no_spending' => 'Трат не было',
+        'all_records' => 'Все рекорды',
+        'open_habit' => 'Открыть привычку',
+        'open_goal' => 'Открыть цель',
     ],
 
     'record' => [
@@ -101,6 +105,40 @@ return [
         'habit_over' => ':value при лимите :target',
         'streak_days' => ':count день подряд|:count дня подряд|:count дней подряд',
         'streak_weeks' => ':count неделя подряд|:count недели подряд|:count недель подряд',
+        // The money streaks under the limit, as on «Сегодня» in the app (docs/PLAN.md, D38).
+        'streak_limit' => 'В лимите :count дн.',
+        'streak_records' => 'записи :count дн.',
+    ],
+
+    // 21:00: «ничего не записано» and the streaks that end tonight, in one message (docs/BOT.md).
+    'evening' => [
+        'title' => '🔥 Серии на сегодня',
+        'at_risk' => 'Оборвутся сегодня',
+        'habit' => ':name: :count день подряд, сегодня ещё не отмечено|:name: :count дня подряд, сегодня ещё не отмечено|:name: :count дней подряд, сегодня ещё не отмечено',
+        'habit_week' => ':name: :count неделя подряд, неделя кончается сегодня|:name: :count недели подряд, неделя кончается сегодня|:name: :count недель подряд, неделя кончается сегодня',
+        'records' => 'Записи: :count день подряд, сегодня ещё ничего не записано|Записи: :count дня подряд, сегодня ещё ничего не записано|Записи: :count дней подряд, сегодня ещё ничего не записано',
+        'no_spare' => 'Запасных дней нет: отметь сегодня, и серия продолжится.',
+        'no_spending_done' => 'Отмечено: сегодня без трат',
+        'no_spending_day' => 'Отмечено: :date без трат',
+        'too_late' => 'Этот день уже не отметить',
+    ],
+
+    // Milestones and records as they happen (App\Models\Record, docs/PLAN.md, D39).
+    'journal' => [
+        'title' => 'Новое в рекордах',
+    ],
+
+    // «Итог недели» in the Sunday summary (App\Streaks\WeekSummary).
+    'week' => [
+        'title' => 'Итог недели',
+        'limit' => 'В лимите',
+        'habits' => 'Привычки',
+        'goals' => 'В цели',
+        'days_of' => ':kept из :days дн.',
+        'of' => ':done из :asked',
+        'before' => ':value · неделей раньше :before',
+        'closer' => '«:goal» ближе на :count дн.',
+        'records' => 'Рекорды недели',
     ],
 
     'calendar' => [

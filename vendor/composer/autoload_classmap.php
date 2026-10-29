@@ -140,6 +140,7 @@ return array(
     'App\\Telegram\\Handlers\\InsightFlow' => $baseDir . '/app/Telegram/Handlers/InsightFlow.php',
     'App\\Telegram\\Handlers\\LoginFlow' => $baseDir . '/app/Telegram/Handlers/LoginFlow.php',
     'App\\Telegram\\Handlers\\RecordFlow' => $baseDir . '/app/Telegram/Handlers/RecordFlow.php',
+    'App\\Telegram\\Handlers\\StreaksFlow' => $baseDir . '/app/Telegram/Handlers/StreaksFlow.php',
     'App\\Telegram\\Handlers\\ThingsFlow' => $baseDir . '/app/Telegram/Handlers/ThingsFlow.php',
     'App\\Telegram\\Keyboard' => $baseDir . '/app/Telegram/Keyboard.php',
     'App\\Telegram\\Notifier' => $baseDir . '/app/Telegram/Notifier.php',

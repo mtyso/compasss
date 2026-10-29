@@ -629,6 +629,7 @@ class ComposerStaticInit291f9aa205efd4a82ef6006906af3d78
         'App\\Telegram\\Handlers\\InsightFlow' => __DIR__ . '/../..' . '/app/Telegram/Handlers/InsightFlow.php',
         'App\\Telegram\\Handlers\\LoginFlow' => __DIR__ . '/../..' . '/app/Telegram/Handlers/LoginFlow.php',
         'App\\Telegram\\Handlers\\RecordFlow' => __DIR__ . '/../..' . '/app/Telegram/Handlers/RecordFlow.php',
+        'App\\Telegram\\Handlers\\StreaksFlow' => __DIR__ . '/../..' . '/app/Telegram/Handlers/StreaksFlow.php',
         'App\\Telegram\\Handlers\\ThingsFlow' => __DIR__ . '/../..' . '/app/Telegram/Handlers/ThingsFlow.php',
         'App\\Telegram\\Keyboard' => __DIR__ . '/../..' . '/app/Telegram/Keyboard.php',
         'App\\Telegram\\Notifier' => __DIR__ . '/../..' . '/app/Telegram/Notifier.php',

@@ -4,6 +4,7 @@ namespace App\Telegram;
 
 use App\Calendar\Reminders;
 use App\Models\Insight;
+use App\Models\Record;
 use App\Models\User;
 use App\Telegram\Views\Cards;
 use Illuminate\Support\Carbon;
@@ -13,7 +14,8 @@ use Illuminate\Support\Collection;
  * The advisor's insights in the chat (docs/BOT.md). Alerts, warnings and good news go out on their own
  * within a minute, outside quiet hours; the rest waits for the morning summary or stays in the app.
  * An insight shown in the chat in any way gets 'telegram' in `sent_via` and is never sent again.
- * Calendar reminders go out here too (remind()), at the time the user chose.
+ * Calendar reminders go out here too (remind()), at the time the user chose, and so do new milestones and
+ * records of the journal, and the 21:00 message with the streaks that end tonight (evening()).
  */
 class Notifier
 {
@@ -22,6 +24,9 @@ class Notifier
 
     /** At most this many separate messages per user a minute: the rest come a minute later. */
     private const PER_RUN = 3;
+
+    /** A journal line dated earlier than yesterday is not news (docs/PLAN.md, D39). */
+    private const RECORD_NEWS_DAYS = 1;
 
     public function __construct(private TelegramClient $telegram, private Cards $cards, private Reminders $reminders) {}
 
@@ -50,6 +55,20 @@ class Notifier
         foreach ($insights as $insight) {
             $insight->update(['sent_via' => array_values(array_unique([...(array) $insight->sent_via, 'telegram']))]);
         }
+    }
+
+    /**
+     * New lines of the records journal to tell about, oldest first. One dated before yesterday is the journal
+     * filling in what came before it (its first run, a month judged late): it is marked told without a message.
+     *
+     * @return Collection<int, Record>
+     */
+    public static function newRecords(User $user, Carbon $now): Collection
+    {
+        $since = $now->copy()->subDays(self::RECORD_NEWS_DAYS)->toDateString();
+        $user->records()->whereNull('notified_at')->where('date', '<', $since)->update(['notified_at' => $now]);
+
+        return $user->records()->whereNull('notified_at')->orderBy('date')->orderBy('id')->get();
     }
 
     /** Besides those severities: the evening «nothing recorded today» and every payment reminder. */
@@ -110,7 +129,11 @@ class Notifier
             $due = self::unsent($user, $now)->filter(fn (Insight $i) => self::pushes($i))->take(self::PER_RUN);
 
             foreach ($due as $insight) {
-                $result = $this->telegram->sendCard($user->telegram_id, $this->cards->insight($insight, $user), $this->cards->insightKeyboard($insight, $user));
+                // «Ничего не записано» brings the streaks that end tonight, as the 21:00 message does.
+                [$card, $keyboard] = $insight->rule === 'forgot_to_record'
+                    ? [$this->cards->evening($user, $now, $insight), $this->cards->eveningKeyboard($user, $now, $insight)]
+                    : [$this->cards->insight($insight, $user), $this->cards->insightKeyboard($insight, $user)];
+                $result = $this->telegram->sendCard($user->telegram_id, $card, $keyboard);
 
                 // Telegram said no (blocked bot, bad markup): retrying every minute would not help.
                 // No answer at all: try again next minute.
@@ -119,8 +142,52 @@ class Notifier
                 }
                 $sent += ($result['ok'] ?? false) ? 1 : 0;
             }
+
+            $sent += $this->records($user, $now);
         }
 
         return $sent;
+    }
+
+    /**
+     * 21:00, right after advisor:run evening (bot:digest evening): «Сегодня ничего не записано» and the
+     * streaks that end tonight in one message, or either alone. The question is then sent, and run() leaves it.
+     *
+     * @return bool whether a message went out
+     */
+    public function evening(User $user, Carbon $now): bool
+    {
+        if (self::isQuiet($now)) {
+            return false;
+        }
+        $forgot = self::unsent($user, $now)->first(fn (Insight $i) => $i->rule === 'forgot_to_record');
+        $card = $this->cards->evening($user, $now, $forgot);
+        if ($card === null) {
+            return false;
+        }
+
+        $result = $this->telegram->sendCard($user->telegram_id, $card, $this->cards->eveningKeyboard($user, $now, $forgot));
+        if ($forgot !== null && (($result['ok'] ?? false) || isset($result['error_code']))) {
+            self::markSent([$forgot]);
+        }
+
+        return (bool) ($result['ok'] ?? false);
+    }
+
+    /** New milestones and records as one short message (docs/PLAN.md, D39); quiet hours hold them till morning. */
+    private function records(User $user, Carbon $now): int
+    {
+        $records = self::newRecords($user, $now);
+        if ($records->isEmpty()) {
+            return 0;
+        }
+
+        $result = $this->telegram->sendCard($user->telegram_id, $this->cards->journal($records, $user), $this->cards->journalKeyboard($records, $user));
+        // As with insights: a refusal would be refused again, no answer at all is worth another try.
+        if (($result['ok'] ?? false) || isset($result['error_code'])) {
+            $user->records()->whereKey($records->modelKeys())->update(['notified_at' => $now]);
+        }
+
+        return ($result['ok'] ?? false) ? 1 : 0;
     }
 }
