@@ -4,9 +4,12 @@ namespace App\Telegram\Handlers;
 
 use App\Habits\HabitProgress;
 use App\Models\User;
+use App\Streaks\RecordKeeper;
 use App\Telegram\TelegramClient;
 use App\Telegram\Views\Cards;
 use App\Telegram\Views\Fmt;
+use Illuminate\Support\Carbon;
+use Throwable;
 
 /**
  * The task and habit buttons under the day's summary: «☑️ Позвонить в банк» ticks a task off
@@ -14,7 +17,7 @@ use App\Telegram\Views\Fmt;
  */
 class ThingsFlow
 {
-    public function __construct(private TelegramClient $telegram, private Cards $cards) {}
+    public function __construct(private TelegramClient $telegram, private Cards $cards, private RecordKeeper $keeper) {}
 
     public function onCallback(array $query, User $user): void
     {
@@ -58,22 +61,27 @@ class ThingsFlow
 
     /**
      * A check habit becomes done (only done: a double tap must not undo it, the app does that);
-     * a count or limit one gets one more for today.
+     * a count or limit one gets one more for the day, today unless the evening message says otherwise.
      */
-    private function logHabit(User $user, int $id): ?string
+    public function logHabit(User $user, int $id, ?Carbon $day = null): ?string
     {
         $habit = $user->habits()->whereNull('archived_at')->find($id);
         if (! $habit) {
             return null;
         }
 
-        $today = now()->startOfDay();
-        $date = $today->toDateString();
-        $current = HabitProgress::for($habit, $today)->value($today);
+        $day = ($day ?? now())->copy()->startOfDay();
+        $date = $day->toDateString();
+        $current = HabitProgress::for($habit, $day)->value($day);
         $value = $habit->type === 'check' ? 1 : $current + 1;
 
-        // As HabitController::log for today.
+        // As HabitController::log, a milestone or a record included: bot:notify then tells about it.
         $habit->logs()->updateOrCreate(['date' => $date], ['value' => $value, 'user_id' => $habit->user_id]);
+        try {
+            $this->keeper->habit($user, $habit, now());
+        } catch (Throwable $e) {
+            report($e);
+        }
 
         if ($habit->type === 'check') {
             return __('bot.things.habit_done', ['name' => $habit->name], $user->locale);
