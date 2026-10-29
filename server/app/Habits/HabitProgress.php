@@ -192,7 +192,10 @@ final class HabitProgress
         return $periods;
     }
 
-    /** Times the week of $day asks for: «N раз в неделю», fewer when a pause leaves fewer free days. */
+    /**
+     * Times the week of $day asks for: «N раз в неделю», and in step with the free days when a pause
+     * takes some: three times a week with two free days asks once.
+     */
     private function weekNeed(Carbon $day): int
     {
         $start = $day->copy()->startOfWeek(Carbon::MONDAY);
@@ -201,7 +204,7 @@ final class HabitProgress
             $free += $this->isPaused($d) ? 0 : 1;
         }
 
-        return min((int) $this->habit->perWeek(), $free);
+        return intdiv((int) $this->habit->perWeek() * $free + 6, 7);
     }
 
     /** Days kept in the week of $day, up to today. */

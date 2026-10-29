@@ -185,6 +185,16 @@ it('asks fewer times of a paused week and gives a spare week for four kept ones'
     logHabit($this, $habit, '2026-10-19')->assertJsonPath('streak.current', 5)->assertJsonPath('today.state', 'off');
 });
 
+it('asks of a paused week in step with its free days', function () {
+    // Three times a week; this week is away from Wednesday, so Monday and Tuesday ask once.
+    $habit = newHabit($this, ['name' => 'Бег', 'type' => 'check', 'schedule' => ['per_week' => 3]], '2026-10-12');
+    foreach (['2026-10-12', '2026-10-14', '2026-10-16'] as $date) {
+        logHabit($this, $habit, $date);
+    }
+    $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-21', 'ends_on' => '2026-10-25'], $this->auth)->assertCreated();
+    logHabit($this, $habit, '2026-10-19')->assertJsonPath('streak.current', 2)->assertJsonPath('today.state', 'off');
+});
+
 it('shows a habit\'s year, its numbers and the days of the main goal it saved', function () {
     $habit = newHabit($this, ['name' => 'Без доставки', 'type' => 'check', 'saves_uzs' => 40000, 'schedule' => ['days' => [1, 2, 3, 4, 5, 6, 7]]], '2026-10-12');
     foreach (['12', '13', '14', '16', '17', '18', '19', '20'] as $day) {
