@@ -49,7 +49,7 @@ it('counts a daily streak that today does not break until it is over', function 
     }
 
     $today = $this->getJson('/api/habits', $this->auth)->json('0');
-    expect($today['streak'])->toBe(['current' => 4, 'best' => 4, 'unit' => 'day'])
+    expect($today['streak'])->toBe(['current' => 4, 'best' => 4, 'previous_best' => 2, 'unit' => 'day', 'spare' => 0, 'next' => 7])
         ->and($today['today']['state'])->toBe('open')
         ->and(collect($today['days'])->pluck('kept')->all())->toBe([false, false, true, true, true, true, false]);
 
@@ -93,7 +93,7 @@ it('counts weeks for a times-a-week habit', function () {
     }
 
     $api = $habit->fresh()->toApi();
-    expect($api['streak'])->toBe(['current' => 1, 'best' => 1, 'unit' => 'week'])
+    expect($api['streak'])->toBe(['current' => 1, 'best' => 1, 'previous_best' => 0, 'unit' => 'week', 'spare' => 0, 'next' => 4])
         ->and($api['week_count'])->toBe(1)->and($api['today']['state'])->toBe('open');
 
     logHabit($this, $habit, '2026-10-21');
@@ -132,4 +132,102 @@ it('puts today\'s tasks and habits on «Сегодня»', function () {
     expect(collect($today->json('tasks'))->pluck('title')->all())->toBe(['Overdue', 'Urgent today', 'Today'])
         ->and($today->json('tasks_later'))->toBe(2)
         ->and(collect($today->json('habits'))->pluck('name')->all())->toBe(['Every day']);
+});
+
+// Spares, pauses and the habit's screen (docs/PLAN.md, D37).
+
+it('covers one missed day with a spare earned by seven kept days', function () {
+    $habit = newHabit($this, ['name' => 'Зарядка', 'type' => 'check', 'schedule' => ['days' => [1, 2, 3, 4, 5, 6, 7]]], '2026-10-10');
+    // 10–16 kept (7 days, a spare), 17 missed, 18–20 kept.
+    foreach (['10', '11', '12', '13', '14', '15', '16', '18', '19', '20'] as $day) {
+        logHabit($this, $habit, "2026-10-{$day}");
+    }
+
+    $api = $habit->fresh()->toApi();
+    expect($api['streak'])->toBe(['current' => 10, 'best' => 10, 'previous_best' => 0, 'unit' => 'day', 'spare' => 0, 'next' => 14])
+        ->and(collect($api['days'])->firstWhere('date', '2026-10-17'))->toMatchArray(['kept' => false, 'spared' => true]);
+
+    // A second miss with no spare left breaks it.
+    $this->travelTo(Carbon::parse('2026-10-23 09:00', 'Asia/Tashkent'));
+    expect($habit->fresh()->toApi()['streak']['current'])->toBe(0);
+});
+
+it('lets a pause hold a streak and takes paused habits off today', function () {
+    $run = newHabit($this, ['name' => 'Бег', 'type' => 'check', 'schedule' => ['days' => [1, 2, 3, 4, 5, 6, 7]]], '2026-10-14');
+    $coffee = newHabit($this, ['name' => 'Кофе', 'type' => 'limit', 'target' => 2, 'schedule' => ['days' => [1, 2, 3, 4, 5, 6, 7]]], '2026-10-14');
+    foreach (['14', '15', '16', '19'] as $day) {
+        logHabit($this, $run, "2026-10-{$day}");
+    }
+    // Ill from the 17th: the 19th was kept anyway; nothing to do today.
+    $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-17', 'ends_on' => '2026-10-22'], $this->auth)->assertCreated();
+    logHabit($this, $coffee, '2026-10-18', 5);
+
+    $api = $run->fresh()->toApi();
+    expect($api['streak']['current'])->toBe(4)
+        ->and($api['today']['state'])->toBe('off')
+        ->and(collect($api['days'])->firstWhere('date', '2026-10-18'))->toMatchArray(['paused' => true, 'kept' => false]);
+    // A limit broken in a pause does not break it; days with nothing logged in it count neither way.
+    expect($coffee->fresh()->toApi()['streak']['current'])->toBe(3);
+
+    $this->getJson('/api/today', $this->auth)->assertJsonCount(1, 'habits')->assertJsonPath('habits.0.name', 'Кофе');
+});
+
+it('asks fewer times of a paused week and gives a spare week for four kept ones', function () {
+    // Twice a week from Monday 14 Sep; weeks of 14, 21, 28 Sep and 5 Oct kept, 12 Oct missed.
+    $habit = newHabit($this, ['name' => 'Зал', 'type' => 'check', 'schedule' => ['per_week' => 2]], '2026-09-14');
+    foreach (['2026-09-14', '2026-09-15', '2026-09-21', '2026-09-22', '2026-09-28', '2026-09-29', '2026-10-05', '2026-10-06'] as $date) {
+        logHabit($this, $habit, $date);
+    }
+    expect($habit->fresh()->toApi()['streak'])->toMatchArray(['current' => 4, 'spare' => 0]);
+
+    // This week is away from Tuesday: Monday alone is enough.
+    $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-20', 'ends_on' => '2026-10-25'], $this->auth)->assertCreated();
+    logHabit($this, $habit, '2026-10-19')->assertJsonPath('streak.current', 5)->assertJsonPath('today.state', 'off');
+});
+
+it('asks of a paused week in step with its free days', function () {
+    // Three times a week; this week is away from Wednesday, so Monday and Tuesday ask once.
+    $habit = newHabit($this, ['name' => 'Бег', 'type' => 'check', 'schedule' => ['per_week' => 3]], '2026-10-12');
+    foreach (['2026-10-12', '2026-10-14', '2026-10-16'] as $date) {
+        logHabit($this, $habit, $date);
+    }
+    $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-21', 'ends_on' => '2026-10-25'], $this->auth)->assertCreated();
+    logHabit($this, $habit, '2026-10-19')->assertJsonPath('streak.current', 2)->assertJsonPath('today.state', 'off');
+});
+
+it('shows a habit\'s year, its numbers and the days of the main goal it saved', function () {
+    $habit = newHabit($this, ['name' => 'Без доставки', 'type' => 'check', 'saves_uzs' => 40000, 'schedule' => ['days' => [1, 2, 3, 4, 5, 6, 7]]], '2026-10-12');
+    foreach (['12', '13', '14', '16', '17', '18', '19', '20'] as $day) {
+        logHabit($this, $habit, "2026-10-{$day}");
+    }
+    // The main goal puts aside 3 044 000 a month, about 100 000 a day.
+    $this->postJson('/api/goals', ['type' => 'save', 'title' => 'Машина', 'target_amount' => 100_000_000, 'currency' => 'UZS', 'monthly_amount' => 3_043_750], $this->auth)->assertCreated();
+
+    $history = $this->getJson("/api/habits/{$habit->id}/history", $this->auth)->assertOk();
+    $days = collect($history->json('days'));
+    expect($days)->toHaveCount(52 * 7 + 3)
+        ->and($days->first()['date'])->toBe('2025-10-20')
+        ->and($days->last())->toBe(['date' => '2026-10-21', 'value' => 0, 'state' => 'open'])
+        ->and($days->firstWhere('date', '2026-10-11')['state'])->toBe('none')
+        ->and($days->firstWhere('date', '2026-10-15')['state'])->toBe('missed')
+        ->and($history->json('habit.streak.current'))->toBe(5)
+        ->and($history->json('stats'))->toMatchArray([
+            'rate' => round(8 / 9, 3), 'rate_over' => '30d', 'kept_days' => 8, 'total_value' => null,
+            'saved_uzs' => 320000, 'streak_saved_uzs' => 200000,
+        ])
+        ->and($history->json('goal'))->toMatchArray(['title' => 'Машина', 'days' => 3, 'streak_days' => 2]);
+});
+
+it('checks the dates of a pause and ends one early', function () {
+    $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-01', 'ends_on' => '2026-10-10'], $this->auth)->assertJsonValidationErrors('starts_on');
+    $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-25', 'ends_on' => '2026-10-24'], $this->auth)->assertJsonValidationErrors('ends_on');
+    $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-21', 'ends_on' => '2027-02-01'], $this->auth)->assertJsonValidationErrors('ends_on');
+
+    $id = $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-20', 'ends_on' => '2026-10-30'], $this->auth)->assertCreated()->json('id');
+    $this->postJson('/api/habit-pauses', ['starts_on' => '2026-10-30', 'ends_on' => '2026-11-02'], $this->auth)->assertJsonValidationErrors('starts_on');
+
+    $this->patchJson("/api/habit-pauses/{$id}", ['ends_on' => '2026-10-21'], $this->auth)->assertOk()->assertJsonPath('ends_on', '2026-10-21');
+    $this->getJson('/api/habit-pauses', $this->auth)->assertJsonCount(1)->assertJsonPath('0.starts_on', '2026-10-20');
+    $this->deleteJson("/api/habit-pauses/{$id}", [], $this->auth)->assertNoContent();
+    $this->getJson('/api/habit-pauses', $this->auth)->assertJsonCount(0);
 });

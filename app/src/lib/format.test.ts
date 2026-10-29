@@ -6,6 +6,7 @@ import {
   formatDayMonthShort,
   formatMoney,
   formatMonthName,
+  formatMonthShort,
   formatMonthTitle,
   formatMonthUntil,
   formatNumber,
@@ -81,6 +82,12 @@ describe('short dates and month names', () => {
     expect(formatMonthName('2026-10')).toBe('Октябрь')
     expect(formatMonthName('2027-05')).toBe('Май')
     expect(formatMonthName('2026-10', 'uz')).toBe('Oktabr')
+  })
+
+  it('cuts the month to three letters, June and July apart in Uzbek', () => {
+    expect(formatMonthShort('2026-06')).toBe('Июн')
+    expect(formatMonthShort('2026-07')).toBe('Июл')
+    expect([formatMonthShort('2026-06', 'uz'), formatMonthShort('2026-07', 'uz')]).toEqual(['Iyn', 'Iyl'])
   })
 })
 

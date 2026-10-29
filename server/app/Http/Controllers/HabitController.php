@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Advisor\AdvisorContext;
+use App\Goals\GoalMath;
+use App\Habits\HabitProgress;
 use App\Models\Category;
 use App\Models\Habit;
+use App\Models\User;
+use App\Streaks\RecordKeeper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class HabitController extends Controller
 {
@@ -56,8 +62,47 @@ class HabitController extends Controller
         return response()->json($habit->toApi());
     }
 
+    /**
+     * A habit's screen (docs/PLAN.md, D37): the habit, every day of the last 53 weeks for the map, its
+     * numbers, and what the money it saved means for the main goal.
+     */
+    public function history(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        $habit = $user->habits()->findOrFail($id);
+        $today = now()->startOfDay();
+        $history = HabitProgress::for($habit, $today, wholeHistory: true)->history($today->copy()->startOfWeek(Carbon::MONDAY)->subWeeks(52));
+
+        return response()->json([
+            'habit' => $habit->toApi($today),
+            ...$history,
+            'goal' => $this->goalDays($user, $history['stats'], now()),
+        ]);
+    }
+
+    /**
+     * «= N дней накоплений на Dongfeng»: the money a habit saved, in days of the main goal's
+     * contributions, the same arithmetic as «Можно ли купить?».
+     *
+     * @param  array<string, mixed>  $stats
+     * @return array{id: int, title: string, days: int, streak_days: int}|null
+     */
+    private function goalDays(User $user, array $stats, Carbon $now): ?array
+    {
+        if (! $stats['saved_uzs']) {
+            return null;
+        }
+        $main = (new AdvisorContext($user, $now, 'check'))->goals()->mainSaving();
+        if ($main === null) {
+            return null;
+        }
+        $days = fn (?int $uzs) => (int) round(($uzs ?? 0) / $main->monthlyUzs * GoalMath::MONTH_DAYS);
+
+        return ['id' => $main->goal->id, 'title' => $main->goal->title, 'days' => $days($stats['saved_uzs']), 'streak_days' => $days($stats['streak_saved_uzs'])];
+    }
+
     /** Sets how much was done on a day (one tap on a check habit sends 1, tapping again 0). */
-    public function log(Request $request, int $id, string $date): JsonResponse
+    public function log(Request $request, RecordKeeper $keeper, int $id, string $date): JsonResponse
     {
         $habit = $request->user()->habits()->findOrFail($id);
         $value = (int) $request->validate(['value' => ['required', 'integer', 'min:0', 'max:100000']])['value'];
@@ -77,6 +122,12 @@ class HabitController extends Controller
         // A day logged before the habit was added moves its start back, so it counts.
         if ($value > 0 && $day->lt($habit->startDate())) {
             $habit->update(['started_on' => $date]);
+        }
+        // A milestone or a record goes into the journal at the tap that makes it (docs/PLAN.md, D39).
+        try {
+            $keeper->habit($request->user(), $habit, now());
+        } catch (Throwable $e) {
+            report($e);
         }
 
         return response()->json($habit->toApi());

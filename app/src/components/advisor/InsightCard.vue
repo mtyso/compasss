@@ -34,9 +34,16 @@ async function run(task: () => Promise<void>, done?: string): Promise<void> {
   }
 }
 
+const ACT_DONE: Partial<Record<NonNullable<Insight['action']>, string>> = {
+  contribute: 'goals.contributed',
+  mark_one_off: 'advice.markedOneOff',
+  no_spending: 'streaks.noSpendingDone',
+}
+
 function act(): void {
   haptics.impact('light')
-  run(() => advisor.act(props.insight), props.insight.action === 'contribute' ? t('goals.contributed') : t('advice.markedOneOff'))
+  const done = props.insight.action ? ACT_DONE[props.insight.action] : undefined
+  run(() => advisor.act(props.insight), done ? t(done) : undefined)
 }
 
 /** «Оплачено» on a reminder; a payment one tap cannot pay (no account, another currency) opens its form. */
@@ -109,6 +116,9 @@ function mute(): void {
       </UiButton>
       <UiButton v-else-if="insight.action === 'contribute'" size="sm" :loading="busy" @click="act">
         {{ $t('goals.contribute') }}
+      </UiButton>
+      <UiButton v-else-if="insight.action === 'no_spending'" size="sm" variant="secondary" :loading="busy" @click="act">
+        {{ $t('streaks.noSpending') }}
       </UiButton>
       <UiButton v-else-if="insight.action === 'pay'" size="sm" :loading="busy" @click="pay">
         {{ $t('payments.pay') }}

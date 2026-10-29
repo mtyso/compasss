@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { CircleCheck, Plus, Target } from 'lucide-vue-next'
+import { CircleCheck, Flame, Plus, ScrollText, Target } from 'lucide-vue-next'
 import ContributeSheet from '@/components/goals/ContributeSheet.vue'
 import GoalRow from '@/components/goals/GoalRow.vue'
 import GoalSheet from '@/components/goals/GoalSheet.vue'
@@ -11,6 +11,7 @@ import ScreenHeader from '@/components/ui/ScreenHeader.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiIconButton from '@/components/ui/UiIconButton.vue'
+import UiRow from '@/components/ui/UiRow.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
 import { showToast } from '@/components/ui/toast'
 import { formatDayMonth } from '@/lib/format'
@@ -93,6 +94,10 @@ const mode = computed<GoalMode>({
             <CircleCheck class="size-5 shrink-0 text-money" :stroke-width="2.2" />
             {{ $t('goals.periodDone', { date: periodEnd }) }}
           </p>
+          <p v-if="plan.streak?.current" class="flex items-center gap-1.5 text-caption font-medium text-money">
+            <Flame class="size-3.5 shrink-0" :stroke-width="2.4" aria-hidden="true" />
+            {{ $t('streaks.contributionsLine', { n: plan.streak.current }, plan.streak.current) }}
+          </p>
           <p class="text-caption text-ink-3">
             {{ $t('goals.monthlyTotal') }} <MoneyAmount :amount="plan.monthly_uzs" class="font-medium text-ink-2" />
           </p>
@@ -118,6 +123,12 @@ const mode = computed<GoalMode>({
           <UiSegmented v-model="mode" :options="modeOptions" :label="$t('goals.modeTitle')" />
           <p class="text-caption text-ink-2">{{ $t(`goals.modeHints.${mode}`) }}</p>
         </section>
+
+        <div class="group">
+          <UiRow :to="{ name: 'records' }" :title="$t('records.link')" :subtitle="$t('records.linkHint')">
+            <template #leading><ScrollText class="size-[22px]" :stroke-width="1.9" /></template>
+          </UiRow>
+        </div>
       </template>
     </template>
 

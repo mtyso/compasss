@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { Archive, ArchiveRestore, CalendarCheck, Crown, Pencil, Plus, Repeat } from 'lucide-vue-next'
+import { Archive, ArchiveRestore, CalendarCheck, Crown, Flame, Pencil, Plus, Repeat } from 'lucide-vue-next'
 import BuySheet from '@/components/goals/BuySheet.vue'
 import ContributeSheet from '@/components/goals/ContributeSheet.vue'
 import GoalIcon from '@/components/goals/GoalIcon.vue'
@@ -281,6 +281,10 @@ function bought(debt: { id: number } | null): void {
           <template v-else-if="goal.period.planned > 0">{{ $t('goals.periodMade') }}</template>
           <template v-else>{{ $t('goals.periodNone') }}</template>
         </p>
+        <p v-if="detail.streak?.current" class="-mt-1 flex items-center gap-1.5 text-caption font-medium text-money">
+          <Flame class="size-3.5 shrink-0" :stroke-width="2.4" aria-hidden="true" />
+          {{ $t('streaks.contributionsLine', { n: detail.streak.current }, detail.streak.current) }}
+        </p>
         <UiButton v-if="goal.period.due > 0" @click="contributeOpen = true">{{ goal.type === 'debt' ? $t('goals.pay') : $t('goals.contribute') }}</UiButton>
         <UiButton v-else variant="secondary" size="sm" class="self-start !bg-bg" @click="contributeOpen = true">{{ goal.type === 'debt' ? $t('goals.payMore') : $t('goals.contributeMore') }}</UiButton>
       </section>
@@ -390,7 +394,7 @@ function bought(debt: { id: number } | null): void {
       <section class="flex flex-col gap-3">
         <h2 class="section-title">{{ $t('goals.habits') }}</h2>
         <div class="group">
-          <HabitRow v-for="habit in goalHabits" :key="habit.id" :habit="habit" compact @tap="logHabit(habit)" @hold="openHabit(habit)" @open="openHabit(habit)" />
+          <HabitRow v-for="habit in goalHabits" :key="habit.id" :habit="habit" compact @tap="logHabit(habit)" @hold="openHabit(habit)" @open="router.push({ name: 'habit', params: { id: habit.id } })" />
           <UiRow :title="$t('goals.addHabit')" :subtitle="goalHabits.length ? undefined : $t('goals.habitsHint')" tone="muted" :chevron="false" @click="openHabit(null)">
             <template #leading><span class="grid size-[22px] place-items-center text-ink-3"><Repeat class="size-5" :stroke-width="2.2" /></span></template>
           </UiRow>

@@ -2,10 +2,11 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Archive, CalendarDays, CheckCheck, ListChecks, Plus, Repeat } from 'lucide-vue-next'
+import { Archive, CalendarDays, CheckCheck, ListChecks, PauseCircle, Plus, Repeat } from 'lucide-vue-next'
 import HabitRow from '@/components/things/HabitRow.vue'
 import HabitSheet from '@/components/things/HabitSheet.vue'
 import HabitValueSheet from '@/components/things/HabitValueSheet.vue'
+import PauseSheet from '@/components/things/PauseSheet.vue'
 import PaymentTaskRow from '@/components/things/PaymentTaskRow.vue'
 import TaskRow from '@/components/things/TaskRow.vue'
 import TaskSheet from '@/components/things/TaskSheet.vue'
@@ -20,7 +21,8 @@ import UiProgress from '@/components/ui/UiProgress.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
 import { showToast } from '@/components/ui/toast'
-import { isoDate } from '@/lib/dates'
+import { isoDate, shiftDate } from '@/lib/dates'
+import { formatDayMonth } from '@/lib/format'
 import { haptics } from '@/lib/haptics'
 import { scheduleLabel } from '@/lib/habits'
 import { readJson, writeJson } from '@/lib/storage'
@@ -65,7 +67,7 @@ const viewOptions = computed(() => VIEWS.map((value) => ({ value, label: t(`task
 
 async function load(): Promise<void> {
   try {
-    await Promise.all([tasks.load(), habits.load(), plan.loadPayments(), money.ensureLoaded(), view.value === 'done' ? tasks.loadDone() : null])
+    await Promise.all([tasks.load(), habits.load(), habits.loadPauses(), plan.loadPayments(), money.ensureLoaded(), view.value === 'done' ? tasks.loadDone() : null])
     failed.value = false
   } catch {
     failed.value = true
@@ -153,6 +155,37 @@ const valueHabit = ref<Habit | null>(null)
 function openHabit(habit: Habit | null): void {
   editingHabit.value = habit
   habitSheetOpen.value = true
+}
+
+function showHabit(habit: Habit): void {
+  void router.push({ name: 'habit', params: { id: habit.id } })
+}
+
+// A pause for all habits (docs/PLAN.md, D37): set or move one ahead in the sheet, end one under way here.
+const pauseSheetOpen = ref(false)
+const pauseText = computed(() => {
+  const active = habits.activePause
+  if (active) return t('habits.pause.active', { date: formatDayMonth(active.ends_on, settings.locale) })
+  const next = habits.nextPause
+  return next ? t('habits.pause.upcoming', { from: formatDayMonth(next.starts_on, settings.locale), to: formatDayMonth(next.ends_on, settings.locale) }) : null
+})
+const endingPause = ref(false)
+
+/** Ending a pause today: today counts again. One that began today simply goes. */
+async function endPause(): Promise<void> {
+  const pause = habits.activePause
+  if (!pause || endingPause.value) return
+  endingPause.value = true
+  try {
+    if (pause.starts_on >= today) await habits.removePause(pause.id)
+    else await habits.savePause({ ends_on: shiftDate(today, -1) }, pause.id)
+    haptics.notify('success')
+    showToast({ message: t('habits.pause.ended') })
+  } catch {
+    showToast({ message: t('habits.pause.failed'), tone: 'danger' })
+  } finally {
+    endingPause.value = false
+  }
 }
 
 function adjustHabit(habit: Habit): void {
@@ -270,6 +303,15 @@ function openNew(): void {
         </UiEmpty>
 
         <template v-else>
+          <article v-if="habits.activePause" class="card flex items-start gap-3 p-4" data-panel>
+            <PauseCircle class="size-6 shrink-0 text-ink-2" :stroke-width="2" />
+            <div class="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+              <span class="font-semibold">{{ pauseText }}</span>
+              <span class="text-caption text-ink-2">{{ $t('habits.pause.activeHint') }}</span>
+              <UiButton variant="secondary" size="sm" class="mt-2 !bg-bg" :loading="endingPause" @click="endPause">{{ $t('habits.pause.end') }}</UiButton>
+            </div>
+          </article>
+
           <article v-if="habits.forToday.length" class="card flex flex-col gap-3 p-5">
             <div class="flex items-baseline justify-between gap-3">
               <span class="text-sm font-medium text-ink-2">{{ $t('habits.summary', { done: doneToday, total: habits.forToday.length }) }}</span>
@@ -285,7 +327,7 @@ function openNew(): void {
               :habit="habit"
               @tap="logHabit(habit)"
               @hold="adjustHabit(habit)"
-              @open="openHabit(habit)"
+              @open="showHabit(habit)"
             />
             <UiRow :title="$t('habits.new')" tone="muted" :chevron="false" @click="openHabit(null)">
               <template #leading>
@@ -304,11 +346,24 @@ function openNew(): void {
                 class="opacity-70"
                 @tap="logHabit(habit)"
                 @hold="adjustHabit(habit)"
-                @open="openHabit(habit)"
+                @open="showHabit(habit)"
               />
             </div>
           </section>
         </template>
+
+        <div v-if="habits.active.length && !habits.activePause" class="group">
+          <UiRow
+            :title="habits.nextPause ? pauseText! : $t('habits.pause.row')"
+            :subtitle="$t('habits.pause.rowHint')"
+            tone="muted"
+            @click="pauseSheetOpen = true"
+          >
+            <template #leading>
+              <span class="grid size-10 place-items-center text-ink-3"><PauseCircle class="size-5" :stroke-width="2" /></span>
+            </template>
+          </UiRow>
+        </div>
 
         <section v-if="habits.archived.length" class="flex flex-col gap-1.5">
           <h2 class="section-title flex items-center gap-1.5"><Archive class="size-3.5" :stroke-width="2.2" />{{ $t('habits.archived') }}</h2>
@@ -336,6 +391,7 @@ function openNew(): void {
     <PaySheet v-model:open="paySheetOpen" :payment="paying" @edit="editPayment" />
     <HabitSheet v-model:open="habitSheetOpen" :habit="editingHabit" />
     <HabitValueSheet v-model:open="valueSheetOpen" :habit="valueHabit" @save="saveValue" />
+    <PauseSheet v-model:open="pauseSheetOpen" :pause="habits.nextPause" />
   </div>
 </template>
 

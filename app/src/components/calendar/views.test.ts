@@ -44,7 +44,7 @@ function habit(id: number, name: string, type: Habit['type']): Habit {
   return {
     id, name, type, target: type === 'check' ? 1 : 8, unit: null, schedule: { days: [1, 2, 3, 4, 5, 6, 7] }, color: 'blue', icon: null,
     sort: 0, started_on: '2026-01-01', archived: false, today: { value: 0, state: 'open' }, week_count: null,
-    streak: { current: 0, best: 0, unit: 'day' }, days: [], goal_id: null, saves_uzs: null,
+    streak: { current: 0, best: 0, previous_best: 0, unit: 'day', spare: 0, next: 7 }, days: [], goal_id: null, saves_uzs: null,
   }
 }
 

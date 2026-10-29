@@ -20,6 +20,8 @@ import UiIconButton from '@/components/ui/UiIconButton.vue'
 import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import LimitCard from '@/components/plan/LimitCard.vue'
+import MoneyStreakLine from '@/components/plan/MoneyStreakLine.vue'
+import WeekSummaryCard from '@/components/plan/WeekSummaryCard.vue'
 import PaySheet from '@/components/plan/PaySheet.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
 import { isoDate } from '@/lib/dates'
@@ -150,7 +152,12 @@ function saveValue(value: number): void {
           <UiEmpty v-if="!today.has_accounts" :icon="Wallet" tone="money" :title="$t('today.limit')" :text="$t('today.limitEmpty')">
             <UiButton :to="{ name: 'account-new' }" size="sm">{{ $t('quickAdd.addAccount') }}</UiButton>
           </UiEmpty>
-          <LimitCard v-else :limit="today.limit" :income-name="today.next_income?.name" />
+          <template v-else>
+            <LimitCard :limit="today.limit" :income-name="today.next_income?.name" />
+            <MoneyStreakLine :streaks="today.streaks" />
+          </template>
+
+          <WeekSummaryCard v-if="today.week" :week="today.week" />
 
           <section class="flex flex-col gap-3">
             <div class="flex items-baseline justify-between gap-3">
@@ -208,7 +215,7 @@ function saveValue(value: number): void {
             </RouterLink>
           </div>
           <div v-if="habits.forToday.length" class="group">
-            <HabitRow v-for="habit in habits.forToday" :key="habit.id" :habit="habit" compact @tap="logHabit(habit)" @hold="adjustHabit(habit)" @open="openHabit(habit)" />
+            <HabitRow v-for="habit in habits.forToday" :key="habit.id" :habit="habit" compact @tap="logHabit(habit)" @hold="adjustHabit(habit)" @open="router.push({ name: 'habit', params: { id: habit.id } })" />
           </div>
           <UiEmpty v-else :icon="Repeat" tone="habit" :text="habits.active.length ? $t('habits.emptyToday') : $t('today.habitsEmpty')">
             <UiButton v-if="!habits.active.length" size="sm" variant="secondary" :to="{ name: 'tasks', query: { tab: 'habits', new: '1' } }">{{ $t('habits.add') }}</UiButton>

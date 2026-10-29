@@ -393,7 +393,8 @@ it('lists today\'s tasks and habits under the limit, with a tap for each', funct
         ->toContain('<h4>Привычки</h4>')
         ->toContain('<li>⬜ Зарядка · 🔥 2 дня подряд</li>')
         ->toContain('<li>⬜ Вода — 3 из 8 стаканов</li>')
-        ->toContain('<li>⚠️ Кофе — 3 при лимите 2</li>')
+        // Twenty kept days earned spares: going over today spends one instead of breaking the streak.
+        ->toContain('<li>⚠️ Кофе — 3 при лимите 2 · 🔥 20 дней подряд</li>')
         ->and(cmdButtons($card))->toContain(
             "task:done:{$t['gift']->id}", "task:done:{$t['call']->id}", "task:done:{$t['gym']->id}",
             "habit:inc:{$t['workout']->id}", "habit:inc:{$t['water']->id}", "habit:inc:{$t['coffee']->id}",

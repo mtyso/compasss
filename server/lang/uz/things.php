@@ -5,6 +5,10 @@ return [
     'log_date' => "Faqat o'tgan yoki bugungi kunni belgilash mumkin, bir yildan uzoq emas.",
     'limit_daily' => "Cheklov odati kunlar bo'yicha hisoblanadi: hafta kunlarini tanlang.",
     'count_target' => 'Bir kunda qancha bajarish kerakligini kiriting.',
+    'pause_back' => "Pauzani :days kundan oldinroq boshlab bo'lmaydi.",
+    'pause_order' => 'Pauza boshlanishidan oldin tugay olmaydi.',
+    'pause_long' => 'Pauza :days kundan oshmasligi kerak.',
+    'pause_overlap' => 'Bu kunlarga pauza allaqachon bor.',
 
     // Calendar and daily routine
     'event_times_pair' => 'Boshlanish va tugash vaqtini kiriting.',

@@ -92,6 +92,12 @@ export function formatMonthName(month: string, locale: Locale = 'ru'): string {
   return capitalize(new Intl.DateTimeFormat('ru-RU', { timeZone: TIME_ZONE, month: 'long' }).format(new Date(`${month}-15T12:00:00+05:00`)))
 }
 
+/** «Окт», «Okt»: a month (YYYY-MM) in three letters, for labels over a map; June and July stay apart in Uzbek. */
+export function formatMonthShort(month: string, locale: Locale = 'ru'): string {
+  if (locale === 'uz') return capitalize(UZ_MONTHS_SHORT[Number(month.slice(5, 7)) - 1])
+  return formatMonthName(month, locale).slice(0, 3)
+}
+
 /** «мая 2027» as it reads after «до» (Russian takes the genitive), «May 2027» in Uzbek, for a month as YYYY-MM. */
 export function formatMonthUntil(month: string, locale: Locale = 'ru'): string {
   if (locale === 'uz') return formatMonthTitle(month, locale)

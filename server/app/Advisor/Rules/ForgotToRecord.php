@@ -4,7 +4,7 @@ namespace App\Advisor\Rules;
 
 use App\Advisor\AdvisorContext;
 
-/** «Сегодня ничего не записано. Были траты?» In the evening, when the day has no operations. */
+/** «Сегодня ничего не записано. Были траты?» In the evening, when the day has no operations and no «Трат не было». */
 final class ForgotToRecord extends BaseRule
 {
     public function key(): string
@@ -27,7 +27,9 @@ final class ForgotToRecord extends BaseRule
         $recorded = $context->user->transactions()
             ->where(fn ($q) => $q->whereBetween('occurred_at', [$context->today, $tomorrow])->orWhereBetween('created_at', [$context->today, $tomorrow]))
             ->exists();
+        // «Трат не было» already answered the question (docs/PLAN.md, D38).
+        $answered = $context->user->dayResults()->where('date', $context->today->toDateString())->where('no_spending', true)->exists();
 
-        return $recorded ? [] : [$this->finding('info', $context->today->toDateString())];
+        return $recorded || $answered ? [] : [$this->finding('info', $context->today->toDateString())];
     }
 }

@@ -20,3 +20,7 @@ Schedule::command('bot:digest weekly')->weeklyOn(0, config('telegram.digest.week
 // Last month's report on the 1st, in the evening: a day to record what the last day left out.
 Schedule::command('bot:digest monthly')->monthlyOn(1, config('telegram.digest.weekly_at'))->timezone('Asia/Tashkent');
 Schedule::command('bot:notify')->everyMinute();
+
+// The money streaks (docs/PLAN.md, D38): a day's limit can only be written on that day. Hourly, so a missed
+// run costs an hour of the day, not the day; the 23:55 run is the day's result.
+Schedule::command('streaks:close-day')->hourlyAt(55)->timezone('Asia/Tashkent');

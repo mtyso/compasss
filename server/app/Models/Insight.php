@@ -76,6 +76,7 @@ class Insight extends Model
                 && ! SubscriptionFinder::covered($this->user, $this->payload ?? []) => 'add_payment',
             $this->rule === 'lent_due' && $this->lent() !== null => 'returned',
             $this->rule === 'goal_reached' && ($this->payload['variant'] ?? null) === 'debt_roll' && $this->nextDebt() !== null => 'roll',
+            $this->rule === 'forgot_to_record' => 'no_spending',
             default => null,
         };
     }
@@ -183,6 +184,15 @@ class Insight extends Model
         $this->update(['status' => 'useful']);
 
         return $transaction;
+    }
+
+    /** «Трат не было» on the evening reminder: the day still counts for the «записываю» streak (docs/PLAN.md, D38). */
+    public function noSpending(): string
+    {
+        $this->user->dayResults()->updateOrCreate(['date' => $this->period_key], ['no_spending' => true]);
+        $this->update(['status' => 'useful']);
+
+        return $this->period_key;
     }
 
     /**

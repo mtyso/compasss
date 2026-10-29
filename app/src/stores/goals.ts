@@ -5,7 +5,7 @@ import type { Currency } from '@/lib/format'
 import { useAuth } from '@/stores/auth'
 import type { Habit } from '@/stores/habits'
 import { useMoney, type Transaction } from '@/stores/money'
-import { usePlan } from '@/stores/plan'
+import { usePlan, type ContributionStreak } from '@/stores/plan'
 import type { Task } from '@/stores/tasks'
 
 export type GoalType = 'save' | 'buy' | 'debt' | 'other'
@@ -69,6 +69,8 @@ export interface Goal {
 export interface GoalsPlan {
   mode: GoalMode
   period: { start: string; end: string; by_income: boolean }
+  /** Pay periods in a row with every goal's contribution made (docs/PLAN.md, D38). */
+  streak: ContributionStreak
   due_uzs: number
   monthly_uzs: number
   main_id: number | null
@@ -106,6 +108,8 @@ export interface GoalDetail {
     essential_uzs: number
     levers: Lever[]
   } | null
+  /** This goal's contributions made in full, period after period; null for a goal without money. */
+  streak: ContributionStreak | null
 }
 
 export type GoalInput = Partial<
