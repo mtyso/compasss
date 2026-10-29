@@ -11,6 +11,7 @@ use App\Http\Controllers\DebtController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\HabitController;
+use App\Http\Controllers\HabitPauseController;
 use App\Http\Controllers\IncomeScheduleController;
 use App\Http\Controllers\InsightController;
 use App\Http\Controllers\MeController;
@@ -66,6 +67,8 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::apiResource('habits', HabitController::class)->except('show')->parameters(['habits' => 'id']);
     Route::post('/habits/{id}/restore', [HabitController::class, 'restore']);
     Route::put('/habits/{id}/logs/{date}', [HabitController::class, 'log']);
+    Route::get('/habits/{id}/history', [HabitController::class, 'history'])->whereNumber('id');
+    Route::apiResource('habit-pauses', HabitPauseController::class)->except('show')->parameters(['habit-pauses' => 'id']);
 
     Route::get('/calendar', CalendarController::class);
     Route::post('/events', [EventController::class, 'store']);

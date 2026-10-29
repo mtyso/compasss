@@ -90,6 +90,11 @@ class User extends Authenticatable
         return $this->hasMany(Habit::class);
     }
 
+    public function habitPauses(): HasMany
+    {
+        return $this->hasMany(HabitPause::class);
+    }
+
     public function insights(): HasMany
     {
         return $this->hasMany(Insight::class);
