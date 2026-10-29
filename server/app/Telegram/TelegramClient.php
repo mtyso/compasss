@@ -4,6 +4,7 @@ namespace App\Telegram;
 
 use App\Telegram\Rich\Card;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -17,13 +18,44 @@ class TelegramClient
     /** @return array<string, mixed> */
     public function call(string $method, array $params = [], int $timeout = 10): array
     {
+        return $this->send($method, fn (string $url) => Http::asJson()->timeout($timeout)->post($url, $params));
+    }
+
+    /**
+     * A call that uploads files as multipart/form-data, e.g. the bot's profile photo.
+     * Object parameters go as JSON and point at a file with attach://<name>.
+     *
+     * @param  array<string, string>  $files  attach name => path
+     * @return array<string, mixed>
+     */
+    public function upload(string $method, array $params, array $files, int $timeout = 30): array
+    {
+        return $this->send($method, function (string $url) use ($params, $files, $timeout) {
+            $request = Http::asMultipart()->timeout($timeout);
+            foreach ($files as $name => $path) {
+                $request = $request->attach($name, (string) file_get_contents($path), basename($path));
+            }
+
+            return $request->post($url, array_map(
+                fn ($value) => is_array($value) ? json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : $value,
+                $params,
+            ));
+        });
+    }
+
+    /**
+     * @param  callable(string): Response  $request  sends the call to the given method URL
+     * @return array<string, mixed>
+     */
+    private function send(string $method, callable $request): array
+    {
         $token = (string) config('telegram.bot_token');
         if ($token === '') {
             throw new RuntimeException('TELEGRAM_BOT_TOKEN is not set.');
         }
 
         try {
-            $response = Http::asJson()->timeout($timeout)->post("https://api.telegram.org/bot{$token}/{$method}", $params);
+            $response = $request("https://api.telegram.org/bot{$token}/{$method}");
         } catch (ConnectionException $e) {
             // The exception message contains the request URL, and with it the bot token.
             Log::warning("Telegram {$method} failed: ".str_replace($token, '***', $e->getMessage()));
