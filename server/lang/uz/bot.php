@@ -35,6 +35,10 @@ return [
         'mute' => 'Bunday yubormang',
         'returned' => 'Qaytardi',
         'calendar' => 'Kalendar',
+        'no_spending' => "Xarajat bo'lmadi",
+        'all_records' => 'Barcha rekordlar',
+        'open_habit' => 'Odatni ochish',
+        'open_goal' => 'Maqsadni ochish',
         'roll' => "To'lovni o'tkazish",
     ],
 
@@ -101,6 +105,36 @@ return [
         'habit_over' => ':value, chegara :target',
         'streak_days' => ':count kun ketma-ket',
         'streak_weeks' => ':count hafta ketma-ket',
+        'streak_limit' => 'Limitda :count kun',
+        'streak_records' => 'yozuvlar :count kun',
+    ],
+
+    'evening' => [
+        'title' => '🔥 Bugungi seriyalar',
+        'at_risk' => 'Bugun uziladi',
+        'habit' => ':name: ketma-ket :count kun, bugun hali belgilanmagan',
+        'habit_week' => ':name: ketma-ket :count hafta, hafta bugun tugaydi',
+        'records' => 'Yozuvlar: ketma-ket :count kun, bugun hali hech narsa yozilmagan',
+        'no_spare' => "Zaxira kunlar yo'q: bugun belgilang, seriya davom etadi.",
+        'no_spending_done' => 'Belgilandi: bugun xarajatsiz',
+        'no_spending_day' => 'Belgilandi: :date xarajatsiz',
+        'too_late' => "Bu kunni endi belgilab bo'lmaydi",
+    ],
+
+    'journal' => [
+        'title' => 'Rekordlarda yangilik',
+    ],
+
+    'week' => [
+        'title' => 'Hafta yakuni',
+        'limit' => 'Limitda',
+        'habits' => 'Odatlar',
+        'goals' => 'Maqsadlarga',
+        'days_of' => ':days kundan :kept',
+        'of' => ':asked tadan :done ta',
+        'before' => ':value · bir hafta oldin :before',
+        'closer' => '«:goal» :count kun yaqinlashdi',
+        'records' => 'Hafta rekordlari',
     ],
 
     'calendar' => [
