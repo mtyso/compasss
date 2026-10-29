@@ -390,7 +390,7 @@ function bought(debt: { id: number } | null): void {
       <section class="flex flex-col gap-3">
         <h2 class="section-title">{{ $t('goals.habits') }}</h2>
         <div class="group">
-          <HabitRow v-for="habit in goalHabits" :key="habit.id" :habit="habit" compact @tap="logHabit(habit)" @hold="openHabit(habit)" @open="openHabit(habit)" />
+          <HabitRow v-for="habit in goalHabits" :key="habit.id" :habit="habit" compact @tap="logHabit(habit)" @hold="openHabit(habit)" @open="router.push({ name: 'habit', params: { id: habit.id } })" />
           <UiRow :title="$t('goals.addHabit')" :subtitle="goalHabits.length ? undefined : $t('goals.habitsHint')" tone="muted" :chevron="false" @click="openHabit(null)">
             <template #leading><span class="grid size-[22px] place-items-center text-ink-3"><Repeat class="size-5" :stroke-width="2.2" /></span></template>
           </UiRow>

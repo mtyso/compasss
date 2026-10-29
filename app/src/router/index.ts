@@ -30,6 +30,7 @@ export const router = createRouter({
         // Under «Дела»: the tab stays lit and going in and back slides like any deeper screen.
         { path: 'tasks/calendar', name: 'calendar', component: () => import('@/pages/CalendarPage.vue') },
         { path: 'tasks/calendar/routine', name: 'routine', component: () => import('@/pages/RoutinePage.vue') },
+        { path: 'tasks/habits/:id(\\d+)', name: 'habit', component: () => import('@/pages/HabitPage.vue') },
         { path: 'goals', name: 'goals', component: () => import('@/pages/GoalsPage.vue') },
         { path: 'goals/:id(\\d+)', name: 'goal', component: () => import('@/pages/GoalPage.vue') },
         { path: 'more', name: 'more', component: () => import('@/pages/MorePage.vue') },

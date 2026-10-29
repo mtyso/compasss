@@ -2,7 +2,7 @@ import { computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { showToast } from '@/components/ui/toast'
 import { haptics } from '@/lib/haptics'
-import { tapValue } from '@/lib/habits'
+import { streakMoment, tapValue } from '@/lib/habits'
 import { dueLabel } from '@/lib/tasks'
 import { isoDate } from '@/lib/dates'
 import { useHabits, type Habit } from '@/stores/habits'
@@ -51,7 +51,16 @@ export function useThingActions() {
       const fresh = await habits.log(habit, value, date)
       if (fresh.today.state === 'over' && before !== 'over') haptics.notify('warning')
       else if (fresh.type !== 'limit' && fresh.today.state === 'done' && before !== 'done') haptics.notify('success')
-      if (date === isoDate() && !wasAllDone && allHabitsDone()) showToast({ message: t('habits.allDone'), tone: 'success' })
+      if (date !== isoDate()) return
+      // A milestone or a new record is marked once, and outranks «all done» (docs/PLAN.md, D37).
+      const moment = streakMoment(habit.streak, fresh.streak)
+      if (moment) {
+        const streak = t(fresh.streak.unit === 'week' ? 'habits.streakWeeks' : 'habits.streak', moment.n)
+        haptics.notify('success')
+        showToast({ message: t(moment.kind === 'milestone' ? 'habits.milestone' : 'habits.newRecord', { streak }), detail: fresh.name, tone: 'success' })
+      } else if (!wasAllDone && allHabitsDone()) {
+        showToast({ message: t('habits.allDone'), tone: 'success' })
+      }
     } catch {
       haptics.notify('error')
       showToast({ message: t('habits.failed'), tone: 'danger' })

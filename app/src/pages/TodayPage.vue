@@ -208,7 +208,7 @@ function saveValue(value: number): void {
             </RouterLink>
           </div>
           <div v-if="habits.forToday.length" class="group">
-            <HabitRow v-for="habit in habits.forToday" :key="habit.id" :habit="habit" compact @tap="logHabit(habit)" @hold="adjustHabit(habit)" @open="openHabit(habit)" />
+            <HabitRow v-for="habit in habits.forToday" :key="habit.id" :habit="habit" compact @tap="logHabit(habit)" @hold="adjustHabit(habit)" @open="router.push({ name: 'habit', params: { id: habit.id } })" />
           </div>
           <UiEmpty v-else :icon="Repeat" tone="habit" :text="habits.active.length ? $t('habits.emptyToday') : $t('today.habitsEmpty')">
             <UiButton v-if="!habits.active.length" size="sm" variant="secondary" :to="{ name: 'tasks', query: { tab: 'habits', new: '1' } }">{{ $t('habits.add') }}</UiButton>
