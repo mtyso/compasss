@@ -72,6 +72,27 @@ final class StreakCounter
         return ['current' => $run, 'best' => $best, 'previous' => $previous, 'spare' => $spare, 'spared' => $spared, 'start' => $start];
     }
 
+    /**
+     * The dates of the kept periods in the current run, oldest first: when each step of it was made.
+     *
+     * @param  list<string>  $periods
+     * @param  list<string>  $dates  one per period
+     * @return list<string>
+     */
+    public static function keptDates(array $periods, array $dates, ?int $start): array
+    {
+        $kept = [];
+        if ($start !== null) {
+            foreach (array_slice($periods, $start, null, true) as $index => $state) {
+                if ($state === self::KEPT) {
+                    $kept[] = $dates[$index];
+                }
+            }
+        }
+
+        return $kept;
+    }
+
     /** The next milestone above the current streak, or null past the last one. */
     public static function nextMilestone(int $current, string $unit): ?int
     {

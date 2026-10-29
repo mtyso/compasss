@@ -8,12 +8,14 @@ use App\Habits\HabitProgress;
 use App\Models\Category;
 use App\Models\Habit;
 use App\Models\User;
+use App\Streaks\RecordKeeper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class HabitController extends Controller
 {
@@ -100,7 +102,7 @@ class HabitController extends Controller
     }
 
     /** Sets how much was done on a day (one tap on a check habit sends 1, tapping again 0). */
-    public function log(Request $request, int $id, string $date): JsonResponse
+    public function log(Request $request, RecordKeeper $keeper, int $id, string $date): JsonResponse
     {
         $habit = $request->user()->habits()->findOrFail($id);
         $value = (int) $request->validate(['value' => ['required', 'integer', 'min:0', 'max:100000']])['value'];
@@ -120,6 +122,12 @@ class HabitController extends Controller
         // A day logged before the habit was added moves its start back, so it counts.
         if ($value > 0 && $day->lt($habit->startDate())) {
             $habit->update(['started_on' => $date]);
+        }
+        // A milestone or a record goes into the journal at the tap that makes it (docs/PLAN.md, D39).
+        try {
+            $keeper->habit($request->user(), $habit, now());
+        } catch (Throwable $e) {
+            report($e);
         }
 
         return response()->json($habit->toApi());

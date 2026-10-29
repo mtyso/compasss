@@ -17,6 +17,7 @@ use App\Http\Controllers\IncomeScheduleController;
 use App\Http\Controllers\InsightController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\RateController;
+use App\Http\Controllers\RecordController;
 use App\Http\Controllers\RecurringPaymentController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoutineController;
@@ -71,6 +72,8 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::get('/habits/{id}/history', [HabitController::class, 'history'])->whereNumber('id');
     Route::apiResource('habit-pauses', HabitPauseController::class)->except('show')->parameters(['habit-pauses' => 'id']);
     Route::put('/days/{date}/no-spending', [DayController::class, 'noSpending'])->where('date', '\d{4}-\d{2}-\d{2}');
+    Route::get('/records', [RecordController::class, 'index']);
+    Route::delete('/records/{id}', [RecordController::class, 'destroy'])->whereNumber('id');
 
     Route::get('/calendar', CalendarController::class);
     Route::post('/events', [EventController::class, 'store']);

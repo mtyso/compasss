@@ -112,6 +112,65 @@ final class HabitProgress
         ];
     }
 
+    /**
+     * The current run for the records journal: its length, the longest run before it and the day each of its
+     * periods was kept (a week: its Sunday, or today while it goes on).
+     *
+     * @return array{current: int, previous: int, unit: string, kept: list<string>}
+     */
+    public function run(): array
+    {
+        ['periods' => $periods, 'count' => $count] = $this->counted();
+        $unit = $this->unit();
+        $dates = array_map(fn (array $p) => $unit === 'day'
+            ? $p['date']
+            : Carbon::parse($p['date'], config('app.timezone'))->addDays(6)->min($this->today->copy())->toDateString(), $periods);
+
+        return [
+            'current' => $count['current'],
+            'previous' => $count['previous'],
+            'unit' => $unit,
+            'kept' => StreakCounter::keptDates(array_column($periods, 'state'), $dates, $count['start']),
+        ];
+    }
+
+    /**
+     * How the week from $monday went, for the week summary: times done and times asked. A daily habit counts its
+     * scheduled days (a day a spare covered is still a miss here), a weekly one what the week asked for.
+     *
+     * @return array{done: int, asked: int}
+     */
+    public function week(Carbon $monday): array
+    {
+        $monday = $monday->copy()->startOfDay();
+        if ($this->habit->perWeek() !== null) {
+            $sunday = $monday->copy()->addDays(6);
+            if ($sunday->lt($this->from) || $monday->gt($this->today)) {
+                return ['done' => 0, 'asked' => 0];
+            }
+            $asked = $this->weekNeed($monday);
+            $done = min($asked, $this->weekCount($monday));
+            // The first, partial week asks nothing unless it was kept anyway, as in the streak.
+            if ($monday->lt($this->from) && $done < $asked) {
+                return ['done' => 0, 'asked' => 0];
+            }
+
+            return ['done' => $done, 'asked' => $asked];
+        }
+        $from = $monday->toDateString();
+        $to = $monday->copy()->addDays(6)->toDateString();
+        $done = $asked = 0;
+        foreach ($this->counted()['periods'] as $period) {
+            if ($period['date'] < $from || $period['date'] > $to) {
+                continue;
+            }
+            $done += $period['state'] === StreakCounter::KEPT ? 1 : 0;
+            $asked += in_array($period['state'], [StreakCounter::KEPT, StreakCounter::MISSED], true) ? 1 : 0;
+        }
+
+        return ['done' => $done, 'asked' => $asked];
+    }
+
     private function unit(): string
     {
         return $this->habit->perWeek() === null ? 'day' : 'week';

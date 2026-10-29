@@ -105,6 +105,11 @@ class User extends Authenticatable
         return $this->hasMany(ContributionPeriod::class);
     }
 
+    public function records(): HasMany
+    {
+        return $this->hasMany(Record::class);
+    }
+
     public function insights(): HasMany
     {
         return $this->hasMany(Insight::class);

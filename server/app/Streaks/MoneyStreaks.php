@@ -43,12 +43,21 @@ final class MoneyStreaks
         return [
             'limit' => $hasAccounts ? $this->limit($user, $now, $limit ?? $this->plan->limit($user, $now, $goals)) : null,
             'records' => $this->records($user, $now),
-            'contributions' => $this->contributions($user, $goals),
+            'contributions' => $this->contributions($user, $goals, $now),
         ];
     }
 
     /** @return array<string, mixed> with `today`: within or over, and `covered`: a spare will take today's overrun */
     public function limit(User $user, Carbon $now, DailyLimit $limit): array
+    {
+        $streak = $this->streak($this->limitPeriods($user, $now), 'day');
+        $over = $limit->leftTodayUzs < 0;
+
+        return [...$streak, 'today' => $over ? 'over' : 'within', 'covered' => $over && $streak['spare'] > 0];
+    }
+
+    /** @return list<array{date: string, state: string}> from the first day written down to today (open) */
+    private function limitPeriods(User $user, Carbon $now): array
     {
         $today = $now->copy()->startOfDay();
         $rows = $user->dayResults()->whereNotNull('limit_uzs')
@@ -64,23 +73,33 @@ final class MoneyStreaks
             $spent = $this->plan->everydaySpentByDay($user, $first, $today->copy()->subDay());
             for ($day = $first->copy(); $day->lt($today); $day->addDay()) {
                 $date = $day->toDateString();
-                $periods[] = match (true) {
+                $periods[] = ['date' => $date, 'state' => match (true) {
                     ! $rows->has($date) => StreakCounter::PAUSED,
                     ($spent[$date] ?? 0) <= $rows[$date] => StreakCounter::KEPT,
                     default => StreakCounter::MISSED,
-                };
+                }];
             }
         }
-        $periods[] = StreakCounter::OPEN;
+        $periods[] = ['date' => $today->toDateString(), 'state' => StreakCounter::OPEN];
 
-        $streak = $this->streak($periods, 'day');
-        $over = $limit->leftTodayUzs < 0;
-
-        return [...$streak, 'today' => $over ? 'over' : 'within', 'covered' => $over && $streak['spare'] > 0];
+        return $periods;
     }
 
     /** @return array<string, mixed> with `today`: kept or open, and `no_spending`: today is marked «Трат не было» */
     public function records(User $user, Carbon $now): array
+    {
+        $periods = $this->recordPeriods($user, $now);
+        $today = $periods === [] ? null : $periods[array_key_last($periods)]['state'];
+
+        return [
+            ...$this->streak($periods, 'day'),
+            'today' => $today === StreakCounter::KEPT ? 'kept' : 'open',
+            'no_spending' => $user->dayResults()->where('date', $now->toDateString())->where('no_spending', true)->exists(),
+        ];
+    }
+
+    /** @return list<array{date: string, state: string}> from the first operation or mark to today */
+    private function recordPeriods(User $user, Carbon $now): array
     {
         $today = $now->copy()->startOfDay();
         $horizon = $today->copy()->subDays(self::HORIZON_DAYS);
@@ -100,62 +119,93 @@ final class MoneyStreaks
         if ($kept !== []) {
             for ($day = Carbon::parse(min(array_keys($kept))); $day->lte($today); $day->addDay()) {
                 $date = $day->toDateString();
-                $periods[] = isset($kept[$date]) ? StreakCounter::KEPT : ($day->eq($today) ? StreakCounter::OPEN : StreakCounter::MISSED);
+                $periods[] = ['date' => $date, 'state' => isset($kept[$date]) ? StreakCounter::KEPT : ($day->eq($today) ? StreakCounter::OPEN : StreakCounter::MISSED)];
             }
         }
-        $todayKey = $today->toDateString();
 
-        return [
-            ...$this->streak($periods, 'day'),
-            'today' => isset($kept[$todayKey]) ? 'kept' : 'open',
-            'no_spending' => $marks->contains($todayKey),
-        ];
+        return $periods;
     }
 
     /** All goals together: a period is kept when every goal got its contribution. @return array<string, mixed> */
-    public function contributions(User $user, GoalsPlan $goals): array
+    public function contributions(User $user, GoalsPlan $goals, ?Carbon $now = null): array
     {
-        $asked = $this->asked($goals);
+        $periods = $this->contributionPeriods($user, $goals, $now ?? Carbon::now());
+
+        return [...$this->streak($periods, 'period'), 'today' => $this->todayOf($periods[array_key_last($periods)]['state'])];
+    }
+
+    /**
+     * Past periods dated by the day each closed (the next income), then the current one under today's date.
+     * With $goalId, one goal's share of each.
+     *
+     * @return list<array{date: string, state: string}>
+     */
+    private function contributionPeriods(User $user, GoalsPlan $goals, Carbon $now, ?int $goalId = null): array
+    {
+        $asked = $this->asked($goals)->when($goalId !== null, fn (Collection $c) => $c->filter(fn (GoalState $s) => $s->goal->id === $goalId));
         $current = match (true) {
             $asked->isEmpty() => StreakCounter::PAUSED,
             $asked->sum('due') === 0 => StreakCounter::KEPT,
             default => StreakCounter::OPEN,
         };
-        $periods = $this->pastPeriods($user, $goals)
-            ->map(fn (ContributionPeriod $p) => match (true) {
-                $p->planned_uzs <= 0 => StreakCounter::PAUSED,
-                $p->due_uzs <= 0 => StreakCounter::KEPT,
+        $periods = [];
+        foreach ($this->pastPeriods($user, $goals) as $period) {
+            $entry = $goalId === null ? null : collect($period->goals ?? [])->firstWhere('id', $goalId);
+            [$planned, $due] = $goalId === null ? [$period->planned_uzs, $period->due_uzs] : [$entry['planned'] ?? 0, $entry['due'] ?? 0];
+            $periods[] = ['date' => substr((string) $period->ends_on, 0, 10), 'state' => match (true) {
+                $planned <= 0 => StreakCounter::PAUSED,
+                $due <= 0 => StreakCounter::KEPT,
                 default => StreakCounter::MISSED,
-            })
-            ->push($current)
-            ->all();
+            }];
+        }
+        $periods[] = ['date' => $now->toDateString(), 'state' => $current];
 
-        return [...$this->streak($periods, 'period'), 'today' => $this->todayOf($current)];
+        return $periods;
     }
 
     /** One goal's contributions, for its screen. @return array<string, mixed> */
-    public function goal(User $user, GoalsPlan $goals, int $goalId): array
+    public function goal(User $user, GoalsPlan $goals, int $goalId, ?Carbon $now = null): array
     {
-        $state = $this->asked($goals)->first(fn (GoalState $s) => $s->goal->id === $goalId);
-        $current = match (true) {
-            $state === null => StreakCounter::PAUSED,
-            $state->due === 0 => StreakCounter::KEPT,
-            default => StreakCounter::OPEN,
-        };
-        $periods = $this->pastPeriods($user, $goals)
-            ->map(function (ContributionPeriod $p) use ($goalId) {
-                $entry = collect($p->goals ?? [])->firstWhere('id', $goalId);
+        $periods = $this->contributionPeriods($user, $goals, $now ?? Carbon::now(), $goalId);
 
-                return match (true) {
-                    $entry === null || ($entry['planned'] ?? 0) <= 0 => StreakCounter::PAUSED,
-                    ($entry['due'] ?? 0) <= 0 => StreakCounter::KEPT,
-                    default => StreakCounter::MISSED,
-                };
-            })
-            ->push($current)
-            ->all();
+        return [...$this->streak($periods, 'period'), 'today' => $this->todayOf($periods[array_key_last($periods)]['state'])];
+    }
 
-        return [...$this->streak($periods, 'period'), 'today' => $this->todayOf($current)];
+    /**
+     * The runs behind the three streaks for the records journal: length, the longest run before it and the
+     * dates its periods were kept.
+     *
+     * @return array<string, array{current: int, previous: int, unit: string, kept: list<string>}>
+     */
+    public function runs(User $user, Carbon $now, ?GoalsPlan $goals = null): array
+    {
+        $goals ??= $this->planner->plan($user, $now);
+        $runs = [
+            'records' => $this->run($this->recordPeriods($user, $now), 'day'),
+            'contributions' => $this->run($this->contributionPeriods($user, $goals, $now), 'period'),
+        ];
+        if ($user->accounts()->whereNull('archived_at')->exists()) {
+            $runs['limit'] = $this->run($this->limitPeriods($user, $now), 'day');
+        }
+
+        return $runs;
+    }
+
+    /**
+     * @param  list<array{date: string, state: string}>  $periods
+     * @return array{current: int, previous: int, unit: string, kept: list<string>}
+     */
+    private function run(array $periods, string $unit): array
+    {
+        $states = array_column($periods, 'state');
+        $count = $this->count($states, $unit);
+
+        return [
+            'current' => $count['current'],
+            'previous' => $count['previous'],
+            'unit' => $unit,
+            'kept' => StreakCounter::keptDates($states, array_column($periods, 'date'), $count['start']),
+        ];
     }
 
     /** The goals' plan for the API with the contribution streak beside it. @return array<string, mixed> */
@@ -192,14 +242,12 @@ final class MoneyStreaks
     }
 
     /**
-     * @param  list<string>  $periods
+     * @param  list<array{date: string, state: string}>  $periods
      * @return array{current: int, best: int, previous_best: int, unit: string, spare: int, next: int|null}
      */
     private function streak(array $periods, string $unit): array
     {
-        $count = $unit === 'day'
-            ? StreakCounter::count($periods, StreakCounter::SPARE_EVERY_DAYS, StreakCounter::SPARE_MAX_DAYS)
-            : StreakCounter::count($periods, 0, 0);
+        $count = $this->count(array_column($periods, 'state'), $unit);
 
         return [
             'current' => $count['current'],
@@ -209,5 +257,16 @@ final class MoneyStreaks
             'spare' => $count['spare'],
             'next' => $unit === 'day' ? StreakCounter::nextMilestone($count['current'], 'day') : null,
         ];
+    }
+
+    /**
+     * @param  list<string>  $states
+     * @return array{current: int, best: int, previous: int, spare: int, spared: list<int>, start: int|null}
+     */
+    private function count(array $states, string $unit): array
+    {
+        return $unit === 'day'
+            ? StreakCounter::count($states, StreakCounter::SPARE_EVERY_DAYS, StreakCounter::SPARE_MAX_DAYS)
+            : StreakCounter::count($states, 0, 0);
     }
 }
