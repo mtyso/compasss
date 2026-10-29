@@ -21,14 +21,6 @@ final class HabitProgress
     /** How far back streaks look, unless the whole history is asked for. */
     private const HORIZON_DAYS = 400;
 
-    private const SPARE_EVERY_DAYS = 7;
-
-    private const SPARE_MAX_DAYS = 2;
-
-    private const SPARE_EVERY_WEEKS = 4;
-
-    private const SPARE_MAX_WEEKS = 1;
-
     /** @var array{periods: list<array{date: string, state: string}>, count: array{current: int, best: int, previous: int, spare: int, spared: list<int>, start: int|null}}|null */
     private ?array $counted = null;
 
@@ -136,8 +128,8 @@ final class HabitProgress
             $perWeek = $this->habit->perWeek();
             $periods = $perWeek === null ? $this->dayPeriods() : $this->weekPeriods($perWeek);
             $count = $perWeek === null
-                ? StreakCounter::count(array_column($periods, 'state'), self::SPARE_EVERY_DAYS, self::SPARE_MAX_DAYS)
-                : StreakCounter::count(array_column($periods, 'state'), self::SPARE_EVERY_WEEKS, self::SPARE_MAX_WEEKS);
+                ? StreakCounter::count(array_column($periods, 'state'), StreakCounter::SPARE_EVERY_DAYS, StreakCounter::SPARE_MAX_DAYS)
+                : StreakCounter::count(array_column($periods, 'state'), StreakCounter::SPARE_EVERY_WEEKS, StreakCounter::SPARE_MAX_WEEKS);
             $this->counted = ['periods' => $periods, 'count' => $count];
         }
 

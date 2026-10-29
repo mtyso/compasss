@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\TelegramWebAppController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DayController;
 use App\Http\Controllers\DebtController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GoalController;
@@ -69,6 +70,7 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::put('/habits/{id}/logs/{date}', [HabitController::class, 'log']);
     Route::get('/habits/{id}/history', [HabitController::class, 'history'])->whereNumber('id');
     Route::apiResource('habit-pauses', HabitPauseController::class)->except('show')->parameters(['habit-pauses' => 'id']);
+    Route::put('/days/{date}/no-spending', [DayController::class, 'noSpending'])->where('date', '\d{4}-\d{2}-\d{2}');
 
     Route::get('/calendar', CalendarController::class);
     Route::post('/events', [EventController::class, 'store']);

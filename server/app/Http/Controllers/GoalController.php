@@ -14,6 +14,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Money\Balances;
 use App\Money\TransactionWriter;
+use App\Streaks\MoneyStreaks;
 use App\Support\Money;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,13 +27,13 @@ use Illuminate\Validation\ValidationException;
 /** Goals (docs/PLAN.md, 2.6): the list with this period's plan, one goal in full, «Отложить» and «Купил». */
 class GoalController extends Controller
 {
-    public function __construct(private GoalPlanner $planner) {}
+    public function __construct(private GoalPlanner $planner, private MoneyStreaks $streaks) {}
 
     /** Goals not archived with their plan; `?archived=1` adds the archived ones. */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $data = $this->planner->plan($user, now())->toApi();
+        $data = $this->streaks->goalsApi($user, $this->planner->plan($user, now()));
         if ($request->boolean('archived')) {
             $data['archived'] = $user->goals()->whereNotNull('archived_at')->latest('archived_at')->get()
                 ->map(fn (Goal $g) => ['id' => $g->id, 'type' => $g->type, 'title' => $g->title, 'icon' => $g->icon, 'archived' => true])->values();
@@ -62,6 +63,8 @@ class GoalController extends Controller
             'checkins' => $goal->checkins()->orderByDesc('date')->limit(60)->get()
                 ->map(fn ($c) => ['date' => substr((string) $c->date, 0, 10), 'value' => (float) $c->value])->values(),
             'speed' => $goal->hasMoney() ? $speed->for($user, $plan, $state, $now) : null,
+            // Contributions made in full period after period (docs/PLAN.md, D38).
+            'streak' => $goal->hasMoney() ? $this->streaks->goal($user, $plan, $goal->id) : null,
         ]);
     }
 
@@ -161,7 +164,7 @@ class GoalController extends Controller
 
         return response()->json([
             'transactions' => array_map(fn (Transaction $t) => $t->toApi(), $transactions),
-            'goals' => $this->planner->plan($user, now())->toApi(),
+            'goals' => $this->streaks->goalsApi($user, $this->planner->plan($user, now())),
         ]);
     }
 

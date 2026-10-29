@@ -20,6 +20,15 @@ final class StreakCounter
 
     public const OPEN = 'open';
 
+    /** A spare day for every 7 kept days, at most 2 held; a spare week for every 4 kept weeks, at most 1. */
+    public const SPARE_EVERY_DAYS = 7;
+
+    public const SPARE_MAX_DAYS = 2;
+
+    public const SPARE_EVERY_WEEKS = 4;
+
+    public const SPARE_MAX_WEEKS = 1;
+
     /** Streak lengths worth marking, in days and in weeks. */
     public const DAY_MILESTONES = [7, 14, 30, 60, 100, 200, 365];
 

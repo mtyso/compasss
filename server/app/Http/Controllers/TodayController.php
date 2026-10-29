@@ -8,13 +8,14 @@ use App\Goals\GoalPlanner;
 use App\Models\Habit;
 use App\Models\RecurringPayment;
 use App\Money\Plan;
+use App\Streaks\MoneyStreaks;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /** Everything the «Сегодня» screen needs in one request (docs/PLAN.md, section 7). */
 class TodayController extends Controller
 {
-    public function __invoke(Request $request, Plan $plan, Advisor $advisor, GoalPlanner $planner, Agenda $agenda): JsonResponse
+    public function __invoke(Request $request, Plan $plan, Advisor $advisor, GoalPlanner $planner, Agenda $agenda, MoneyStreaks $streaks): JsonResponse
     {
         $user = $request->user();
         $now = now();
@@ -24,13 +25,16 @@ class TodayController extends Controller
         $limit = $plan->limit($user, $now, $goals);
         $income = $plan->nextIncome($user, $today);
         $day = $agenda->day($user, $today, $now, ['event']);
+        $money = $streaks->for($user, $now, $limit, $goals);
 
         return response()->json([
             'date' => $today->toDateString(),
             'limit' => $limit->toApi(),
             'has_accounts' => $user->accounts()->whereNull('archived_at')->exists(),
             // Goals come right under the limit: they decide how much of the money is for spending (D25).
-            'goals' => $goals->toApi(),
+            'goals' => [...$goals->toApi(), 'streak' => $money['contributions']],
+            // The money streaks under the limit (docs/PLAN.md, D38).
+            'streaks' => $money,
             'next_income' => $income?->toApi($today),
             // Overdue ones and those due before the next income, i.e. the ones the limit sets aside.
             'payments' => $plan->unpaidPayments($user)

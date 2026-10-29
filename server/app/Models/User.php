@@ -95,6 +95,16 @@ class User extends Authenticatable
         return $this->hasMany(HabitPause::class);
     }
 
+    public function dayResults(): HasMany
+    {
+        return $this->hasMany(DayResult::class);
+    }
+
+    public function contributionPeriods(): HasMany
+    {
+        return $this->hasMany(ContributionPeriod::class);
+    }
+
     public function insights(): HasMany
     {
         return $this->hasMany(Insight::class);
