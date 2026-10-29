@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Goals\GoalPlanner;
 use App\Models\Insight;
 use App\Models\Transaction;
+use App\Streaks\MoneyStreaks;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -47,8 +48,8 @@ class InsightController extends Controller
         return response()->json(['insight' => $insight->toApi(app()->getLocale()), 'settings' => (object) ($insight->user->settings ?? [])]);
     }
 
-    /** The button on an insight: «Отметить разовой» on a large expense, «Отложить» into goals. */
-    public function act(Request $request, GoalPlanner $planner, int $id): JsonResponse
+    /** The button on an insight: «Отметить разовой» on a large expense, «Отложить» into goals, «Трат не было». */
+    public function act(Request $request, GoalPlanner $planner, MoneyStreaks $streaks, int $id): JsonResponse
     {
         $user = $request->user();
         $insight = $user->insights()->findOrFail($id);
@@ -60,8 +61,9 @@ class InsightController extends Controller
             'roll' => ['goal_id' => $insight->roll(now())->id],
             'contribute' => [
                 'transactions' => array_map(fn (Transaction $t) => $t->toApi(), $insight->contribute(now())),
-                'goals' => $planner->plan($user, now())->toApi(),
+                'goals' => $streaks->goalsApi($user, $planner->plan($user, now())),
             ],
+            'no_spending' => ['date' => $insight->noSpending()],
             default => throw ValidationException::withMessages(['action' => 'Nothing to do.']),
         };
 

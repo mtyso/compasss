@@ -10,6 +10,7 @@ use App\Models\IncomeSchedule;
 use App\Models\RecurringPayment;
 use App\Models\User;
 use App\Support\Money;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -27,13 +28,7 @@ class Plan
         return new DailyLimit(
             today: $today,
             spendableUzs: $this->spendableUzs($user, $spendable, $now),
-            // Only everyday spending eats into today's allowance. A paid recurring payment was already set
-            // aside, and a one-off purchase comes out of the free money, lowering the limit from now on.
-            spentTodayUzs: (int) $user->transactions()
-                ->where('type', 'expense')
-                ->where('is_one_off', false)
-                ->whereNull('recurring_payment_id')
-                ->whereIn('account_id', $spendable->pluck('id'))
+            spentTodayUzs: (int) $this->everydayExpenses($user, $spendable)
                 ->where('occurred_at', '>=', $today)
                 ->where('occurred_at', '<', $today->copy()->addDay())
                 ->sum('amount_uzs'),
@@ -58,6 +53,42 @@ class Plan
     public function unpaidPayments(User $user): Collection
     {
         return $user->recurringPayments()->where('active', true)->orderBy('next_due_on')->get();
+    }
+
+    /**
+     * Everyday spending by day from $from to $to (both days included), in som: what the daily limit of
+     * each day was for (the «в лимите» streak, docs/PLAN.md, D38).
+     *
+     * @return array<string, int> by Y-m-d, days without spending left out
+     */
+    public function everydaySpentByDay(User $user, Carbon $from, Carbon $to): array
+    {
+        $days = [];
+        $this->everydayExpenses($user, $this->spendableAccounts($user))
+            ->where('occurred_at', '>=', $from->copy()->startOfDay())
+            ->where('occurred_at', '<', $to->copy()->startOfDay()->addDay())
+            ->get(['occurred_at', 'amount_uzs'])
+            ->each(function ($t) use (&$days) {
+                $day = $t->occurred_at->toDateString();
+                $days[$day] = ($days[$day] ?? 0) + (int) $t->amount_uzs;
+            });
+
+        return $days;
+    }
+
+    /**
+     * Only everyday spending eats into a day's allowance. A paid recurring payment was already set aside,
+     * and a one-off purchase comes out of the free money, lowering the limit from then on.
+     *
+     * @param  Collection<int, Account>  $spendable
+     */
+    private function everydayExpenses(User $user, Collection $spendable): HasMany
+    {
+        return $user->transactions()
+            ->where('type', 'expense')
+            ->where('is_one_off', false)
+            ->whereNull('recurring_payment_id')
+            ->whereIn('account_id', $spendable->pluck('id'));
     }
 
     /** @return Collection<int, Account> */
