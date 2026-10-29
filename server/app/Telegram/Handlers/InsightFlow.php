@@ -69,6 +69,12 @@ class InsightFlow
         }
 
         $this->telegram->answerCallbackQuery($query['id'], $toast);
+        if ($insight->rule === 'forgot_to_record') {
+            // The evening message: the streaks that end tonight keep their buttons.
+            $this->telegram->editKeyboard($chatId, $messageId, $this->cards->eveningKeyboard($user, now(), $insight));
+
+            return;
+        }
         // Answered: only «Открыть Компас» stays under the text. A refused «Отложить», «Оплачено», «Вернул» or
         // «Перенести платёж» keeps its buttons.
         $this->telegram->editKeyboard($chatId, $messageId, $this->cards->insightKeyboard($insight, $user, answered: ! in_array($insight->action(), ['contribute', 'pay', 'returned', 'roll'], true)));

@@ -9,6 +9,7 @@ use App\Habits\HabitProgress;
 use App\Models\Category;
 use App\Models\Habit;
 use App\Models\Insight;
+use App\Models\Record;
 use App\Models\RecurringPayment;
 use App\Models\Task;
 use App\Models\Transaction;
@@ -16,6 +17,9 @@ use App\Models\User;
 use App\Money\MonthReport;
 use App\Money\MonthSpending;
 use App\Money\Plan;
+use App\Streaks\MoneyStreaks;
+use App\Streaks\Summary;
+use App\Streaks\WeekSummary;
 use App\Telegram\Keyboard;
 use App\Telegram\Phrase\ParsedPhrase;
 use App\Telegram\Rich\Card;
@@ -26,7 +30,13 @@ use Illuminate\Support\Str;
 /** Every card the bot sends, in the user's language. Layout notes: docs/BOT.md. */
 class Cards
 {
-    public function __construct(private Plan $plan, private Agenda $agenda) {}
+    public function __construct(
+        private Plan $plan,
+        private Agenda $agenda,
+        private MoneyStreaks $streaks,
+        private Summary $summary,
+        private WeekSummary $weeks,
+    ) {}
 
     public function start(User $user): Card
     {
@@ -315,6 +325,109 @@ class Cards
         return $card;
     }
 
+    // --- 21:00: «ничего не записано» and the streaks that end tonight ------------------
+
+    /**
+     * The one evening message (docs/BOT.md): the advisor's «Сегодня ничего не записано» when it came, and the
+     * streaks of a week or more that end tonight unless marked, with no spare left (App\Streaks\Summary).
+     * Null when there is neither.
+     */
+    public function evening(User $user, Carbon $now, ?Insight $forgot = null): ?Card
+    {
+        $l = $user->locale;
+        $lines = array_map(fn (array $streak) => Card::e(trans_choice(match (true) {
+            $streak['kind'] === 'records' => 'bot.evening.records',
+            $streak['unit'] === 'week' => 'bot.evening.habit_week',
+            default => 'bot.evening.habit',
+        }, $streak['current'], ['count' => $streak['current'], 'name' => $streak['name'] ?? ''], $l)), $this->summary->for($user, $now)['at_risk']);
+
+        if ($forgot === null && $lines === []) {
+            return null;
+        }
+
+        $card = $forgot !== null ? $this->insight($forgot, $user) : Card::make()->heading(__('bot.evening.title', [], $l), 3);
+        if ($lines !== []) {
+            if ($forgot !== null) {
+                $card->heading(__('bot.evening.at_risk', [], $l), 4);
+            }
+            $card->list($lines)->paragraph(Card::e(__('bot.evening.no_spare', [], $l)));
+        }
+
+        return $card;
+    }
+
+    /**
+     * «Трат не было» while the day has nothing recorded, a mark for each habit at risk, then the question's
+     * own buttons. The date in the buttons keeps a tap after midnight on the day it was meant for.
+     */
+    public function eveningKeyboard(User $user, Carbon $now, ?Insight $forgot = null): Keyboard
+    {
+        $l = $user->locale;
+        $date = $now->toDateString();
+        $atRisk = collect($this->summary->for($user, $now)['at_risk']);
+        $keyboard = Keyboard::make();
+
+        if ($forgot?->action() === 'no_spending' || $atRisk->contains('kind', 'records')) {
+            $keyboard->row([Keyboard::callback('🙅 '.__('bot.buttons.no_spending', [], $l), "streak:nospend:{$date}", 'primary')]);
+        }
+
+        $streaks = $atRisk->where('kind', 'habit');
+        $habits = $user->habits()->whereIn('id', $streaks->pluck('id'))->get()->keyBy('id');
+        $keyboard->grid($streaks->filter(fn (array $s) => isset($habits[$s['id']]))
+            ->map(fn (array $s) => Keyboard::callback(($habits[$s['id']]->type === 'check' ? '✓ ' : '+1 ').$habits[$s['id']]->name, "streak:habit:{$s['id']}:{$date}"))
+            ->values()->all(), 2);
+
+        if ($forgot !== null && in_array($forgot->status, ['new', 'seen'], true)) {
+            $keyboard->row([
+                Keyboard::callback('👍 '.__('bot.buttons.useful', [], $l), "ins:useful:{$forgot->id}"),
+                Keyboard::callback('🔕 '.__('bot.buttons.mute', [], $l), "ins:mute:{$forgot->id}"),
+            ]);
+        }
+
+        return $keyboard->row([Keyboard::webApp('🧭 '.__('bot.buttons.open_app', [], $l), '/')]);
+    }
+
+    // --- Milestones and records as they happen -----------------------------------------
+
+    private const RECORD_EMOJI = [
+        'streak_milestone' => '🔥', 'streak_record' => '🏆', 'goal_first' => '🎯', 'goal_step' => '🎯', 'goal_done' => '🎉',
+        'debt_closed' => '✅', 'cushion' => '🛟', 'month_budget' => '📊', 'savings_rate' => '🏆',
+    ];
+
+    /** «🔥 Бег: 30 дней подряд», or several new lines under «Новое в рекордах». @param  Collection<int, Record>  $records */
+    public function journal(Collection $records, User $user): Card
+    {
+        $l = $user->locale;
+        if ($records->count() === 1) {
+            return Card::make()->heading($this->recordLine($records->first(), $l), 3);
+        }
+
+        return Card::make()
+            ->heading('🏆 '.__('bot.journal.title', [], $l), 3)
+            ->list($records->map(fn (Record $r) => Card::e($this->recordLine($r, $l)))->values()->all());
+    }
+
+    /** The habit or goal of a single line, and the whole journal. @param  Collection<int, Record>  $records */
+    public function journalKeyboard(Collection $records, User $user): Keyboard
+    {
+        $l = $user->locale;
+        $ref = $records->count() === 1 ? $records->first()->toApi($l)['ref'] : null;
+
+        return Keyboard::make()->row([
+            match ($ref['type'] ?? null) {
+                'habit' => Keyboard::webApp(__('bot.buttons.open_habit', [], $l), "/tasks/habits/{$ref['id']}"),
+                'goal' => Keyboard::webApp(__('bot.buttons.open_goal', [], $l), "/goals/{$ref['id']}"),
+                default => null,
+            },
+            Keyboard::webApp('🏆 '.__('bot.buttons.all_records', [], $l), '/goals/records'),
+        ]);
+    }
+
+    private function recordLine(Record $record, string $l): string
+    {
+        return (self::RECORD_EMOJI[$record->kind] ?? '🏆').' '.$record->text($l);
+    }
+
     // --- /today and the morning digest -------------------------------------------
 
     /** @param  iterable<Insight>  $insights  the morning summary carries the night's advice */
@@ -342,6 +455,16 @@ class Cards
                     : [__('bot.today.until', [], $l), Card::e(__('bot.today.until_value', ['date' => Fmt::date($limit->nextIncome, $l), 'days' => Fmt::days($limit->daysLeft, $l)], $l))],
                 $limit->upcomingUzs > 0 ? [__('bot.today.reserved', [], $l), Card::e(Fmt::uzs($limit->upcomingUzs, $l))] : null,
             ])));
+
+        // The money streaks in one line, as under the limit in the app (docs/PLAN.md, D38); zeros left out.
+        $streaks = $this->streaks->for($user, $now, $limit);
+        $parts = array_filter([
+            ($streaks['limit']['current'] ?? 0) > 0 ? __('bot.today.streak_limit', ['count' => $streaks['limit']['current']], $l) : null,
+            $streaks['records']['current'] > 0 ? __('bot.today.streak_records', ['count' => $streaks['records']['current']], $l) : null,
+        ]);
+        if ($parts !== []) {
+            $card->paragraph(Card::e('🔥 '.Str::ucfirst(implode(' · ', $parts))));
+        }
 
         $payments = $this->paymentsBeforeIncome($user, $today, $limit);
         if ($payments->isNotEmpty()) {
@@ -683,11 +806,16 @@ class Cards
 
     // --- Digests -----------------------------------------------------------------
 
-    /** The last seven days against the seven before them. Null when both weeks are empty. */
+    /**
+     * Sunday evening: the last seven days' spending against the seven before them, then «Итог недели»
+     * (App\Streaks\WeekSummary): days in the limit, habits and goals beside the week before, plain numbers
+     * with no score, and the week's records. Null when there is nothing to say.
+     */
     public function weekly(User $user, ?Carbon $now = null): ?Card
     {
         $l = $user->locale;
-        $end = ($now ?? now())->copy()->startOfDay()->addDay();
+        $now ??= now();
+        $end = $now->copy()->startOfDay()->addDay();
         $start = $end->copy()->subDays(7);
         $before = $start->copy()->subDays(7);
 
@@ -695,11 +823,37 @@ class Cards
             ->where('occurred_at', '>=', $from)->where('occurred_at', '<', $to)->sum('amount_uzs');
         $thisWeek = $spent($start, $end);
         $lastWeek = $spent($before, $start);
+        $week = $this->weeks->for($user, $now->copy()->startOfWeek(Carbon::MONDAY), $now, $l);
+        $facts = $this->weekFacts($week, $l);
 
-        if ($thisWeek === 0 && $lastWeek === 0) {
+        $spending = $thisWeek > 0 || $lastWeek > 0;
+        if (! $spending && $facts === [] && $week['records'] === []) {
             return null;
         }
 
+        $card = Card::make();
+        if ($spending) {
+            $this->weeklySpending($card, $user, $start, $end, $thisWeek, $lastWeek, $l);
+        }
+        if ($facts !== [] || ! $spending) {
+            $card->heading(__('bot.week.title', [], $l), $spending ? 4 : 2)->facts($facts);
+        }
+        if ($week['main'] !== null) {
+            $card->paragraph(Card::e(__('bot.week.closer', ['goal' => $week['main']['title'], 'count' => $week['main']['days']], $l)));
+        }
+        if ($week['records'] !== []) {
+            $card->heading(__('bot.week.records', [], $l), 4)
+                ->list(array_map(fn (array $r) => Card::e((self::RECORD_EMOJI[$r['kind']] ?? '🏆').' '.$r['text']), array_slice($week['records'], 0, self::WEEK_RECORDS_SHOWN)));
+        }
+
+        return $card->footer(Card::e(Fmt::date($start, $l).' — '.Fmt::date($end->copy()->subDay(), $l)));
+    }
+
+    private const WEEK_RECORDS_SHOWN = 5;
+
+    /** «Неделя: потрачено …», against the week before, and the top three categories. */
+    private function weeklySpending(Card $card, User $user, Carbon $start, Carbon $end, int $thisWeek, int $lastWeek, string $l): void
+    {
         $diff = $thisWeek - $lastWeek;
         $compare = match (true) {
             $diff < 0 => __('bot.digest.weekly_less', ['amount' => Fmt::uzs(-$diff, $l)], $l),
@@ -715,15 +869,38 @@ class Cards
             ->toBase()->get();
         $categories = $user->categories()->whereIn('id', $top->pluck('root_id'))->get()->keyBy('id');
 
-        return Card::make()
-            ->heading(__('bot.digest.weekly_title', ['amount' => Fmt::uzs($thisWeek, $l)], $l), 2)
+        $card->heading(__('bot.digest.weekly_title', ['amount' => Fmt::uzs($thisWeek, $l)], $l), 2)
             ->paragraph(Card::e($compare))
             ->heading(__('bot.digest.weekly_top', [], $l), 4)
             ->facts($top->map(fn ($row) => [
                 Fmt::categoryEmoji($categories[$row->root_id] ?? null).' '.Fmt::categoryName($categories[$row->root_id] ?? null, $l),
                 Card::e(Fmt::uzs((int) $row->total, $l)),
-            ])->all())
-            ->footer(Card::e(Fmt::date($start, $l).' — '.Fmt::date($end->copy()->subDay(), $l)));
+            ])->all());
+    }
+
+    /**
+     * «В лимите 5 из 7 дн. · неделей раньше 4 из 7 дн.», the same for habits and for what went into goals.
+     * A number the week does not have is left out.
+     *
+     * @param  array<string, mixed>  $week
+     * @return list<array{0: string, 1: string}>
+     */
+    private function weekFacts(array $week, string $l): array
+    {
+        $days = fn (?array $v) => $v === null ? null : __('bot.week.days_of', ['kept' => $v['kept'], 'days' => $v['days']], $l);
+        $habits = fn (?array $v) => $v === null ? null : __('bot.week.of', ['done' => $v['done'], 'asked' => $v['asked']], $l);
+        $goals = fn (int $v) => $v > 0 ? Fmt::uzs($v, $l) : null;
+        $row = fn (string $label, ?string $value, ?string $before) => $value === null ? null : [
+            __($label, [], $l),
+            Card::e($before === null ? $value : __('bot.week.before', ['value' => $value, 'before' => $before], $l)),
+        ];
+        $prev = $week['prev'];
+
+        return array_values(array_filter([
+            $row('bot.week.limit', $days($week['limit']), $days($prev['limit'])),
+            $row('bot.week.habits', $habits($week['habits']), $habits($prev['habits'])),
+            $row('bot.week.goals', $goals($week['goals_uzs']) ?? ($prev['goals_uzs'] > 0 ? Fmt::uzs(0, $l) : null), $goals($prev['goals_uzs'])),
+        ]));
     }
 
     /**
