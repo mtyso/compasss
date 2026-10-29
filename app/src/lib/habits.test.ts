@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { i18n } from '@/i18n'
 import type { Habit } from '@/stores/habits'
-import { amountLabel, DAY_MILESTONES, progress, scaleShare, scheduleLabel, streakMoment, tapValue, yearColumns } from './habits'
+import { amountLabel, DAY_MILESTONES, progress, scaleShare, scheduleLabel, streakMoment, tapValue, trimYear, yearColumns } from './habits'
 import type { Translate } from './tasks'
 
 const t = i18n.global.t as unknown as Translate
@@ -95,5 +95,20 @@ describe('yearColumns', () => {
     expect(weeks[2]![3]).toBeNull()
     // September is too close to October to be named as well.
     expect(months).toEqual([{ column: 2, month: '2026-10' }])
+  })
+})
+
+describe('trimYear', () => {
+  const year = (first: number, length = 52 * 7 + 3) => Array.from({ length }, (_, i) => ({ state: i < first ? 'none' : 'kept' }))
+
+  it('starts at the week the habit began', () => {
+    // Began on a Wednesday 30 weeks in: the map starts on that Monday.
+    expect(trimYear(year(30 * 7 + 2))).toHaveLength(52 * 7 + 3 - 30 * 7)
+  })
+
+  it('keeps at least a quarter for a new habit, and the whole year for an old one', () => {
+    expect(trimYear(year(52 * 7))).toHaveLength(12 * 7 + 3)
+    expect(trimYear(year(0))).toHaveLength(52 * 7 + 3)
+    expect(trimYear(year(400))).toHaveLength(12 * 7 + 3)
   })
 })

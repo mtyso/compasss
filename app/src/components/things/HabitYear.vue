@@ -2,8 +2,8 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { dateAtNoon } from '@/lib/dates'
-import { formatDayHeading, formatMonthName } from '@/lib/format'
-import { yearColumns } from '@/lib/habits'
+import { formatDayHeading, formatMonthShort } from '@/lib/format'
+import { trimYear, yearColumns } from '@/lib/habits'
 import type { HabitDayState, HabitHistory } from '@/stores/habits'
 import { useSettings } from '@/stores/settings'
 
@@ -12,15 +12,18 @@ type Day = HabitHistory['days'][number]
 /**
  * A habit's year as a map: a column of seven squares per week from Monday, oldest on the left,
  * in the habit's colour. A kept day is filled; a day a spare covered is a ring; a missed day is
- * grey (pale colour when part of a count was done); a pause is hatched. On a phone the map scrolls
- * and opens at today; a tap on a square tells that day.
+ * grey (pale colour when part of a count was done); a pause is hatched. The map starts at the
+ * habit's first week; on a phone it scrolls and opens at today; a tap on a square tells that day.
+ * The legend names only what the map shows.
  */
 const props = defineProps<{ days: Day[]; color: string; target: number; unit: string | null; type: 'check' | 'count' | 'limit' }>()
 const { t } = useI18n()
 const settings = useSettings()
 
-const columns = computed(() => yearColumns(props.days))
+const shown = computed(() => trimYear(props.days))
+const columns = computed(() => yearColumns(shown.value))
 const keptCount = computed(() => props.days.filter((d) => d.state === 'kept').length)
+const has = computed(() => new Set(shown.value.map((d) => d.state)))
 const selected = ref<Day | null>(null)
 const scroller = ref<HTMLElement | null>(null)
 
@@ -46,7 +49,7 @@ const stateClass: Record<HabitDayState, string> = {
 
 function pick(event: MouseEvent): void {
   const index = Number((event.target as HTMLElement).dataset.index)
-  const day = Number.isFinite(index) ? props.days[index] : undefined
+  const day = Number.isFinite(index) ? shown.value[index] : undefined
   selected.value = day && day.state !== 'none' && selected.value !== day ? day : null
 }
 
@@ -67,7 +70,7 @@ function toEnd(): void {
   })
 }
 onMounted(toEnd)
-watch(() => props.days.length, toEnd)
+watch(() => shown.value.length, toEnd)
 </script>
 
 <template>
@@ -81,7 +84,7 @@ watch(() => props.days.length, toEnd)
           :style="{ left: `${m.column * STEP}px` }"
           aria-hidden="true"
         >
-          {{ formatMonthName(m.month, settings.locale).slice(0, 3) }}
+          {{ formatMonthShort(m.month, settings.locale) }}
         </span>
         <div class="grid grid-flow-col grid-rows-7 gap-[2px]" role="img" :aria-label="$t('habits.yearLabel', { n: keptCount }, keptCount)" @click="pick">
           <template v-for="(week, w) in columns.weeks" :key="w">
@@ -102,9 +105,9 @@ watch(() => props.days.length, toEnd)
       <template v-if="selectedText">{{ selectedText }}</template>
       <span v-else class="flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-3">
         <span class="flex items-center gap-1.5"><span class="cell size-[10px] rounded-[2.5px]" :style="{ backgroundColor: color }" />{{ $t('habits.states.kept') }}</span>
-        <span class="flex items-center gap-1.5"><span class="cell size-[10px] rounded-[2.5px]" :style="{ boxShadow: `inset 0 0 0 1.5px ${color}` }" />{{ $t('habits.states.spared') }}</span>
-        <span class="flex items-center gap-1.5"><span class="cell size-[10px] rounded-[2.5px] bg-ink/12" />{{ $t('habits.states.missed') }}</span>
-        <span class="flex items-center gap-1.5"><span class="cell paused size-[10px] rounded-[2.5px]" />{{ $t('habits.states.paused') }}</span>
+        <span v-if="has.has('spared')" class="flex items-center gap-1.5"><span class="cell size-[10px] rounded-[2.5px]" :style="{ boxShadow: `inset 0 0 0 1.5px ${color}` }" />{{ $t('habits.states.spared') }}</span>
+        <span v-if="has.has('missed')" class="flex items-center gap-1.5"><span class="cell size-[10px] rounded-[2.5px] bg-ink/12" />{{ $t('habits.states.missed') }}</span>
+        <span v-if="has.has('paused')" class="flex items-center gap-1.5"><span class="cell paused size-[10px] rounded-[2.5px]" />{{ $t('habits.states.paused') }}</span>
       </span>
     </p>
   </div>

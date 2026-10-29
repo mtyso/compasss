@@ -238,7 +238,7 @@ const uz: typeof ru = {
     allMilestones: "barcha bosqichlar o'tildi",
     milestones: 'Bosqichlar',
     savedStreak: 'Seriya davomida tejaldi',
-    savedTotal: 'jami tejaldi',
+    savedTotal: 'Butun vaqt davomida',
     goalDays: "«{goal}» uchun {n} kunlik jamg'arma",
     rate30: 'oxirgi 30 kunda bajarildi',
     rate4w: 'oxirgi 4 haftada bajarildi',

@@ -235,7 +235,7 @@ export default {
     allMilestones: 'все вехи пройдены',
     milestones: 'Вехи',
     savedStreak: 'Сэкономлено за серию',
-    savedTotal: 'сэкономлено всего',
+    savedTotal: 'За всё время',
     goalDays: '{n} день накоплений на «{goal}» | {n} дня накоплений на «{goal}» | {n} дней накоплений на «{goal}»',
     rate30: 'выполнено за 30 дней',
     rate4w: 'выполнено за 4 недели',

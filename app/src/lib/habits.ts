@@ -68,6 +68,17 @@ export function streakMoment(before: HabitStreak, after: HabitStreak): { kind: '
 }
 
 /**
+ * The year map starts at the habit's first week instead of a year of empty squares, but shows at
+ * least `minWeeks` weeks so a new habit still reads as a map. Days run from a Monday, oldest first.
+ */
+export function trimYear<T extends { state: string }>(days: T[], minWeeks = 13): T[] {
+  const lastWeek = Math.floor((days.length - 1) / 7) * 7
+  const first = days.findIndex((d) => d.state !== 'none')
+  const start = first < 0 ? lastWeek : first - (first % 7)
+  return days.slice(Math.max(0, Math.min(start, lastWeek - (minWeeks - 1) * 7)))
+}
+
+/**
  * The year map: days (from a Monday, oldest first) in columns of weeks, and the columns where a
  * month begins. A label that would crowd the next one is left out.
  */

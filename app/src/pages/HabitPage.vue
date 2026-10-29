@@ -164,11 +164,15 @@ function saveValue(value: number): void {
       </section>
 
       <!-- What the money it saved means for the main goal. -->
-      <section v-if="stats.streak_saved_uzs" class="card flex flex-col gap-1 p-4" data-panel>
+      <section v-if="stats.saved_uzs" class="card flex flex-col gap-1 p-4" data-panel>
         <span class="text-caption text-ink-2">{{ $t('habits.savedStreak') }}</span>
-        <MoneyAmount :amount="stats.streak_saved_uzs" currency="UZS" animate class="text-headline font-semibold" />
+        <MoneyAmount :amount="stats.streak_saved_uzs ?? 0" currency="UZS" animate class="text-headline font-semibold" />
         <span v-if="history?.goal && history.goal.streak_days > 0" class="text-caption text-ink-2">
           = {{ $t('habits.goalDays', { n: history.goal.streak_days, goal: history.goal.title }, history.goal.streak_days) }}
+        </span>
+        <span v-if="stats.saved_uzs > (stats.streak_saved_uzs ?? 0)" class="mt-2 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-caption text-ink-2">
+          {{ $t('habits.savedTotal') }}
+          <MoneyAmount :amount="stats.saved_uzs" currency="UZS" class="font-medium text-ink" />
         </span>
       </section>
 
@@ -178,7 +182,7 @@ function saveValue(value: number): void {
         <HabitYear :days="history!.days" :color="color" :type="habit.type" :target="habit.target" :unit="habit.unit" />
       </section>
 
-      <dl class="grid grid-cols-3 gap-4 rounded-card bg-surface-2 px-4 py-3">
+      <dl class="grid gap-4 rounded-card bg-surface-2 px-4 py-3" :class="stats.total_value === null ? 'grid-cols-2' : 'grid-cols-3'">
         <div class="flex min-w-0 flex-col gap-0.5">
           <dd class="num text-headline font-semibold">{{ stats.rate === null ? '—' : `${Math.round(stats.rate * 100)}%` }}</dd>
           <dt class="text-caption text-ink-3">{{ $t(stats.rate_over === '4w' ? 'habits.rate4w' : 'habits.rate30') }}</dt>
@@ -187,11 +191,7 @@ function saveValue(value: number): void {
           <dd class="num text-headline font-semibold">{{ stats.kept_days }}</dd>
           <dt class="text-caption text-ink-3">{{ $t('habits.keptDays', stats.kept_days) }}</dt>
         </div>
-        <div v-if="stats.saved_uzs" class="flex min-w-0 flex-col gap-0.5">
-          <dd class="truncate text-headline font-semibold"><MoneyAmount :amount="stats.saved_uzs" currency="UZS" /></dd>
-          <dt class="text-caption text-ink-3">{{ $t('habits.savedTotal') }}</dt>
-        </div>
-        <div v-else-if="stats.total_value !== null" class="flex min-w-0 flex-col gap-0.5">
+        <div v-if="stats.total_value !== null" class="flex min-w-0 flex-col gap-0.5">
           <dd class="num truncate text-headline font-semibold">{{ stats.total_value.toLocaleString('ru-RU') }}</dd>
           <dt class="truncate text-caption text-ink-3">{{ $t('habits.totalValue') }}<template v-if="habit.unit"> · {{ habit.unit }}</template></dt>
         </div>
