@@ -49,7 +49,7 @@ it('counts a daily streak that today does not break until it is over', function 
     }
 
     $today = $this->getJson('/api/habits', $this->auth)->json('0');
-    expect($today['streak'])->toBe(['current' => 4, 'best' => 4, 'unit' => 'day', 'spare' => 0, 'next' => 7])
+    expect($today['streak'])->toBe(['current' => 4, 'best' => 4, 'previous_best' => 2, 'unit' => 'day', 'spare' => 0, 'next' => 7])
         ->and($today['today']['state'])->toBe('open')
         ->and(collect($today['days'])->pluck('kept')->all())->toBe([false, false, true, true, true, true, false]);
 
@@ -93,7 +93,7 @@ it('counts weeks for a times-a-week habit', function () {
     }
 
     $api = $habit->fresh()->toApi();
-    expect($api['streak'])->toBe(['current' => 1, 'best' => 1, 'unit' => 'week', 'spare' => 0, 'next' => 4])
+    expect($api['streak'])->toBe(['current' => 1, 'best' => 1, 'previous_best' => 0, 'unit' => 'week', 'spare' => 0, 'next' => 4])
         ->and($api['week_count'])->toBe(1)->and($api['today']['state'])->toBe('open');
 
     logHabit($this, $habit, '2026-10-21');
@@ -144,7 +144,7 @@ it('covers one missed day with a spare earned by seven kept days', function () {
     }
 
     $api = $habit->fresh()->toApi();
-    expect($api['streak'])->toBe(['current' => 10, 'best' => 10, 'unit' => 'day', 'spare' => 0, 'next' => 14])
+    expect($api['streak'])->toBe(['current' => 10, 'best' => 10, 'previous_best' => 0, 'unit' => 'day', 'spare' => 0, 'next' => 14])
         ->and(collect($api['days'])->firstWhere('date', '2026-10-17'))->toMatchArray(['kept' => false, 'spared' => true]);
 
     // A second miss with no spare left breaks it.

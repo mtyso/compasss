@@ -26,14 +26,15 @@ final class StreakCounter
     public const WEEK_MILESTONES = [4, 8, 12, 26, 52];
 
     /**
-     * `spared` lists the indexes a spare covered in the current run, `start` is where that run begins.
+     * `previous` is the longest run before the current one (beating it is a record), `spared` lists the
+     * indexes a spare covered in the current run, `start` is where that run begins.
      *
      * @param  list<string>  $periods  one of the constants above per period, oldest first
-     * @return array{current: int, best: int, spare: int, spared: list<int>, start: int|null}
+     * @return array{current: int, best: int, previous: int, spare: int, spared: list<int>, start: int|null}
      */
     public static function count(array $periods, int $spareEvery, int $spareMax): array
     {
-        $run = $best = $spare = $towardsSpare = 0;
+        $run = $best = $previous = $spare = $towardsSpare = 0;
         $start = null;
         $spared = [];
         foreach ($periods as $index => $state) {
@@ -50,6 +51,7 @@ final class StreakCounter
                     $spare--;
                     $spared[] = $index;
                 } else {
+                    $previous = max($previous, $run);
                     $run = $towardsSpare = 0;
                     $start = null;
                 }
@@ -58,7 +60,7 @@ final class StreakCounter
         // Spares spent on an earlier run that broke later are history, not part of this one.
         $spared = $start === null ? [] : array_values(array_filter($spared, fn (int $i) => $i > $start));
 
-        return ['current' => $run, 'best' => $best, 'spare' => $spare, 'spared' => $spared, 'start' => $start];
+        return ['current' => $run, 'best' => $best, 'previous' => $previous, 'spare' => $spare, 'spared' => $spared, 'start' => $start];
     }
 
     /** The next milestone above the current streak, or null past the last one. */

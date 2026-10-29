@@ -17,14 +17,14 @@ function periods(string $pattern): array
 
 it('counts kept periods and breaks on a miss with no spare', function () {
     expect(StreakCounter::count(periods('kkkmkk'), 7, 2))
-        ->toBe(['current' => 2, 'best' => 3, 'spare' => 0, 'spared' => [], 'start' => 4]);
-    expect(StreakCounter::count([], 7, 2))->toBe(['current' => 0, 'best' => 0, 'spare' => 0, 'spared' => [], 'start' => null]);
+        ->toBe(['current' => 2, 'best' => 3, 'previous' => 3, 'spare' => 0, 'spared' => [], 'start' => 4]);
+    expect(StreakCounter::count([], 7, 2))->toBe(['current' => 0, 'best' => 0, 'previous' => 0, 'spare' => 0, 'spared' => [], 'start' => null]);
 });
 
 it('covers a miss with a spare earned by seven kept days', function () {
     // The miss adds nothing, so 7 + 3 kept days make 10.
     expect(StreakCounter::count(periods('kkkkkkkmkkk'), 7, 2))
-        ->toBe(['current' => 10, 'best' => 10, 'spare' => 0, 'spared' => [7], 'start' => 0]);
+        ->toBe(['current' => 10, 'best' => 10, 'previous' => 0, 'spare' => 0, 'spared' => [7], 'start' => 0]);
 });
 
 it('keeps at most two spares and breaks on the third miss in a row', function () {
@@ -32,7 +32,7 @@ it('keeps at most two spares and breaks on the third miss in a row', function ()
     expect($two['current'])->toBe(21)->and($two['spare'])->toBe(0)->and($two['spared'])->toBe([21, 22]);
 
     $three = StreakCounter::count(periods(str_repeat('k', 21).'mmmk'), 7, 2);
-    expect($three)->toBe(['current' => 1, 'best' => 21, 'spare' => 0, 'spared' => [], 'start' => 24]);
+    expect($three)->toBe(['current' => 1, 'best' => 21, 'previous' => 21, 'spare' => 0, 'spared' => [], 'start' => 24]);
 });
 
 it('does not let every other day hold a streak', function () {
@@ -41,7 +41,7 @@ it('does not let every other day hold a streak', function () {
 
 it('lets pauses and the open period count neither way', function () {
     expect(StreakCounter::count(periods('kkppppkko'), 7, 2))
-        ->toBe(['current' => 4, 'best' => 4, 'spare' => 0, 'spared' => [], 'start' => 0]);
+        ->toBe(['current' => 4, 'best' => 4, 'previous' => 0, 'spare' => 0, 'spared' => [], 'start' => 0]);
 });
 
 it('earns a spare week for every four kept weeks', function () {

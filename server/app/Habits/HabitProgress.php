@@ -29,7 +29,7 @@ final class HabitProgress
 
     private const SPARE_MAX_WEEKS = 1;
 
-    /** @var array{periods: list<array{date: string, state: string}>, count: array{current: int, best: int, spare: int, spared: list<int>, start: int|null}}|null */
+    /** @var array{periods: list<array{date: string, state: string}>, count: array{current: int, best: int, previous: int, spare: int, spared: list<int>, start: int|null}}|null */
     private ?array $counted = null;
 
     /**
@@ -103,7 +103,7 @@ final class HabitProgress
         return $this->habit->isScheduledOn($this->today) ? 'open' : 'off';
     }
 
-    /** @return array{current: int, best: int, unit: string, spare: int, next: int|null} */
+    /** @return array{current: int, best: int, previous_best: int, unit: string, spare: int, next: int|null} */
     public function streaks(): array
     {
         $count = $this->counted()['count'];
@@ -112,6 +112,8 @@ final class HabitProgress
         return [
             'current' => $count['current'],
             'best' => $count['best'],
+            // The longest run before this one: passing it is a new record
+            'previous_best' => $count['previous'],
             'unit' => $unit,
             'spare' => $count['spare'],
             'next' => StreakCounter::nextMilestone($count['current'], $unit),
@@ -126,7 +128,7 @@ final class HabitProgress
     /**
      * The periods the streak is counted over (scheduled days, or weeks from Monday) and the count.
      *
-     * @return array{periods: list<array{date: string, state: string}>, count: array{current: int, best: int, spare: int, spared: list<int>, start: int|null}}
+     * @return array{periods: list<array{date: string, state: string}>, count: array{current: int, best: int, previous: int, spare: int, spared: list<int>, start: int|null}}
      */
     private function counted(): array
     {
