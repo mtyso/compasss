@@ -7,6 +7,8 @@ use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 const CMD_OWNER = 111222333;
 
@@ -199,14 +201,67 @@ it('leaves the weekly totals out on a Sunday that is the 1st, when the month\'s 
         ->and(cmdCalls('sendRichMessage')[0]['rich_message']['html'])->toContain('Итоги месяца: Октябрь');
 });
 
-it('sets up the webhook, commands in both languages and the Mini App menu button', function () {
+it('sets up the webhook, the name, commands and descriptions in both languages and the Mini App menu button', function () {
+    Storage::fake('local');
+
     $this->artisan('telegram:setup')->assertSuccessful();
 
     expect(cmdCalls('setWebhook')[0])->toMatchArray(['url' => 'https://kompas.example.uz/telegram/webhook', 'secret_token' => 'hook-secret'])
         ->and(cmdCalls('setChatMenuButton')[0]['menu_button'])->toBe(['type' => 'web_app', 'text' => 'Компас', 'web_app' => ['url' => 'https://kompas.example.uz/']])
+        ->and(cmdCalls('setMyName'))->toBe([['name' => 'Компас'], ['language_code' => 'uz', 'name' => 'Kompas']])
         ->and(cmdCalls('setMyCommands'))->toHaveCount(2)
         ->and(cmdCalls('setMyCommands')[1]['language_code'])->toBe('uz')
         ->and(collect(cmdCalls('setMyCommands')[0]['commands'])->pluck('command')->all())->toBe(['today', 'month', 'help']);
+
+    // Telegram's limits: 512 characters in an empty chat, 120 on the profile page.
+    foreach ([...cmdCalls('setMyDescription'), ...cmdCalls('setMyShortDescription')] as $call) {
+        expect(mb_strlen($call['description'] ?? $call['short_description']))->toBeLessThanOrEqual(isset($call['description']) ? 512 : 120);
+    }
+});
+
+it('uploads the profile photo once, then again only when the file changed or with --avatar, and leaves a right name alone', function () {
+    Storage::fake('local');
+    Http::swap(new Factory);
+    $names = ['' => 'compasss', 'uz' => 'Kompas'];
+    Http::fake(function (HttpRequest $r) use (&$names) {
+        $method = Str::afterLast($r->url(), '/');
+        $lang = $r->isMultipart() ? '' : ($r->data()['language_code'] ?? '');
+        if ($method === 'setMyName') {
+            $names[$lang] = $r->data()['name'];
+        }
+
+        return Http::response(['ok' => true, 'result' => $method === 'getMyName' ? ['name' => $names[$lang]] : true]);
+    });
+
+    $this->artisan('telegram:setup')->expectsOutputToContain('✓ profile photo')->assertSuccessful();
+    $this->artisan('telegram:setup')->expectsOutputToContain('· profile photo unchanged')->assertSuccessful();
+    $this->artisan('telegram:setup --avatar')->expectsOutputToContain('✓ profile photo')->assertSuccessful();
+
+    $uploads = Http::recorded(fn (HttpRequest $r) => str_ends_with($r->url(), '/setMyProfilePhoto'))->map(fn ($pair) => $pair[0])->values();
+    expect($uploads)->toHaveCount(2)
+        ->and($uploads[0]->hasFile('avatar', file_get_contents(resource_path('telegram/avatar.jpg')), 'avatar.jpg'))->toBeTrue()
+        ->and(collect($uploads[0]->data())->firstWhere('name', 'photo')['contents'])->toBe('{"type":"static","photo":"attach://avatar"}')
+        ->and(cmdCalls('setMyName'))->toBe([['name' => 'Компас']]);
+});
+
+it('says when Telegram refuses the profile photo, and tries it again on the next run', function () {
+    Storage::fake('local');
+    Http::swap(new Factory);
+    Http::fake([
+        'api.telegram.org/*/setMyProfilePhoto' => Http::sequence()
+            ->push(['ok' => false, 'error_code' => 400, 'description' => 'Bad Request: photo is too big'], 400)
+            ->push(['ok' => true, 'result' => true]),
+        'api.telegram.org/*' => Http::response(['ok' => true, 'result' => true]),
+    ]);
+
+    $this->artisan('telegram:setup')->expectsOutputToContain('✗ profile photo: Bad Request: photo is too big')->assertFailed();
+    $this->artisan('telegram:setup')->expectsOutputToContain('✓ profile photo')->assertSuccessful();
+});
+
+it('keeps the profile photo a square JPG Telegram takes', function () {
+    [$width, $height, $type] = getimagesize(resource_path('telegram/avatar.jpg'));
+
+    expect($type)->toBe(IMAGETYPE_JPEG)->and($width)->toBe($height)->and($width)->toBeGreaterThanOrEqual(512);
 });
 
 it('answers updates fetched with telegram:poll, and shows who wrote', function () {

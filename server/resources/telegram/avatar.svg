@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="640" height="640">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1D3328"/>
+      <stop offset=".62" stop-color="#13201A"/>
+      <stop offset="1" stop-color="#0C1511"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F0F3EF" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#F0F3EF" stop-opacity=".14"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="640" height="640" fill="url(#bg)"/>
+  <!-- dial -->
+  <circle cx="320" cy="320" r="214" fill="none" stroke="url(#ring)" stroke-width="12"/>
+  <g stroke="#F0F3EF" stroke-linecap="round">
+    <g stroke-opacity=".38" stroke-width="7">
+      <path d="M320 140v22M500 320h-22M320 500v-22M140 320h22"/>
+    </g>
+    <g stroke-opacity=".18" stroke-width="5">
+      <path d="M447.3 192.7l-11.3 11.3M447.3 447.3l-11.3-11.3M192.7 447.3l11.3-11.3M192.7 192.7l11.3 11.3"/>
+    </g>
+  </g>
+  <!-- needle glow -->
+  <path d="M320 112 384 320H256z" fill="#5FD6A8" opacity=".35" filter="url(#glow)"/>
+  <!-- north half: two facets -->
+  <path d="M320 112 256 320h64z" fill="#6FE0B4"/>
+  <path d="M320 112 384 320h-64z" fill="#46B98D"/>
+  <!-- south half -->
+  <path d="M256 320h64v208z" fill="#F0F3EF" fill-opacity=".92"/>
+  <path d="M384 320h-64v208z" fill="#C3CCC5" fill-opacity=".92"/>
+  <!-- pivot -->
+  <circle cx="320" cy="320" r="24" fill="#13201A" stroke="#F0F3EF" stroke-width="12"/>
+</svg>

@@ -173,14 +173,20 @@ return [
         'already' => "Allaqachon to'langan deb belgilangan.",
     ],
 
+    'name' => 'Kompas',
     'commands' => [
-        'today' => 'Bugungi limit, ishlar va odatlar',
-        'month' => "Oy xarajatlari toifalar bo'yicha",
-        'help' => 'Xarajatlarni qanday yozish kerak',
+        'today' => '☀️ Bugun: limit, ishlar, odatlar',
+        'month' => "📊 Oy xarajatlari toifalar bo'yicha",
+        'help' => '💬 Xarajatlarni qanday yozish kerak',
     ],
     'menu_button' => 'Kompas',
-    'short_description' => 'Shaxsiy yordamchi: pul, odatlar, ishlar.',
-    'description' => "Kompas pulni oqilona sarflashga yordam beradi: bugun qancha sarflash mumkinligini hisoblaydi va xarajatlarni bitta ibora bilan yozadi, masalan «taksi 32k».\n\nBu shaxsiy bot, faqat egasi foydalana oladi.",
+    'short_description' => 'Shaxsiy yordamchi: bugun qancha sarflash mumkin, xarajatlar bitta iborada, maqsadlar, ishlar va odatlar.',
+    'description' => "Kompas — shaxsiy yordamchi: pul, odatlar, ishlar va maqsadlar bir joyda.\n\n"
+        ."💸 Maoshgacha yetishi va maqsadlarga ulgurish uchun bugun qancha sarflash mumkinligini hisoblaydi.\n"
+        ."✍️ Xarajatlarni bitta ibora bilan yozadi: «taksi 32k», «tushlik 85 000 naqd».\n"
+        ."🤔 «Sotib olsam bo'ladimi?» degan savolga javob beradi.\n"
+        ."⏰ To'lovlar, ishlar va kalendardagi tadbirlarni eslatadi.\n\n"
+        .'Bot shaxsiy, faqat egasi foydalana oladi.',
 
     'login' => [
         'confirm' => "Kompasga kirish\nQurilma: :device\n\nAgar kirishni siz boshlamagan bo'lsangiz, «Rad etish»ni bosing.",
