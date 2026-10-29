@@ -21,6 +21,7 @@ import UiEmpty from '@/components/ui/UiEmpty.vue'
 import UiRow from '@/components/ui/UiRow.vue'
 import LimitCard from '@/components/plan/LimitCard.vue'
 import MoneyStreakLine from '@/components/plan/MoneyStreakLine.vue'
+import WeekSummaryCard from '@/components/plan/WeekSummaryCard.vue'
 import PaySheet from '@/components/plan/PaySheet.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
 import { isoDate } from '@/lib/dates'
@@ -155,6 +156,8 @@ function saveValue(value: number): void {
             <LimitCard :limit="today.limit" :income-name="today.next_income?.name" />
             <MoneyStreakLine :streaks="today.streaks" />
           </template>
+
+          <WeekSummaryCard v-if="today.week" :week="today.week" />
 
           <section class="flex flex-col gap-3">
             <div class="flex items-baseline justify-between gap-3">

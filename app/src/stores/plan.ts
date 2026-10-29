@@ -5,6 +5,7 @@ import type { Currency } from '@/lib/format'
 import type { Insight } from '@/stores/advisor'
 import type { TodayPlan } from '@/stores/calendar'
 import type { GoalsPlan } from '@/stores/goals'
+import type { JournalRecord } from '@/stores/records'
 import { useMoney, type Transaction } from '@/stores/money'
 
 export interface DailyLimit {
@@ -94,6 +95,27 @@ export interface Today {
   plan: TodayPlan
   /** How many routine blocks there are: none means «Задать распорядок дня». */
   routine_blocks: number
+  /** On Monday, the week that just ended (D39); null on other days. */
+  week: WeekSummary | null
+}
+
+/** One week's plain numbers for «Итог недели»: each says what it is about, there is no score made of them. */
+export interface WeekNumbers {
+  /** Days within the daily limit, of the days the limit was written down. */
+  limit: { kept: number; days: number } | null
+  /** Times done of times asked, over all habits. */
+  habits: { done: number; asked: number } | null
+  /** Put into goals (not debts), in som. */
+  goals_uzs: number
+  /** The main goal's part of it, in days of its contributions. */
+  main: { id: number; title: string; days: number } | null
+}
+
+export interface WeekSummary extends WeekNumbers {
+  from: string
+  to: string
+  prev: WeekNumbers
+  records: JournalRecord[]
 }
 
 export interface BudgetItem {

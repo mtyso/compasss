@@ -33,6 +33,7 @@ export const router = createRouter({
         { path: 'tasks/habits/:id(\\d+)', name: 'habit', component: () => import('@/pages/HabitPage.vue') },
         { path: 'goals', name: 'goals', component: () => import('@/pages/GoalsPage.vue') },
         { path: 'goals/:id(\\d+)', name: 'goal', component: () => import('@/pages/GoalPage.vue') },
+        { path: 'goals/records', name: 'records', component: () => import('@/pages/RecordsPage.vue') },
         { path: 'more', name: 'more', component: () => import('@/pages/MorePage.vue') },
         { path: 'more/accounts', name: 'accounts', component: () => import('@/pages/AccountsPage.vue') },
         { path: 'more/accounts/new', name: 'account-new', component: () => import('@/pages/AccountFormPage.vue') },
