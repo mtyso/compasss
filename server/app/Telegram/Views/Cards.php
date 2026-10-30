@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Money\MonthReport;
 use App\Money\MonthSpending;
 use App\Money\Plan;
+use App\Prayer\Prayers;
 use App\Streaks\MoneyStreaks;
 use App\Streaks\Summary;
 use App\Streaks\WeekSummary;
@@ -36,6 +37,7 @@ class Cards
         private MoneyStreaks $streaks,
         private Summary $summary,
         private WeekSummary $weeks,
+        private Prayers $prayers,
     ) {}
 
     public function start(User $user): Card
@@ -501,6 +503,13 @@ class Cards
                 ->list($habits->map(fn (array $h) => $this->habitLine($h['habit'], $h['progress'], $today, $l))->all());
         }
 
+        // The five prayers in one line (docs/PLAN.md, D40): what is prayed, the one whose time is on, the rest.
+        if (Prayers::on($user)) {
+            $prayers = array_filter([$this->nightIsha($user, $now), ...$this->prayers->day($user, $today->toDateString(), $now)]);
+            $card->heading(__('bot.prayer.today', [], $l), 4)
+                ->paragraph(Card::e(implode(' · ', array_map(fn (array $p) => $this->prayerShort($p, $l), $prayers))));
+        }
+
         return $this->withInsights($card, $insights, $l)->footer(Card::e(Fmt::longDate($today, $l)));
     }
 
@@ -528,6 +537,17 @@ class Cards
             ->take(4)
             ->map(fn (array $h) => Keyboard::callback(($h['habit']->type === 'check' ? '✓ ' : '+1 ').$h['habit']->name, "habit:inc:{$h['habit']->id}"))
             ->values()->all(), 2);
+
+        // The prayer whose time is on, if it is not marked yet: after midnight, yesterday's Isha.
+        if (Prayers::on($user)) {
+            $date = $today->toDateString();
+            $prayers = array_filter([$this->nightIsha($user, $now ?? now()), ...array_map(fn (array $p) => $p + ['date' => $date], $this->prayers->day($user, $date, $now ?? now()))]);
+            foreach ($prayers as $prayer) {
+                if ($prayer['state'] === 'now') {
+                    $keyboard->row([Keyboard::callback('🕌 '.__('bot.buttons.prayed_name', ['name' => __("prayer.names.{$prayer['name']}", [], $l)], $l), "prayer:t:{$prayer['date']}:{$prayer['name']}")]);
+                }
+            }
+        }
 
         return $keyboard->row([Keyboard::webApp('🧭 '.__('bot.buttons.open_app', [], $l), '/')]);
     }
@@ -685,6 +705,9 @@ class Cards
      */
     public function reminder(array $reminder, User $user, ?Carbon $now = null): Card
     {
+        if ($reminder['kind'] === 'prayer') {
+            return $this->prayerReminder($reminder, $user, $now ?? now());
+        }
         $l = $user->locale;
         $zone = config('app.timezone');
         $now = ($now ?? now())->copy()->timezone($zone);
@@ -723,6 +746,12 @@ class Cards
     /** «Календарь»: the reminder's day in the Mini App. */
     public function reminderKeyboard(array $reminder, User $user): Keyboard
     {
+        if ($reminder['kind'] === 'prayer') {
+            return Keyboard::make()->row([
+                Keyboard::callback('✅ '.__('bot.buttons.prayed', [], $user->locale), "prayer:r:{$reminder['date']}:{$reminder['prayer']}", 'success'),
+                Keyboard::webApp('🕌 '.__('bot.buttons.prayer', [], $user->locale), '/tasks/prayer'),
+            ]);
+        }
         $path = $reminder['kind'] === 'routine' ? '/tasks/calendar/routine' : "/tasks/calendar?view=day&date={$reminder['date']}";
 
         return Keyboard::make()->row([Keyboard::webApp('📅 '.__('bot.buttons.calendar', [], $user->locale), $path)]);
@@ -756,6 +785,131 @@ class Cards
         };
 
         return [$start, $end];
+    }
+
+    // --- Prayers (docs/PLAN.md, D40) ---------------------------------------------
+
+    private const PRAYER_EMOJI = ['done' => '✅', 'qaza' => '☑️', 'now' => '⏳', 'missed' => '⚠️', 'later' => '▫️', 'skipped' => '▫️'];
+
+    /**
+     * The time to pray has come, or 20 minutes are left of it and the prayer is not marked yet. The minutes are
+     * counted to the end, so a reminder sent late (prayers turned on a little before it) still tells the truth.
+     */
+    private function prayerReminder(array $reminder, User $user, Carbon $now): Card
+    {
+        $l = $user->locale;
+        $isha = $reminder['prayer'] === 'isha';
+        if ($reminder['phase'] === 'end') {
+            $left = isset($reminder['until']) ? max(1, (int) ceil($now->diffInSeconds($reminder['until'], false) / 60)) : $reminder['remind_before'];
+
+            return Card::make()
+                ->heading(__($isha ? 'bot.prayer.last_title_isha' : 'bot.prayer.last_title', ['name' => $reminder['title'], 'm' => min($left, $reminder['remind_before'])], $l), 3)
+                ->paragraph(Card::e(__($isha ? 'bot.prayer.last_text_isha' : 'bot.prayer.last_text', ['end' => $reminder['end']], $l)));
+        }
+
+        return Card::make()
+            ->heading('🕌 '.$reminder['title'], 3)
+            ->paragraph(Card::e(__($isha ? 'bot.prayer.time_isha' : 'bot.prayer.time', ['start' => $reminder['start'], 'end' => $reminder['end']], $l)));
+    }
+
+    /** What a reminder becomes after «Прочитал»: the prayer done, and when it was marked. */
+    public function prayerDone(User $user, string $prayer, string $status, ?Carbon $markedAt = null): Card
+    {
+        $l = $user->locale;
+        $name = __("prayer.names.{$prayer}", [], $l);
+
+        return Card::make()
+            ->heading(__($status === 'qaza' ? 'bot.prayer.qaza_title' : 'bot.prayer.done_title', ['name' => $name], $l), 3)
+            ->paragraph(Card::e(__('bot.prayer.done_at', ['time' => ($markedAt ?? now())->copy()->timezone(config('app.timezone'))->format('H:i')], $l)));
+    }
+
+    /** /namaz while prayers are off: they are turned on in the app. */
+    public function prayerOff(User $user): Card
+    {
+        return Card::make()
+            ->heading(__('bot.prayer.today', [], $user->locale), 3)
+            ->paragraph(Card::e(__('bot.prayer.off', [], $user->locale)));
+    }
+
+    public function prayerDoneKeyboard(User $user): Keyboard
+    {
+        return Keyboard::make()->row([Keyboard::webApp('🕌 '.__('bot.buttons.prayer', [], $user->locale), '/tasks/prayer')]);
+    }
+
+    /** /namaz: today's five with their times and marks, the streak and how many to make up. */
+    public function prayerDay(User $user, ?Carbon $now = null): Card
+    {
+        $l = $user->locale;
+        $now ??= now();
+        $today = $now->copy()->timezone(config('app.timezone'))->startOfDay();
+        $prayers = array_filter([$this->nightIsha($user, $now), ...$this->prayers->day($user, $today->toDateString(), $now)]);
+        $card = Card::make()
+            ->heading(__('bot.prayer.title', ['city' => Prayers::city($user)['name']], $l), 3)
+            ->list(array_map(fn (array $p) => $this->prayerLine($p, $l), $prayers));
+
+        $streak = $this->prayers->history($user, $now)['streak']['current'];
+        if ($streak > 0) {
+            $card->paragraph(Card::e(__('bot.prayer.streak', ['days' => Fmt::days($streak, $l)], $l)));
+        }
+        $missed = count($this->prayers->missed($user, $now));
+        if ($missed > 0) {
+            $card->paragraph(Card::e(__('bot.prayer.missed', ['count' => $missed], $l)));
+        }
+
+        return $card->footer(Card::e(Fmt::longDate($today, $l)));
+    }
+
+    /** «✅ Аср» for every prayer of today whose time is on or over and that is not marked yet, and the night's Isha. */
+    public function prayerDayKeyboard(User $user, ?Carbon $now = null): Keyboard
+    {
+        $l = $user->locale;
+        $now ??= now();
+        $date = $now->copy()->timezone(config('app.timezone'))->toDateString();
+        $prayers = array_filter([$this->nightIsha($user, $now), ...array_map(fn (array $p) => $p + ['date' => $date], $this->prayers->day($user, $date, $now))]);
+        $keyboard = Keyboard::make()->grid(collect($prayers)
+            ->filter(fn (array $p) => in_array($p['state'], ['now', 'missed'], true))
+            ->map(fn (array $p) => Keyboard::callback('✅ '.__("prayer.names.{$p['name']}", [], $l), "prayer:d:{$p['date']}:{$p['name']}"))
+            ->values()->all(), 3);
+
+        return $keyboard->row([Keyboard::webApp('🕌 '.__('bot.buttons.prayer', [], $l), '/tasks/prayer')]);
+    }
+
+    /**
+     * Yesterday's Isha while its time lasts and it is not marked: from midnight to Fajr, the prayer whose time is on.
+     *
+     * @return array{name: string, start: string, end: string, state: string, date: string}|null
+     */
+    private function nightIsha(User $user, Carbon $now): ?array
+    {
+        $yesterday = $now->copy()->timezone(config('app.timezone'))->subDay()->toDateString();
+        $isha = collect($this->prayers->day($user, $yesterday, $now))->firstWhere('name', 'isha');
+
+        return $isha !== null && $isha['state'] === 'now' ? $isha + ['date' => $yesterday] : null;
+    }
+
+    /** «✅ Бомдод 05:32», «⏳ Аср 15:39 — сейчас, до 17:25». */
+    private function prayerLine(array $prayer, string $l): string
+    {
+        $state = match ($prayer['state']) {
+            'now' => ' — '.__('bot.prayer.state_now', ['end' => $prayer['end']], $l),
+            'missed' => ' — '.__('bot.prayer.state_missed', [], $l),
+            'qaza' => ' — '.__('bot.prayer.state_qaza', [], $l),
+            default => '',
+        };
+
+        return Card::e(self::PRAYER_EMOJI[$prayer['state']].' '.__("prayer.names.{$prayer['name']}", [], $l).' '.$prayer['start'].$state);
+    }
+
+    /** The same in a word or two, for the line in /today: «✅ Бомдод», «⏳ Аср до 17:25», «Шом 17:25». */
+    private function prayerShort(array $prayer, string $l): string
+    {
+        $name = __("prayer.names.{$prayer['name']}", [], $l);
+
+        return match ($prayer['state']) {
+            'done', 'qaza', 'missed' => self::PRAYER_EMOJI[$prayer['state']].' '.$name,
+            'now' => '⏳ '.$name.' '.__('bot.prayer.state_now', ['end' => $prayer['end']], $l),
+            default => $name.' '.$prayer['start'],
+        };
     }
 
     // --- /month ------------------------------------------------------------------

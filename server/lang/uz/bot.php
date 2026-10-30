@@ -17,6 +17,9 @@ return [
     ],
 
     'buttons' => [
+        'prayed' => "O'qidim",
+        'prayed_name' => ":name o'qildi",
+        'prayer' => 'Namoz',
         'open_app' => 'Kompasni ochish',
         'open_report' => 'Yakunni ochish',
         'category' => 'Toifa',
@@ -157,6 +160,30 @@ return [
         'habit_logged' => ':name: :progress',
     ],
 
+    'prayer' => [
+        'title' => '🕌 Namoz · :city',
+        'today' => '🕌 Namoz',
+        'time' => 'Namoz vaqti: :start–:end',
+        'time_isha' => 'Namoz vaqti: :start dan, afzali :end gacha',
+        'last_title' => '⏳ :name: :m daqiqa qoldi',
+        'last_title_isha' => '⏳ :name: tun yarmigacha :m daqiqa',
+        'last_text' => 'Vaqti :end gacha, namoz hali belgilanmagan.',
+        'last_text_isha' => "Afzali :end gacha o'qish, namoz hali belgilanmagan.",
+        'done_title' => "✅ :name o'qildi",
+        'qaza_title' => '✅ :name: qazo qilindi',
+        'done_at' => 'Belgilandi: :time',
+        'marked' => ':name belgilandi',
+        'marked_qaza' => ':name qazo sifatida yozildi',
+        'already' => ':name allaqachon belgilangan',
+        'off' => "Namoz o'chirilgan. Uni ilovada, «Namoz» ekranida yoqish mumkin.",
+        'too_early' => 'Bu namozning vaqti hali kirmagan',
+        'state_now' => 'hozir, :end gacha',
+        'state_missed' => "o'tkazib yuborildi",
+        'state_qaza' => 'qazo',
+        'streak' => "🔥 Beshalasi o'z vaqtida: ketma-ket :days",
+        'missed' => "30 kunda o'tkazib yuborilgan: :count",
+    ],
+
     'month' => [
         'title' => ':month: :amount sarflandi',
         'income' => 'Daromadlar :amount',
@@ -211,6 +238,7 @@ return [
     'commands' => [
         'today' => '☀️ Bugun: limit, ishlar, odatlar',
         'month' => "📊 Oy xarajatlari toifalar bo'yicha",
+        'namaz' => '🕌 Namoz: vaqtlar va belgilar',
         'help' => '💬 Xarajatlarni qanday yozish kerak',
     ],
     'menu_button' => 'Kompas',
@@ -219,7 +247,7 @@ return [
         ."💸 Maoshgacha yetishi va maqsadlarga ulgurish uchun bugun qancha sarflash mumkinligini hisoblaydi.\n"
         ."✍️ Xarajatlarni bitta ibora bilan yozadi: «taksi 32k», «tushlik 85 000 naqd».\n"
         ."🤔 «Sotib olsam bo'ladimi?» degan savolga javob beradi.\n"
-        ."⏰ To'lovlar, ishlar va kalendardagi tadbirlarni eslatadi.\n\n"
+        ."⏰ To'lovlar, ishlar, kalendardagi tadbirlar va namozni eslatadi.\n\n"
         .'Bot shaxsiy, faqat egasi foydalana oladi.',
 
     'login' => [

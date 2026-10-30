@@ -6,7 +6,7 @@ import type { Component } from 'vue'
  * Quiet on purpose: a soft panel with the module's colour on the icon only. An empty list is an
  * invitation, not an error.
  */
-withDefaults(defineProps<{ icon?: Component; title?: string; text: string; tone?: 'neutral' | 'money' | 'habit' | 'task' | 'goal' }>(), {
+withDefaults(defineProps<{ icon?: Component; title?: string; text: string; tone?: 'neutral' | 'money' | 'habit' | 'task' | 'goal' | 'prayer' }>(), {
   icon: undefined,
   title: undefined,
   tone: 'neutral',
@@ -18,6 +18,7 @@ const tones = {
   habit: 'text-habit',
   task: 'text-task',
   goal: 'text-goal',
+  prayer: 'text-prayer',
 } as const
 </script>
 

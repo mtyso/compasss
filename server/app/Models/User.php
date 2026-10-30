@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Money\DefaultCategories;
+use App\Prayer\Cities;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,6 +35,12 @@ class User extends Authenticatable
         // «Не показывать такое»: rules switched off
         'muted_rules' => ['array', 'max:20'],
         'muted_rules.*' => ['string', 'distinct', 'in:'.Insight::RULES_LIST],
+        // Prayers (D40): kept at all (off until turned on), the city of the taqvim, how the bot reminds, and the prayers it does not remind of
+        'prayer_on' => ['boolean'],
+        'prayer_city' => ['string', 'in:'.Cities::LIST],
+        'prayer_remind' => ['string', 'in:start,start_end,end,off'],
+        'prayer_mute' => ['array', 'max:5'],
+        'prayer_mute.*' => ['string', 'distinct', 'in:fajr,dhuhr,asr,maghrib,isha'],
     ];
 
     protected static function booted(): void
@@ -108,6 +115,11 @@ class User extends Authenticatable
     public function records(): HasMany
     {
         return $this->hasMany(Record::class);
+    }
+
+    public function prayerLogs(): HasMany
+    {
+        return $this->hasMany(PrayerLog::class);
     }
 
     public function insights(): HasMany

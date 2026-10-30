@@ -65,7 +65,7 @@ class Record extends Model
         };
     }
 
-    /** habit, habit_week, limit, records or contributions. */
+    /** habit, habit_week, limit, records, contributions or prayer. */
     private function streakKey(): string
     {
         if (str_starts_with($this->subject, 'h')) {

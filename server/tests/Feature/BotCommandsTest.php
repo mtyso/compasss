@@ -211,7 +211,7 @@ it('sets up the webhook, the name, commands and descriptions in both languages a
         ->and(cmdCalls('setMyName'))->toBe([['name' => 'Компас'], ['language_code' => 'uz', 'name' => 'Kompas']])
         ->and(cmdCalls('setMyCommands'))->toHaveCount(2)
         ->and(cmdCalls('setMyCommands')[1]['language_code'])->toBe('uz')
-        ->and(collect(cmdCalls('setMyCommands')[0]['commands'])->pluck('command')->all())->toBe(['today', 'month', 'help']);
+        ->and(collect(cmdCalls('setMyCommands')[0]['commands'])->pluck('command')->all())->toBe(['today', 'month', 'namaz', 'help']);
 
     // Telegram's limits: 512 characters in an empty chat, 120 on the profile page.
     foreach ([...cmdCalls('setMyDescription'), ...cmdCalls('setMyShortDescription')] as $call) {

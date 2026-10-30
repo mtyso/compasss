@@ -26,6 +26,14 @@ export interface TelegramWebApp {
   onEvent(event: string, handler: () => void): void
   offEvent(event: string, handler: () => void): void
   BackButton: { isVisible: boolean; show(): void; hide(): void; onClick(handler: () => void): void }
+  /** Used by the Qibla compass (Bot API 8.0): angles in radians, `absolute` when alpha is against north. */
+  DeviceOrientation?: {
+    isStarted: boolean
+    absolute: boolean
+    alpha: number | null
+    start(params: { refresh_rate?: number; need_absolute?: boolean }, callback?: (started: boolean) => void): void
+    stop(callback?: () => void): void
+  }
   /** Used by lib/haptics. */
   HapticFeedback?: {
     impactOccurred(style: 'light' | 'medium' | 'heavy'): void

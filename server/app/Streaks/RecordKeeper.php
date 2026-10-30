@@ -13,6 +13,7 @@ use App\Models\Record;
 use App\Models\User;
 use App\Money\Balances;
 use App\Money\MonthReport;
+use App\Prayer\Prayers;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -22,13 +23,13 @@ use Illuminate\Support\Facades\Cache;
  *
  *   streaks  a milestone (30, 100, 365 days; 4, 12, 52 weeks; 3, 6, 12 periods) and a new record, that is a
  *            run longer than every earlier one, from 7 days (4 weeks, 3 periods); a record line follows its
- *            run as it grows
+ *            run as it grows. Habits, the money streaks and the prayers (D40)
  *   goals    the first contribution, 25 / 50 / 75 / 100% collected (only steps above where the goal started),
  *            reached or bought; a debt goal its 25 / 50 / 75% paid
  *   money    a debt paid off, the cushion at 1 / 3 / 6 months of usual spending, last month in budget, last
  *            month's savings rate above every earlier month's
  *
- * Runs after a habit is marked, after an operation and every hour with streaks:close-day. Every check is safe
+ * Runs after a habit or a prayer is marked, after an operation and every hour with streaks:close-day. Every check is safe
  * to repeat: a fact is found by its `ref`, a line the user removed included.
  */
 final class RecordKeeper
@@ -47,7 +48,7 @@ final class RecordKeeper
     /** @var Collection<int, Record> */
     private Collection $added;
 
-    public function __construct(private MoneyStreaks $streaks, private GoalPlanner $planner, private MonthReport $report)
+    public function __construct(private MoneyStreaks $streaks, private GoalPlanner $planner, private MonthReport $report, private Prayers $prayers)
     {
         $this->added = collect();
     }
@@ -59,6 +60,7 @@ final class RecordKeeper
         foreach ($user->habits()->whereNull('archived_at')->get() as $habit) {
             $this->checkHabit($user, $habit, $now);
         }
+        $this->checkPrayer($user, $now);
         $goals = $this->planner->plan($user, $now);
         $this->checkMoney($user, $now, $goals);
         $this->checkCushion($user, $now);
@@ -76,6 +78,15 @@ final class RecordKeeper
         return $this->added;
     }
 
+    /** The prayer streak, right after a prayer is marked. @return Collection<int, Record> */
+    public function prayer(User $user, Carbon $now): Collection
+    {
+        $this->added = collect();
+        $this->checkPrayer($user, $now);
+
+        return $this->added;
+    }
+
     /** The money streaks, goals and debts, right after an operation. @return Collection<int, Record> */
     public function money(User $user, Carbon $now): Collection
     {
@@ -89,6 +100,13 @@ final class RecordKeeper
     {
         $run = HabitProgress::for($habit, $now)->run();
         $this->streak($user, 'h'.$habit->id, $run, ['name' => $habit->name]);
+    }
+
+    private function checkPrayer(User $user, Carbon $now): void
+    {
+        if (Prayers::on($user)) {
+            $this->streak($user, 'prayer', $this->prayers->history($user, $now)['run']);
+        }
     }
 
     private function checkMoney(User $user, Carbon $now, GoalsPlan $goals): void
