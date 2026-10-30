@@ -38,6 +38,14 @@ return [
             ],
         ],
         'income_split' => [
+            'leftover' => [
+                'title' => 'Daromad tushdi: :amount_uzs',
+                'body' => "Keyingi daromadgacha majburiy to'lovlar :payments_uzs. Yashash uchun :left_uzs, bu kuniga :per_day_uzs. Reja bo'yicha maqsadlarga :plan_uzs: :until_on gacha qolgan puldan ajratasiz.",
+            ],
+            'leftover_debt' => [
+                'title' => 'Daromad tushdi: :amount_uzs',
+                'body' => "Keyingi daromadgacha majburiy to'lovlar :payments_uzs va qarz to'lovi :debt_uzs. Yashash uchun :left_uzs, bu kuniga :per_day_uzs. Reja bo'yicha maqsadlarga :plan_uzs: :until_on gacha qolgan puldan ajratasiz.",
+            ],
             'goals' => [
                 'title' => 'Daromad tushdi: :amount_uzs',
                 'body' => "Keyingi daromadgacha majburiy to'lovlar :payments_uzs, reja bo'yicha maqsadlarga :goals_uzs. Yashash uchun :left_uzs qoladi, bu kuniga :per_day_uzs. «Ajratish»ni bosing, pul jamg'armalarga o'tadi.",
@@ -80,6 +88,10 @@ return [
             ],
         ],
         'goal_pace' => [
+            'slower' => [
+                'title' => "«:goal» hozirgi sur'atda :fact_on gacha bo'ladi",
+                'body' => "Bu muddatdan (:deadline_on) kech. Ulgurish uchun oyiga :monthly_amount ajratish kerak. Shunday xotirjamroq bo'lsa, muddatni suring.",
+            ],
             'behind' => [
                 'title' => '«:goal» jadvaldan :behind_amount ortda',
                 'body' => "Ulgurish uchun (:deadline_on) oyiga :monthly_amount ajrating. Maqsad ekranida «Qanday tezlashtirish»ni ko'ring.",

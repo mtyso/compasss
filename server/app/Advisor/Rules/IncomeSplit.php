@@ -7,7 +7,8 @@ use App\Advisor\AdvisorContext;
 /**
  * «Пришла зарплата 12 млн. Обязательные платежи 4,2 млн, в подушку советую 1,2 млн, на жизнь остаётся 6,6 млн,
  * это 220 000 в день.» When a sizeable income arrives today. With goals the split names this period's
- * contributions instead, and «Отложить» on the insight makes them (docs/PLAN.md, 2.6).
+ * contributions instead, and «Отложить» on the insight makes them (docs/PLAN.md, 2.6). With «Из остатка» it
+ * only names the goals' plan: they get what is left by the next income.
  */
 final class IncomeSplit extends BaseRule
 {
@@ -39,6 +40,25 @@ final class IncomeSplit extends BaseRule
 
         $limit = $context->limit();
         $goals = $context->goals();
+        $plannedUzs = $goals->dueUzs() - $goals->debtDueUzs();
+        if ($goals->mode === 'leftover' && $plannedUzs > 0) {
+            // «Из остатка»: the limit is not cut for goals, so the split only names their plan for this period.
+            // No «Отложить» here: the goals get what is left by the next income (GoalLeftover).
+            $left = max(0, $limit->freeUzs);
+
+            return [$this->finding('good', 't'.$income->id, '', [
+                'variant' => $goals->debtDueUzs() > 0 ? 'leftover_debt' : 'leftover',
+                'amount_uzs' => $income->amount_uzs,
+                'payments_uzs' => $limit->upcomingUzs,
+                'debt_uzs' => $goals->debtDueUzs(),
+                'plan_uzs' => $plannedUzs,
+                'goal_id' => $goals->mainSaving()?->goal->id,
+                'left_uzs' => $left,
+                'per_day_uzs' => intdiv($left, $limit->daysLeft),
+                'days' => $limit->daysLeft,
+                'until_on' => $goals->period->end->toDateString(),
+            ])];
+        }
         if ($goals->dueUzs() > 0) {
             // «Сначала цели» already keeps them out of the money for each day; «из остатка» does it here,
             // except for debt payments, which the limit keeps out in both modes.

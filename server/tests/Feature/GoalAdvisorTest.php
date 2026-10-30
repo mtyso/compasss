@@ -68,6 +68,47 @@ it('warns when a goal falls behind its line and says what a month needs now', fu
         ->and($pace->text('ru')['body'])->toBe("Чтобы успеть к 1 июля, откладывай 1\u{202F}875\u{202F}000 сум в месяц. Посмотри «Как быстрее» на экране цели.");
 });
 
+it('does not call a goal saving its own smaller amount behind', function () {
+    $this->patchJson("/api/goals/{$this->goal['id']}", ['monthly_amount' => 1_000_000], $this->auth)->assertOk()->assertJsonPath('status', 'later');
+    $this->travelTo(Carbon::parse('2026-11-10 08:00', 'Asia/Tashkent'));
+    $this->advisor->run($this->user, 'morning', now());
+
+    expect($this->user->insights()->where('rule', 'goal_pace')->count())->toBe(0);
+});
+
+it('with «Из остатка» names the goals\' plan on payday without setting it aside, and does not press with reminders', function () {
+    $this->patchJson('/api/me', ['settings' => ['goal_mode' => 'leftover']], $this->auth)->assertOk();
+    $this->user->refresh();
+    $this->postJson('/api/transactions', [
+        'type' => 'income', 'account_id' => $this->card->id, 'amount' => 12_000_000,
+        'category_id' => ($this->cat)('salary')->id, 'occurred_at' => '2026-10-10 09:30',
+    ], $this->auth)->assertCreated();
+
+    // 24 000 000 on the card for 15 days until the advance, the goals are not taken out of it
+    $split = $this->user->insights()->where('rule', 'income_split')->sole();
+    expect($split->payload)->toMatchArray(['variant' => 'leftover', 'plan_uzs' => 1_251_000, 'left_uzs' => 24_000_000, 'per_day_uzs' => 1_600_000, 'goal_id' => $this->goal['id']])
+        ->and($split->toApi('ru')['action'])->toBeNull()
+        ->and($split->text('ru')['body'])->toContain("В цели по плану 1\u{202F}251\u{202F}000 сум: отложишь из того, что останется");
+
+    $this->travelTo(Carbon::parse('2026-10-23 08:00', 'Asia/Tashkent'));
+    $this->advisor->run($this->user, 'morning', now());
+    expect($this->user->insights()->where('rule', 'goal_due')->count())->toBe(0);
+});
+
+it('with «Из остатка» says calmly when the actual pace gets to a goal after its deadline', function () {
+    $this->patchJson('/api/me', ['settings' => ['goal_mode' => 'leftover']], $this->auth)->assertOk();
+    $this->user->refresh();
+    $this->postJson('/api/goals/contribute', ['account_id' => $this->card->id, 'items' => [['goal_id' => $this->goal['id'], 'amount' => 500_000]]], $this->auth)->assertOk();
+    $this->travelTo(Carbon::parse('2026-11-10 08:00', 'Asia/Tashkent'));
+    $this->advisor->run($this->user, 'morning', now());
+
+    $pace = $this->user->insights()->where('rule', 'goal_pace')->sole();
+    expect($pace->severity)->toBe('info')
+        ->and($pace->payload)->toMatchArray(['variant' => 'slower', 'goal_id' => $this->goal['id'], 'deadline_on' => '2027-07-01'])
+        ->and($pace->text('ru')['title'])->toStartWith('«Отпуск» в нынешнем темпе будет к ')
+        ->and($pace->text('ru')['body'])->toEndWith('Если так спокойнее, просто сдвинь срок.');
+});
+
 it('suggests putting what is left on the last evening before an income into the main goal', function () {
     $this->postJson('/api/goals/contribute', ['account_id' => $this->card->id, 'items' => [['goal_id' => $this->goal['id'], 'amount' => 1_251_000]]], $this->auth)->assertOk();
     $this->postJson('/api/transactions', [

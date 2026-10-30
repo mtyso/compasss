@@ -9,7 +9,9 @@ use Illuminate\Support\Collection;
 /**
  * «Dongfeng 008 отстаёт от графика на 4 000 000. Чтобы успеть к 1 апреля, откладывай 24 000 000 в месяц.»
  * Each morning, about money goals: behind their line, past their deadline, or well ahead of it. At most once
- * a month per goal; an unread one goes away when the goal catches up.
+ * a month per goal; an unread one goes away when the goal catches up. A goal saving its own amount, less than
+ * the deadline needs (`later`), is not behind and gets nothing. With «Из остатка» being behind the line is how
+ * it works, so it only says, calmly, when the actual pace reaches the goal after its deadline.
  */
 final class GoalPace extends BaseRule implements Withdraws
 {
@@ -29,17 +31,25 @@ final class GoalPace extends BaseRule implements Withdraws
         foreach ($this->goals($context) as $state) {
             $goal = $state->goal;
             $base = ['goal_id' => $goal->id, 'currency' => $goal->currency, 'deadline_on' => $goal->deadlineDate()?->toDateString()];
-            $finding = match ($state->status) {
-                'behind' => $this->finding('warn', $context->month(), 'g'.$goal->id, [
+            $finding = match (true) {
+                // «Из остатка»: falling behind the line is expected, so only say when the actual pace misses the deadline.
+                $state->status === 'behind' && $context->goals()->mode === 'leftover' => $state->forecastFact?->gt($goal->deadlineDate())
+                    ? $this->finding('info', $context->month(), 'g'.$goal->id, [
+                        'variant' => 'slower', ...$base,
+                        'fact_on' => $state->forecastFact->toDateString(),
+                        'monthly_amount' => $state->monthlyRequired,
+                    ])
+                    : null,
+                $state->status === 'behind' => $this->finding('warn', $context->month(), 'g'.$goal->id, [
                     'variant' => 'behind', ...$base,
                     'behind_amount' => $state->behind,
                     'monthly_amount' => $state->monthlyRequired,
                 ]),
-                'late' => $this->finding('alert', $context->month(), 'g'.$goal->id, [
+                $state->status === 'late' => $this->finding('alert', $context->month(), 'g'.$goal->id, [
                     'variant' => 'late', ...$base,
                     'remaining_amount' => $state->remaining,
                 ]),
-                'ahead' => $state->forecastFact !== null && $state->forecastFact->lt($goal->deadlineDate())
+                $state->status === 'ahead' => $state->forecastFact !== null && $state->forecastFact->lt($goal->deadlineDate())
                     ? $this->finding('good', $context->month(), 'g'.$goal->id, [
                         'variant' => 'ahead', ...$base,
                         'fact_on' => $state->forecastFact->toDateString(),

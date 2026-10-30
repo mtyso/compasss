@@ -12,10 +12,11 @@ import { showToast } from '@/components/ui/toast'
 import { ApiError } from '@/lib/api'
 import { isoDate, shiftDate } from '@/lib/dates'
 import type { Currency } from '@/lib/format'
-import { daysBetween, MONTH_DAYS, monthlyFor, roundUp } from '@/lib/goals'
+import { daysBetween, forecastAt, MONTH_DAYS, monthlyFor, roundUp } from '@/lib/goals'
 import { haptics } from '@/lib/haptics'
 import { useGoals, type Goal, type GoalInput, type GoalType } from '@/stores/goals'
 import { GOAL_ICONS, TYPE_ICONS } from './goalLook'
+import { useGoalText } from './useGoalText'
 
 /**
  * Create or edit a goal. The type decides the rest: a sum and a date to collect it by; a purchase,
@@ -28,6 +29,7 @@ const emit = defineEmits<{ saved: [goal: Goal]; deleted: [] }>()
 
 const goals = useGoals()
 const { t } = useI18n()
+const text = useGoalText()
 
 const DOWN_PERCENTS = [10, 20, 30, 40, 50]
 const LOAN_MONTHS = [6, 12, 24, 36, 48, 60]
@@ -107,13 +109,17 @@ const payment = computed(() => {
 })
 const collects = computed(() => (type.value === 'buy' && installment.value ? downPayment.value : (target.value ?? 0)))
 
+const left = computed(() => Math.max(0, collects.value - (props.goal?.saved ?? already.value ?? 0)))
+
 /** What the deadline asks for a month, before the server's exact split by paydays. */
 const neededMonthly = computed(() => {
   if (!deadline.value || !collects.value) return null
   const months = Math.max(1, Math.ceil(daysBetween(today.value, deadline.value) / MONTH_DAYS))
-  const left = Math.max(0, collects.value - (props.goal?.saved ?? already.value ?? 0))
-  return roundUp(monthlyFor(left, months, type.value === 'debt' ? rate.value : null), currency.value)
+  return roundUp(monthlyFor(left.value, months, type.value === 'debt' ? rate.value : null), currency.value)
 })
+
+/** When the chosen contribution collects the goal: below what the deadline asks for, this date is the forecast. */
+const monthlyReach = computed(() => (type.value === 'debt' || !monthly.value || !left.value ? null : forecastAt(left.value, monthly.value, null, today.value)))
 
 const canSave = computed(() => {
   if (!title.value.trim()) return false
@@ -274,7 +280,13 @@ async function remove(): Promise<void> {
         </p>
       </section>
 
-      <AmountField v-if="hasMoney" v-model="monthly" :currency="currency" :label="type === 'debt' ? $t('goals.payment') : $t('goals.monthly')" />
+      <section v-if="hasMoney" class="flex flex-col gap-2">
+        <AmountField v-model="monthly" :currency="currency" :label="type === 'debt' ? $t('goals.payment') : $t('goals.monthly')" />
+        <template v-if="type !== 'debt'">
+          <p v-if="monthlyReach" class="text-caption text-ink-2">{{ $t('goals.monthlyReach', { date: text.dayYear(monthlyReach) }) }}</p>
+          <p class="text-caption text-ink-3">{{ $t('goals.monthlyHint') }}</p>
+        </template>
+      </section>
 
       <template v-if="!hasMoney">
         <p class="text-caption text-ink-2">{{ $t('goals.otherHint') }}</p>

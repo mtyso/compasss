@@ -31,6 +31,10 @@ final class GoalDue extends BaseRule implements Withdraws
         if ($goals->dueUzs() <= 0 || $days > self::DAYS_BEFORE || $days < 1) {
             return [];
         }
+        // «Из остатка»: goals get what is left on the last evening (GoalLeftover), only a debt payment is worth a reminder.
+        if ($goals->mode === 'leftover' && $goals->debtDueUzs() <= 0) {
+            return [];
+        }
 
         return [$this->finding($days <= 1 ? 'warn' : 'info', $this->periodKey($context), '', [
             'variant' => match (true) {
