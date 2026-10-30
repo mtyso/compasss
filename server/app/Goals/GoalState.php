@@ -10,8 +10,9 @@ use Illuminate\Support\Carbon;
  * `*Uzs` values are in som at today's rate.
  *
  * status: reached (all collected, a purchase not made yet), done (closed), late (the deadline passed),
- * behind / on_track / ahead (against a straight line from the start to the deadline), open (no deadline,
- * a contribution chosen), no_plan (no deadline and no contribution).
+ * behind / on_track / ahead (against a straight line from the start to the deadline), later (its own contribution
+ * is less than the deadline needs, so the forecast is after it), open (no deadline, a contribution chosen),
+ * no_plan (no deadline and no contribution).
  */
 final class GoalState
 {

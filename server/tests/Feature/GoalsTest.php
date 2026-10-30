@@ -133,6 +133,28 @@ it('takes only the rest of the period for a goal set in the middle of it', funct
     expect($this->user->accounts()->where('is_cushion', true)->count())->toBe(1);
 });
 
+it('saves the amount its owner chose even below what the deadline needs, and the deadline becomes a forecast', function () {
+    $goal = $this->postJson('/api/goals', ['type' => 'save', 'title' => 'Машина', 'currency' => 'UZS', 'target_amount' => 15_000_000, 'deadline' => '2027-07-01', 'monthly_amount' => 1_000_000], $this->auth)
+        ->assertCreated()
+        ->assertJsonPath('monthly_required', 1_667_000)
+        ->assertJsonPath('monthly', 1_000_000)
+        ->assertJsonPath('period.planned', 750_000)
+        ->assertJsonPath('status', 'later')
+        // 15 months at 1 000 000, after the deadline and not pulled back to it
+        ->assertJsonPath('forecast.plan_on', '2028-01-10')
+        ->json();
+
+    // (12 000 000 − 750 000) / 15 days
+    $this->getJson('/api/today', $this->auth)
+        ->assertJsonPath('limit.planned_savings_uzs', 750_000)
+        ->assertJsonPath('limit.limit_uzs', 750_000);
+
+    // Asking for what the deadline needs again makes it a plan to keep to.
+    $this->patchJson("/api/goals/{$goal['id']}", ['monthly_amount' => 1_700_000], $this->auth)->assertOk()
+        ->assertJsonPath('monthly', 1_700_000)
+        ->assertJsonPath('status', 'on_track');
+});
+
 it('does not hold goals back from the limit when they get what is left over', function () {
     $this->patchJson('/api/me', ['settings' => ['goal_mode' => 'leftover']], $this->auth)->assertOk();
     $this->postJson('/api/goals', ['type' => 'save', 'title' => 'Отпуск', 'currency' => 'UZS', 'target_amount' => 15_000_000, 'deadline' => '2027-07-01'], $this->auth)->assertCreated();
