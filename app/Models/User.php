@@ -27,7 +27,7 @@ class User extends Authenticatable
         'budget_alert_percent' => ['integer', 'min:50', 'max:100'],
         'large_spend_factor' => ['numeric', 'min:1.5', 'max:10'],
         'cushion_target_months' => ['integer', 'min:1', 'max:12'],
-        // Goals (D25): `first` sets this period's contributions aside before the daily limit, `leftover` saves what is left
+        // Goals (D25): `first` (default) sets this period's contributions aside before the daily limit, `leftover` saves what is left
         'goal_mode' => ['string', 'in:first,leftover'],
         // Debts (D29): which one gets money beyond its payment first, the dearest (`avalanche`) or the smallest (`snowball`)
         'debt_method' => ['string', 'in:avalanche,snowball'],
