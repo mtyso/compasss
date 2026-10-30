@@ -73,7 +73,7 @@ const draft = ref(0)
 watch(goal, (g) => (draft.value = g?.monthly ?? 0), { immediate: true })
 const range = computed(() => {
   const g = goal.value!
-  const base = sliderRange(g.monthly_required, g.monthly, g.remaining, currency.value)
+  const base = sliderRange(g.monthly_required, g.monthly, g.remaining, currency.value, g.type === 'debt')
   return { ...base, max: Math.max(base.max, draft.value) }
 })
 /** Keeping to what the deadline asks for is on time, as on the server: those months are counted in pay months. */
@@ -342,11 +342,15 @@ function bought(debt: { id: number } | null): void {
           <div class="flex flex-col gap-1 text-[0.9375rem]">
             <p v-if="draftDate">
               {{ $t('goals.reachOn', { date: text.dayYear(draftDate) }) }}
-              <span v-if="draftVsDeadline !== null" :class="draftVsDeadline >= 0 ? 'text-money' : 'text-danger'">
+              <!-- Later than the deadline is a choice here, not a failure, so it is not red. -->
+              <span v-if="draftVsDeadline !== null" :class="draftVsDeadline >= 0 ? 'text-money' : 'text-ink-2'">
                 · {{ draftVsDeadline === 0 ? $t('goals.onDeadline') : draftVsDeadline > 0 ? $t('goals.beforeDeadline', draftVsDeadline) : $t('goals.afterDeadline', -draftVsDeadline) }}
               </span>
             </p>
             <p v-else class="text-danger">{{ $t('goals.never') }}</p>
+            <p v-if="goal.deadline && draft < goal.monthly_required" class="text-caption text-ink-2">
+              {{ $t('goals.neededForDeadline', { amount: fmt(goal.monthly_required) }) }}
+            </p>
             <p v-if="draftLimit !== 0" class="text-caption text-ink-2">
               {{ $t(draftLimit > 0 ? 'goals.limitUp' : 'goals.limitDown', { amount: formatMoney(Math.abs(draftLimit), 'UZS', settings.locale) }) }}
             </p>

@@ -50,9 +50,14 @@ describe('limitChangePerDay', () => {
 })
 
 describe('sliderRange', () => {
-  it('starts at what the deadline needs', () => {
-    expect(sliderRange(20_000_000, 20_000_000, 120_000_000, 'UZS')).toEqual({ min: 20_000_000, max: 60_000_000, step: 100_000 })
+  it('starts low, so a goal can save less than its deadline needs, and reaches past that', () => {
+    expect(sliderRange(20_000_000, 20_000_000, 120_000_000, 'UZS')).toEqual({ min: 100_000, max: 60_000_000, step: 100_000 })
+    expect(sliderRange(17_000_000, 8_000_000, 120_000_000, 'UZS')).toEqual({ min: 100_000, max: 25_500_000, step: 100_000 })
     expect(sliderRange(0, 500_000, 15_000_000, 'UZS')).toEqual({ min: 10_000, max: 1_500_000, step: 10_000 })
+  })
+
+  it('starts a debt at what its deadline needs', () => {
+    expect(sliderRange(2_000_000, 2_000_000, 12_000_000, 'UZS', true)).toEqual({ min: 2_000_000, max: 6_000_000, step: 10_000 })
   })
 })
 
@@ -62,5 +67,6 @@ describe('statusTone', () => {
     expect(statusTone('late')).toBe('danger')
     expect(statusTone('ahead')).toBe('money')
     expect(statusTone('open')).toBe('goal')
+    expect(statusTone('later')).toBe('goal')
   })
 })
