@@ -150,7 +150,7 @@ final class Prayers
     /**
      * The prayer whose time is on (yesterday's Isha until Fajr) and the next one to start.
      *
-     * @return array{current: array{name: string, date: string, end: string, marked: bool}|null, next: array{name: string, date: string, start: string, in_minutes: int}}
+     * @return array{current: array{name: string, date: string, start: string, end: string, marked: bool}|null, next: array{name: string, date: string, start: string, in_minutes: int}}
      */
     public function moment(User $user, Carbon $now): array
     {
@@ -159,7 +159,7 @@ final class Prayers
         foreach ([self::addDays($today, -1), $today, self::addDays($today, 1)] as $date) {
             foreach (self::windows($user, $date) as $name => $window) {
                 if ($current === null && $now->gte($window['start']) && $now->lt($window['end'])) {
-                    $current = ['name' => $name, 'date' => $date, 'end' => $window['end']->format('H:i'), 'marked' => isset($this->marks($user, $date)[$name])];
+                    $current = ['name' => $name, 'date' => $date, 'start' => $window['start']->format('H:i'), 'end' => $window['end']->format('H:i'), 'marked' => isset($this->marks($user, $date)[$name])];
                 }
                 if ($next === null && $window['start']->gt($now)) {
                     $next = ['name' => $name, 'date' => $date, 'start' => $window['start']->format('H:i'), 'in_minutes' => (int) ceil($now->diffInSeconds($window['start']) / 60)];
@@ -215,25 +215,28 @@ final class Prayers
             $date = substr((string) $log->date, 0, 10);
             $log->status === 'qaza' ? $qaza[$date] = ($qaza[$date] ?? 0) + 1 : $onTime[$date] = ($onTime[$date] ?? 0) + 1;
         }
-        $paused = $this->pausedDays($user, $since ?? $today, $today);
-        $windows = self::windows($user, $today);
+        // Before any mark the count has not begun: today is its first day, not judged.
+        $first = $since ?? $today;
+        $paused = $this->pausedDays($user, $first, $today);
+        $yesterday = self::addDays($today, -1);
 
         // From the first mark on, every day: the streak looks at all of them, the map at the last 53 weeks.
         $periods = $dates = $days = [];
-        for ($date = $since ?? $today; $date <= $today; $date = self::addDays($date, 1)) {
+        for ($date = $first; $date <= $today; $date = self::addDays($date, 1)) {
             $kept = ($onTime[$date] ?? 0) >= count(PrayerTimes::NAMES);
             $state = match (true) {
                 $kept => StreakCounter::KEPT,
-                $date === $since, isset($paused[$date]) => StreakCounter::PAUSED,
-                // Today stays open while every prayer missing from it can still be prayed in its time.
-                $date === $today => $this->todayLost($windows, $this->marks($user, $today), $now) ? StreakCounter::MISSED : StreakCounter::OPEN,
+                $date === $first, isset($paused[$date]) => StreakCounter::PAUSED,
+                // A day stays open while every prayer missing from it can still be prayed in its time: today,
+                // and after midnight yesterday too, whose Isha lasts until this morning's Fajr.
+                $date === $today, $date === $yesterday => $this->dayLost(self::windows($user, $date), $this->marks($user, $date), $now) ? StreakCounter::MISSED : StreakCounter::OPEN,
                 default => StreakCounter::MISSED,
             };
             $periods[] = $state;
             $dates[] = $date;
             if ($date >= $from) {
                 // On the map the first day is just a day before the count, not a pause.
-                $shown = $date === $since && $state === StreakCounter::PAUSED && ! isset($paused[$date]) ? 'off' : $state;
+                $shown = $date === $first && $state === StreakCounter::PAUSED && ! isset($paused[$date]) ? 'off' : $state;
                 $days[] = ['date' => $date, 'value' => $onTime[$date] ?? 0, 'qaza' => $qaza[$date] ?? 0, 'state' => $shown];
             }
         }
@@ -267,8 +270,8 @@ final class Prayers
         ];
     }
 
-    /** Some prayer of today is past its time without being prayed in it: the day can no longer keep the streak. */
-    private function todayLost(array $windows, array $marks, Carbon $now): bool
+    /** Some prayer of the day is past its time without being prayed in it: the day can no longer keep the streak. */
+    private function dayLost(array $windows, array $marks, Carbon $now): bool
     {
         foreach ($windows as $name => $window) {
             if (($marks[$name] ?? null) !== 'on_time' && $now->gte($window['end'])) {

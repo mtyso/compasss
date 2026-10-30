@@ -16,7 +16,8 @@ final class PrayerReminders
 
     /**
      * Reminders with their moment in ($since, $now]: yesterday's too, for an Isha whose last call is past midnight.
-     * `title` is the prayer's name in the user's language, `prayer` and `phase` (start, end) say which reminder it is.
+     * `title` is the prayer's name in the user's language, `prayer` and `phase` (start, end) say which reminder it is,
+     * `until` is the end to aim for.
      *
      * @return list<array<string, mixed>>
      */
@@ -58,6 +59,7 @@ final class PrayerReminders
                         'date' => $date,
                         'start' => $window['start']->format('H:i'),
                         'end' => $window['until']->format('H:i'),
+                        'until' => $window['until'],
                         'all_day' => false,
                         'remind_at' => $at,
                         'remind_before' => $phase === 'end' ? Prayers::LAST_CALL_MINUTES : 0,

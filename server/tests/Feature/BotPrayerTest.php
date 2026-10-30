@@ -166,3 +166,51 @@ it('shows the day in /namaz with buttons for what can be marked, and one line in
     prayerTap('prayer:t:2026-10-30:maghrib');
     expect(collect(prayerCalls('editMessageText'))->last()['rich_message']['html'])->toContain('✅ Шом');
 });
+
+it('offers yesterday\'s Isha after midnight, while its time lasts until Fajr', function () {
+    foreach (['fajr', 'dhuhr', 'asr', 'maghrib'] as $name) {
+        PrayerLog::create(['user_id' => $this->user->id, 'date' => '2026-10-30', 'prayer' => $name, 'status' => 'on_time']);
+    }
+    $this->travelTo(Carbon::parse('2026-10-31 00:20', 'Asia/Tashkent'));
+
+    prayerSay('/namaz');
+    $card = prayerCalls('sendRichMessage')[0];
+    expect($card['rich_message']['html'])->toContain('<li>⏳ Хуфтон 18:41 — сейчас, до 05:33</li><li>▫️ Бомдод 05:33</li>')
+        ->and(prayerButtons($card))->toBe(['prayer:d:2026-10-30:isha', 'https://kompas.example.uz/tasks/prayer']);
+
+    prayerSay('/today');
+    $today = collect(prayerCalls('sendRichMessage'))->last();
+    expect($today['rich_message']['html'])->toContain('⏳ Хуфтон сейчас, до 05:33 · Бомдод 05:33')
+        ->and(prayerButtons($today))->toContain('prayer:t:2026-10-30:isha');
+
+    prayerTap('prayer:d:2026-10-30:isha');
+    expect(PrayerLog::where('date', '2026-10-30')->where('prayer', 'isha')->value('status'))->toBe('on_time')
+        ->and(collect(prayerCalls('editMessageText'))->last()['rich_message']['html'])->not->toContain('Хуфтон 18:41 — сейчас');
+});
+
+it('tells how to turn prayers on, and marks nothing, while they are off', function () {
+    $this->user->update(['settings' => ['prayer_on' => false]]);
+
+    prayerSay('/namaz');
+    $card = prayerCalls('sendRichMessage')[0];
+    expect($card['rich_message']['html'])->toContain('Намаз выключен')
+        ->and(prayerButtons($card))->toBe(['https://kompas.example.uz/tasks/prayer']);
+
+    prayerTap('prayer:d:2026-10-30:dhuhr');
+    expect(prayerToast())->toContain('Намаз выключен')
+        ->and(PrayerLog::count())->toBe(0);
+});
+
+it('counts the minutes left in a late last call, and keeps the time a prayer was marked', function () {
+    // The first run of the evening, six minutes before the end of Asr.
+    prayerNotifyAt('2026-10-30 17:19');
+    expect(prayerSent())->toHaveCount(1)
+        ->and(prayerSent()[0])->toContain('<h3>⏳ Аср: осталось 6 мин</h3>');
+
+    $this->travelTo(Carbon::parse('2026-10-30 15:45', 'Asia/Tashkent'));
+    PrayerLog::create(['user_id' => $this->user->id, 'date' => '2026-10-30', 'prayer' => 'asr', 'status' => 'on_time']);
+    $this->travelTo(Carbon::parse('2026-10-30 17:00', 'Asia/Tashkent'));
+    prayerTap('prayer:r:2026-10-30:asr');
+    expect(prayerToast())->toBe('Аср уже отмечен')
+        ->and(collect(prayerCalls('editMessageText'))->last()['rich_message']['html'])->toContain('Отмечено в 15:45');
+});

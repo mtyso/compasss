@@ -175,6 +175,7 @@ return [
         'marked' => ':name belgilandi',
         'marked_qaza' => ':name qazo sifatida yozildi',
         'already' => ':name allaqachon belgilangan',
+        'off' => "Namoz o'chirilgan. Uni ilovada, «Namoz» ekranida yoqish mumkin.",
         'too_early' => 'Bu namozning vaqti hali kirmagan',
         'state_now' => 'hozir, :end gacha',
         'state_missed' => "o'tkazib yuborildi",

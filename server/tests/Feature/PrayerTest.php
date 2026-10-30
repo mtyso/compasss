@@ -53,7 +53,7 @@ it('is off until turned on, and gives the day\'s times, states and the next pray
         // Nothing marked yet: the morning is not judged.
         ->and(prayerStates($state))->toBe(['fajr' => 'skipped', 'dhuhr' => 'skipped', 'asr' => 'now', 'maghrib' => 'later', 'isha' => 'later'])
         ->and($state['prayers'][2])->toMatchArray(['name' => 'asr', 'start' => '15:39', 'end' => '17:25'])
-        ->and($state['moment']['current'])->toBe(['name' => 'asr', 'date' => '2026-10-30', 'end' => '17:25', 'marked' => false])
+        ->and($state['moment']['current'])->toBe(['name' => 'asr', 'date' => '2026-10-30', 'start' => '15:39', 'end' => '17:25', 'marked' => false])
         ->and($state['moment']['next'])->toBe(['name' => 'maghrib', 'date' => '2026-10-30', 'start' => '17:25', 'in_minutes' => 85])
         ->and($state['week'])->toHaveCount(7)
         ->and($state['week'][6]['date'])->toBe('2026-10-30')
@@ -65,7 +65,7 @@ it('keeps yesterday\'s Isha on until Fajr', function () {
     $this->travelTo(Carbon::parse('2026-10-31 01:00', 'Asia/Tashkent'));
 
     expect(prayerState()['moment'])->toMatchArray([
-        'current' => ['name' => 'isha', 'date' => '2026-10-30', 'end' => '05:33', 'marked' => false],
+        'current' => ['name' => 'isha', 'date' => '2026-10-30', 'start' => '18:41', 'end' => '05:33', 'marked' => false],
         'next' => ['name' => 'fajr', 'date' => '2026-10-31', 'start' => '05:33', 'in_minutes' => 273],
     ]);
 });
@@ -158,4 +158,34 @@ it('gives the year by days and writes the streak milestones into the journal', f
         ->assertJsonPath('data.0.text', 'Намаз вовремя: 30 дней подряд')
         ->assertJsonPath('data.0.date', '2026-10-28')
         ->assertJsonPath('data.0.ref', null);
+});
+
+it('keeps the streak through the night while yesterday\'s Isha is still in its time', function () {
+    prayedDays('2026-10-28', '2026-10-29');
+    foreach (['fajr', 'dhuhr', 'asr'] as $name) {
+        $this->putJson("/api/prayer/2026-10-30/{$name}", ['status' => 'on_time'], $this->auth)->assertOk();
+    }
+    $this->travelTo(Carbon::parse('2026-10-30 18:00', 'Asia/Tashkent'));
+    $this->putJson('/api/prayer/2026-10-30/maghrib', [], $this->auth)->assertOk();
+
+    // After midnight Isha of the 30th lasts until Fajr at 05:33: the day is still open.
+    $this->travelTo(Carbon::parse('2026-10-31 00:30', 'Asia/Tashkent'));
+    $state = prayerState();
+    expect($state['streak']['current'])->toBe(2)
+        ->and($state['moment']['current'])->toBe(['name' => 'isha', 'date' => '2026-10-30', 'start' => '18:41', 'end' => '05:33', 'marked' => false])
+        ->and(collect($this->getJson('/api/prayer/year', $this->auth)->json('days'))->firstWhere('date', '2026-10-30')['state'])->toBe('open');
+
+    $this->travelTo(Carbon::parse('2026-10-31 05:40', 'Asia/Tashkent'));
+    expect(prayerState()['streak']['current'])->toBe(0);
+
+    $this->travelTo(Carbon::parse('2026-10-31 00:30', 'Asia/Tashkent'));
+    $this->putJson('/api/prayer/2026-10-30/isha', [], $this->auth)->assertOk();
+    expect(prayerState()['streak']['current'])->toBe(3);
+});
+
+it('does not judge a day before the first mark', function () {
+    $year = $this->getJson('/api/prayer/year', $this->auth)->assertOk()->json();
+
+    expect($year['days'])->toBe([['date' => '2026-10-30', 'value' => 0, 'qaza' => 0, 'state' => 'off']])
+        ->and($year['stats']['rate'])->toBeNull();
 });

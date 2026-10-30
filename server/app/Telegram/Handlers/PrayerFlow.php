@@ -2,6 +2,7 @@
 
 namespace App\Telegram\Handlers;
 
+use App\Models\PrayerLog;
 use App\Models\User;
 use App\Prayer\Prayers;
 use App\Prayer\PrayerTimes;
@@ -33,6 +34,13 @@ class PrayerFlow
         $name = __("prayer.names.{$prayer}", [], $l);
         $now = now();
 
+        // Turned off in the app since the card was sent: no marks that would start a count nobody keeps.
+        if (! Prayers::on($user)) {
+            $this->telegram->answerCallbackQuery($query['id'], __('bot.prayer.off', [], $l));
+
+            return;
+        }
+
         // A button from a card left in the chat for long: the app can mark a prayer that old, so can the bot.
         $oldest = $now->copy()->startOfDay()->subDays(Prayers::MISSED_DAYS)->toDateString();
         if ($date < $oldest || $date > $now->toDateString()) {
@@ -46,7 +54,9 @@ class PrayerFlow
             return;
         }
 
-        $marked = $this->prayers->marks($user, $date)[$prayer] ?? null;
+        $log = PrayerLog::where('user_id', $user->id)->where('date', $date)->where('prayer', $prayer)->first();
+        $marked = $log?->status;
+        $markedAt = $log?->updated_at ?? $now;
         if ($marked !== null) {
             $this->telegram->answerCallbackQuery($query['id'], __('bot.prayer.already', ['name' => $name], $l));
         } else {
@@ -61,14 +71,20 @@ class PrayerFlow
         }
 
         match ($from) {
-            'r' => $this->telegram->editCard($chatId, $messageId, $this->cards->prayerDone($user, $prayer, $marked, $now), $this->cards->prayerDoneKeyboard($user)),
+            'r' => $this->telegram->editCard($chatId, $messageId, $this->cards->prayerDone($user, $prayer, $marked, $markedAt), $this->cards->prayerDoneKeyboard($user)),
             't' => $this->telegram->editCard($chatId, $messageId, $this->cards->today($user), $this->cards->todayKeyboard($user)),
             'd' => $this->telegram->editCard($chatId, $messageId, $this->cards->prayerDay($user, $now), $this->cards->prayerDayKeyboard($user, $now)),
         };
     }
 
+    /** /namaz: the day's prayers, or where to turn them on. */
     public function day(int $chatId, User $user): void
     {
+        if (! Prayers::on($user)) {
+            $this->telegram->sendCard($chatId, $this->cards->prayerOff($user), $this->cards->prayerDoneKeyboard($user));
+
+            return;
+        }
         $this->telegram->sendCard($chatId, $this->cards->prayerDay($user), $this->cards->prayerDayKeyboard($user));
     }
 }
