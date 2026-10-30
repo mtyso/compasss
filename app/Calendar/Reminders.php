@@ -5,6 +5,7 @@ namespace App\Calendar;
 use App\Models\CalendarReminder;
 use App\Models\Event;
 use App\Models\User;
+use App\Prayer\PrayerReminders;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -12,7 +13,8 @@ use Illuminate\Support\Collection;
  * Calendar reminders due now, for the bot to send: events with `remind_before` and routine blocks with
  * `remind`. They are what the user asked for, at a time they chose, so unlike the advisor's messages they
  * ignore quiet hours and the per-run cap. The bot claims each before sending, so each goes once, and
- * releases it when Telegram did not answer, so the next minute tries again.
+ * releases it when Telegram did not answer, so the next minute tries again. Prayer reminders come with them
+ * (App\Prayer\PrayerReminders, docs/PLAN.md D40), as kind `prayer`.
  */
 class Reminders
 {
@@ -22,19 +24,22 @@ class Reminders
     /** An all-day event counts from this time of its day. */
     public const ALL_DAY_AT = '09:00';
 
+    public function __construct(private PrayerReminders $prayers) {}
+
     /**
      * Reminders whose time is in (now − 15 min, now] and not claimed yet, the earliest first. The key holds
      * the remind moment, so an event moved after its reminder went out reminds again at the new time. An
      * exception counts as its series, so changing only the title of one occurrence does not remind again.
      *
-     * `block_kind` is the routine block's kind (sleep, work…) for its icon, null for an event.
+     * `block_kind` is the routine block's kind (sleep, work…) for its icon, null for an event. A prayer's carries
+     * `prayer` and `phase` besides (PrayerReminders).
      *
      * @return Collection<int, array{key: string, kind: string, block_kind: string|null, title: string, date: string, start: string|null, end: string|null, all_day: bool, remind_at: Carbon, remind_before: int}>
      */
     public function due(User $user, Carbon $now): Collection
     {
         $since = $now->copy()->subMinutes(self::WINDOW_MINUTES);
-        $due = collect([...$this->events($user, $since, $now), ...$this->routine($user, $since, $now)]);
+        $due = collect([...$this->events($user, $since, $now), ...$this->routine($user, $since, $now), ...$this->prayers->due($user, $since, $now)]);
         if ($due->isEmpty()) {
             return $due;
         }

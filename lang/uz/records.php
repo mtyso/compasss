@@ -8,6 +8,7 @@ return [
         'limit' => 'Limitda: ketma-ket :count kun',
         'records' => 'Yozuvlar: ketma-ket :count kun',
         'contributions' => "O'z vaqtida badallar: ketma-ket :count davr",
+        'prayer' => "Namoz o'z vaqtida: ketma-ket :count kun",
     ],
     'streak_record' => [
         'habit' => ':name: yangi rekord, ketma-ket :count kun',
@@ -15,6 +16,7 @@ return [
         'limit' => 'Limitda: yangi rekord, ketma-ket :count kun',
         'records' => 'Yozuvlar: yangi rekord, ketma-ket :count kun',
         'contributions' => "O'z vaqtida badallar: yangi rekord, ketma-ket :count davr",
+        'prayer' => "Namoz o'z vaqtida: yangi rekord, ketma-ket :count kun",
     ],
     'goal_first' => ':goal: birinchi badal, :amount',
     'goal_step' => ":goal: :percent% yig'ildi, :amount",

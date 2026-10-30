@@ -16,6 +16,7 @@ use App\Http\Controllers\HabitPauseController;
 use App\Http\Controllers\IncomeScheduleController;
 use App\Http\Controllers\InsightController;
 use App\Http\Controllers\MeController;
+use App\Http\Controllers\PrayerController;
 use App\Http\Controllers\RateController;
 use App\Http\Controllers\RecordController;
 use App\Http\Controllers\RecurringPaymentController;
@@ -74,6 +75,12 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::put('/days/{date}/no-spending', [DayController::class, 'noSpending'])->where('date', '\d{4}-\d{2}-\d{2}');
     Route::get('/records', [RecordController::class, 'index']);
     Route::delete('/records/{id}', [RecordController::class, 'destroy'])->whereNumber('id');
+
+    Route::get('/prayer', [PrayerController::class, 'show']);
+    Route::get('/prayer/year', [PrayerController::class, 'year']);
+    Route::get('/prayer/cities', [PrayerController::class, 'cities']);
+    Route::put('/prayer/{date}/{prayer}', [PrayerController::class, 'mark'])->where(['date' => '\d{4}-\d{2}-\d{2}', 'prayer' => 'fajr|dhuhr|asr|maghrib|isha']);
+    Route::delete('/prayer/{date}/{prayer}', [PrayerController::class, 'unmark'])->where(['date' => '\d{4}-\d{2}-\d{2}', 'prayer' => 'fajr|dhuhr|asr|maghrib|isha']);
 
     Route::get('/calendar', CalendarController::class);
     Route::post('/events', [EventController::class, 'store']);
