@@ -95,7 +95,8 @@ class PrayerController extends Controller
 
         return [
             'on' => Prayers::on($user),
-            'city' => ['slug' => $city['slug'], 'name' => $city['name'], 'lat' => $city['lat'], 'lon' => $city['lon']],
+            // The coordinates and the declination are for the Qibla compass.
+            'city' => array_diff_key($city, ['offset' => true]),
             'remind' => Prayers::remindMode($user),
             'mute' => array_values((array) $user->setting('prayer_mute', [])),
             'date' => $today,

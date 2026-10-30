@@ -38,7 +38,7 @@ final class Prayers
         return filter_var($user->setting('prayer_on'), FILTER_VALIDATE_BOOL);
     }
 
-    /** @return array{slug: string, name: string, offset: int, lat: float, lon: float} */
+    /** @return array{slug: string, name: string, offset: int, lat: float, lon: float, declination: float} */
     public static function city(User $user, ?string $locale = null): array
     {
         return Cities::get($user->setting('prayer_city'), $locale ?? $user->locale ?? 'ru');
@@ -232,7 +232,9 @@ final class Prayers
             $periods[] = $state;
             $dates[] = $date;
             if ($date >= $from) {
-                $days[] = ['date' => $date, 'value' => $onTime[$date] ?? 0, 'qaza' => $qaza[$date] ?? 0, 'state' => $state];
+                // On the map the first day is just a day before the count, not a pause.
+                $shown = $date === $since && $state === StreakCounter::PAUSED && ! isset($paused[$date]) ? 'off' : $state;
+                $days[] = ['date' => $date, 'value' => $onTime[$date] ?? 0, 'qaza' => $qaza[$date] ?? 0, 'state' => $shown];
             }
         }
         $count = StreakCounter::count($since === null ? [] : $periods, PHP_INT_MAX, 0);
