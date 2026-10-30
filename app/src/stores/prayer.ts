@@ -39,7 +39,7 @@ export interface PrayerOverview {
   week: { date: string; prayers: { name: PrayerName; state: PrayerState }[] }[]
   moment: {
     /** The prayer whose time is on: yesterday's Isha after midnight. */
-    current: { name: PrayerName; date: string; end: string; marked: boolean } | null
+    current: { name: PrayerName; date: string; start: string; end: string; marked: boolean } | null
     next: { name: PrayerName; date: string; start: string; in_minutes: number }
   }
   /** Days in a row with all five prayed in their time; no spare days here. */

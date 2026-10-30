@@ -28,8 +28,7 @@ export function usePrayerNow() {
     // Isha's time ends at the next morning's Fajr.
     const endDate = c.name === 'isha' ? shiftDate(c.date, 1) : c.date
     const left = minutesUntil(endDate, c.end, now.value)
-    const start = prayer.overview?.date === c.date ? prayer.overview.prayers.find((p) => p.name === c.name)?.start : undefined
-    return { ...c, left, leftText: formatLeft(left, t), share: start ? windowShare(c.date, start, c.end, now.value) : null }
+    return { ...c, left, leftText: formatLeft(left, t), share: windowShare(c.date, c.start, c.end, now.value) }
   })
   const next = computed(() => {
     const n = moment.value?.next
@@ -38,18 +37,32 @@ export function usePrayerNow() {
     return { ...n, left, leftText: formatLeft(left, t), tomorrow: n.date !== prayer.overview?.date }
   })
 
-  function tick(): void {
+  /**
+   * The clock moves on, and the day comes again from the server once a prayer's time has started or ended since
+   * it was loaded: the store's copy can be hours old when a screen comes back. Nothing for prayers turned off.
+   */
+  function refresh(): void {
     now.value = new Date()
+    if (prayer.on !== true || !prayer.overview) return
     const ended = current.value !== null && current.value.left <= 0
     const started = next.value !== null && next.value.left <= 0
     if (ended || started) void prayer.load().catch(() => undefined)
     else void prayer.ensureLoaded().catch(() => undefined)
   }
 
+  function onVisible(): void {
+    if (document.visibilityState === 'visible') refresh()
+  }
+
   onMounted(() => {
-    timer = setInterval(tick, TICK_MS)
+    refresh()
+    timer = setInterval(refresh, TICK_MS)
+    document.addEventListener('visibilitychange', onVisible)
   })
-  onBeforeUnmount(() => clearInterval(timer))
+  onBeforeUnmount(() => {
+    clearInterval(timer)
+    document.removeEventListener('visibilitychange', onVisible)
+  })
 
   // A tap on a prayer: its time on marks it, past or marked opens the choice.
   const sheetOpen = ref(false)

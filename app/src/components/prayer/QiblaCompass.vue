@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import UiButton from '@/components/ui/UiButton.vue'
 import { isoDate, isoTime } from '@/lib/dates'
 import { haptics } from '@/lib/haptics'
-import { compassPoint, headingFrom, kaabaDistance, qiblaBearing, sunOverQibla, turnTo } from '@/lib/qibla'
+import { compassPoint, headingFrom, kaabaDistance, qiblaBearing, sunOverQibla, telegramHeading, turnTo } from '@/lib/qibla'
 import { telegramApp } from '@/lib/telegram'
 
 /**
@@ -39,10 +39,14 @@ watch(facing, (now) => {
   if (now) haptics.impact('medium')
 })
 
+// The sun's line follows the clock: «будет» turns into «стояло», and a new day finds the new time.
+const now = ref(new Date())
+const day = computed(() => isoDate(now.value))
+const sunAt = computed(() => sunOverQibla(day.value, props.lat, props.lon, bearing.value))
 const sun = computed(() => {
-  const at = sunOverQibla(isoDate(), props.lat, props.lon, bearing.value)
+  const at = sunAt.value
   if (!at) return t('prayer.qibla.sunNone')
-  return t(at.getTime() > Date.now() ? 'prayer.qibla.sunAt' : 'prayer.qibla.sunWas', { time: isoTime(at) })
+  return t(at.getTime() > now.value.getTime() ? 'prayer.qibla.sunAt' : 'prayer.qibla.sunWas', { time: isoTime(at) })
 })
 
 const ticks = Array.from({ length: 72 }, (_, i) => i * 5)
@@ -50,6 +54,7 @@ const ticks = Array.from({ length: 72 }, (_, i) => i * 5)
 let gotReading = false
 let asked = false
 let timer: ReturnType<typeof setTimeout> | undefined
+let clock: ReturnType<typeof setInterval> | undefined
 let stop: (() => void) | undefined
 
 function screenAngle(): number {
@@ -83,13 +88,13 @@ function listenWindow(): void {
   waitForReading()
 }
 
-/** Telegram on a phone gives the sensor through its own API (Bot API 8.0): angles in radians. */
+/** Telegram on a phone gives the sensor through its own API (Bot API 8.0): angles in radians, by platform. */
 function listenTelegram(): boolean {
   const app = telegramApp()
   const orientation = app?.DeviceOrientation
   if (!app || !orientation || !app.isVersionAtLeast('8.0')) return false
   const changed = () => {
-    if (orientation.absolute && orientation.alpha !== null) take(headingFrom({ alpha: (orientation.alpha * 180) / Math.PI }, props.declination, screenAngle()))
+    if (orientation.absolute && orientation.alpha !== null) take(telegramHeading(orientation.alpha, app.platform, props.declination, screenAngle()))
   }
   const failed = () => {
     if (!gotReading) sensor.value = 'none'
@@ -144,6 +149,7 @@ async function askPermission(): Promise<void> {
 }
 
 onMounted(() => {
+  clock = setInterval(() => (now.value = new Date()), 60_000)
   if (listenTelegram()) return
   if (typeof DeviceOrientationEvent === 'undefined') {
     sensor.value = 'none'
@@ -154,6 +160,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   clearTimeout(timer)
+  clearInterval(clock)
   stop?.()
 })
 

@@ -39,6 +39,18 @@ export function headingFrom(reading: { alpha: number | null; webkitCompassHeadin
   return magnetic === null ? null : wrap(magnetic + declination + screenAngle)
 }
 
+/**
+ * The same from Telegram's own sensor API (Bot API 8.0), whose alpha is in radians and turns differently on its
+ * two apps: Telegram for Android sends the web's alpha (−azimuth, counter-clockwise), Telegram for iOS the compass
+ * heading itself (clockwise). iOS uses true north when Telegram has the location, which cannot be told from here,
+ * so the reading is taken as magnetic like the others: at most the declination off.
+ */
+export function telegramHeading(alpha: number, platform: string, declination: number, screenAngle = 0): number {
+  const degrees = wrap(deg(alpha))
+  const reading = platform === 'ios' ? { alpha: null, webkitCompassHeading: degrees } : { alpha: degrees }
+  return headingFrom(reading, declination, screenAngle) ?? 0
+}
+
 /** The shortest turn from one heading to another, −180…180: positive is clockwise. */
 export function turnTo(from: number, to: number): number {
   return wrap(to - from + 180) - 180

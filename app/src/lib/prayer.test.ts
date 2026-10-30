@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { i18n } from '@/i18n'
 import { formatLeft, minutesUntil, tapAction, windowShare } from './prayer'
-import { compassPoint, headingFrom, kaabaDistance, qiblaBearing, sunOverQibla, sunPosition, turnTo } from './qibla'
+import { compassPoint, headingFrom, kaabaDistance, qiblaBearing, sunOverQibla, sunPosition, telegramHeading, turnTo } from './qibla'
 import { isoTime } from './dates'
 import type { Translate } from './tasks'
 
@@ -52,6 +52,10 @@ describe('qibla', () => {
     expect(headingFrom({ alpha: 10, webkitCompassHeading: 100 }, 5.7)).toBeCloseTo(105.7, 5)
     expect(headingFrom({ alpha: 0 }, 5.7, 90)).toBeCloseTo(95.7, 5)
     expect(headingFrom({ alpha: null }, 5.7)).toBeNull()
+    // Facing magnetic east in Telegram: Android sends −π/2, iOS +π/2.
+    expect(telegramHeading(-Math.PI / 2, 'android', 5.7)).toBeCloseTo(95.7, 5)
+    expect(telegramHeading(Math.PI / 2, 'ios', 5.7)).toBeCloseTo(95.7, 5)
+    expect(telegramHeading(-Math.PI / 2, 'ios', 5.7)).toBeCloseTo(275.7, 5)
     expect(turnTo(350, 10)).toBe(20)
     expect(turnTo(10, 350)).toBe(-20)
     expect(turnTo(240, 60)).toBe(-180)
