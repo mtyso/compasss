@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Telegram\Handlers\Commands;
 use App\Telegram\Handlers\InsightFlow;
 use App\Telegram\Handlers\LoginFlow;
+use App\Telegram\Handlers\PrayerFlow;
 use App\Telegram\Handlers\RecordFlow;
 use App\Telegram\Handlers\StreaksFlow;
 use App\Telegram\Handlers\ThingsFlow;
@@ -24,6 +25,7 @@ class UpdateHandler
         private InsightFlow $insights,
         private ThingsFlow $things,
         private StreaksFlow $streaks,
+        private PrayerFlow $prayers,
     ) {}
 
     public function handle(array $update): void
@@ -60,6 +62,12 @@ class UpdateHandler
 
         $user = $this->userFor($from);
 
+        if (preg_match('/^\/(namaz|prayer)(?:@\w+)?(?:\s|$)/i', $text)) {
+            $this->prayers->day($chatId, $user);
+
+            return;
+        }
+
         if (preg_match('/^\/([a-z_]+)(?:@\w+)?(?:\s|$)/i', $text, $m)) {
             $this->commands->handle(strtolower($m[1]), $chatId, $user);
 
@@ -94,6 +102,7 @@ class UpdateHandler
             str_starts_with($data, 'pay:') => $this->commands->onPay($query, $user),
             str_starts_with($data, 'task:'), str_starts_with($data, 'habit:') => $this->things->onCallback($query, $user),
             str_starts_with($data, 'streak:') => $this->streaks->onCallback($query, $user),
+            str_starts_with($data, 'prayer:') => $this->prayers->onCallback($query, $user),
             default => $this->telegram->answerCallbackQuery($query['id']),
         };
     }
