@@ -9,7 +9,7 @@ import { usePlan, type ContributionStreak } from '@/stores/plan'
 import type { Task } from '@/stores/tasks'
 
 export type GoalType = 'save' | 'buy' | 'debt' | 'other'
-export type GoalStatus = 'reached' | 'done' | 'late' | 'behind' | 'on_track' | 'ahead' | 'open' | 'no_plan'
+export type GoalStatus = 'reached' | 'done' | 'late' | 'behind' | 'on_track' | 'ahead' | 'later' | 'open' | 'no_plan'
 /** «Сначала цели»: contributions come out of the money before the daily limit; «из остатка»: after (D25). */
 export type GoalMode = 'first' | 'leftover'
 

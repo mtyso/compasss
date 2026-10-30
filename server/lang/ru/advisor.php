@@ -39,6 +39,14 @@ return [
             ],
         ],
         'income_split' => [
+            'leftover' => [
+                'title' => 'Пришёл доход :amount_uzs',
+                'body' => 'Обязательные платежи до следующего дохода :payments_uzs. На жизнь :left_uzs, это :per_day_uzs в день. В цели по плану :plan_uzs: отложишь из того, что останется к :until_on.',
+            ],
+            'leftover_debt' => [
+                'title' => 'Пришёл доход :amount_uzs',
+                'body' => 'Обязательные платежи до следующего дохода :payments_uzs и платёж по долгам :debt_uzs. На жизнь :left_uzs, это :per_day_uzs в день. В цели по плану :plan_uzs: отложишь из того, что останется к :until_on.',
+            ],
             'goals' => [
                 'title' => 'Пришёл доход :amount_uzs',
                 'body' => 'Обязательные платежи до следующего дохода :payments_uzs, в цели по плану :goals_uzs. На жизнь остаётся :left_uzs, это :per_day_uzs в день. Нажми «Отложить», и деньги уйдут в копилки.',
@@ -81,6 +89,10 @@ return [
             ],
         ],
         'goal_pace' => [
+            'slower' => [
+                'title' => '«:goal» в нынешнем темпе будет к :fact_on',
+                'body' => 'Это позже срока :deadline_on. Чтобы успеть, нужно откладывать :monthly_amount в месяц. Если так спокойнее, просто сдвинь срок.',
+            ],
             'behind' => [
                 'title' => '«:goal» отстаёт от графика на :behind_amount',
                 'body' => 'Чтобы успеть к :deadline_on, откладывай :monthly_amount в месяц. Посмотри «Как быстрее» на экране цели.',

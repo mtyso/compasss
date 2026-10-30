@@ -71,11 +71,14 @@ export function limitChangePerDay(monthlyNow: number, monthlyNew: number, curren
   return -Math.round((((monthlyNew - monthlyNow) / unit) * rate) / MONTH_DAYS)
 }
 
-/** The range the «Как быстрее» slider offers: from what the deadline needs (or a little) to a lot more. */
-export function sliderRange(monthlyRequired: number, monthly: number, remaining: number, currency: Currency): { min: number; max: number; step: number } {
+/**
+ * The range the «Как быстрее» slider offers: from a little, since a goal may save less than its deadline needs
+ * (a debt starts at what its deadline needs), to well past both the contribution and what the deadline needs.
+ */
+export function sliderRange(monthlyRequired: number, monthly: number, remaining: number, currency: Currency, debt = false): { min: number; max: number; step: number } {
   const step = currency === 'UZS' ? (Math.max(monthly, monthlyRequired) >= 5_000_000 ? 100_000 : 10_000) : 1000
-  const min = monthlyRequired > 0 ? monthlyRequired : step
-  const max = Math.max(min + step, Math.min(remaining, Math.max(monthly, min) * 3))
+  const min = debt && monthlyRequired > 0 ? monthlyRequired : step
+  const max = Math.max(min + step, Math.min(remaining, Math.max(monthly * 3, monthlyRequired * 1.5, min)))
   return { min, max: Math.ceil(max / step) * step, step }
 }
 

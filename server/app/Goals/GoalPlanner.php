@@ -16,7 +16,9 @@ use Illuminate\Support\Collection;
 /**
  * Works out every goal's plan for the current pay period (docs/PLAN.md, 2.6):
  *
- *   monthly  = what the deadline needs (the rest over the months left), or the chosen contribution if it is more
+ *   monthly  = the contribution its owner chose, even below what the deadline needs: then the deadline is a wish
+ *              and the plan's date the forecast. Without one, what the deadline needs (the rest over the months
+ *              left). A debt has to keep to its deadline, so it gets the larger of the two.
  *   planned  = monthly × the payday's share of the month, only the rest of the period for a goal set mid-period
  *   made     = what went into the goal this period from money for spending (or straight from income)
  *   due      = planned − made: set aside before the daily limit is counted (App\Money\Plan)
@@ -91,7 +93,8 @@ class GoalPlanner
         if ($deadline !== null && $remainingAtStart > 0) {
             $required = GoalMath::roundUp(GoalMath::monthlyFor($remainingAtStart, GoalMath::monthsUntil($period->start, $deadline), $ratePercent), $currency);
         }
-        $monthly = max($required, (int) $goal->monthly_amount);
+        $chosen = (int) $goal->monthly_amount;
+        $monthly = $goal->type === 'debt' || $chosen <= 0 ? max($required, $chosen) : $chosen;
 
         $planned = min($remainingAtStart, GoalMath::roundUp((int) round($monthly * $period->share * $period->restFrom($goal->startDate())), $currency));
         $made = $goal->account_id ? max(0, $this->madeFromSpending($goal->account_id, $spendable, $period->start, $now)) : 0;
@@ -106,7 +109,7 @@ class GoalPlanner
         // What the deadline asks for is counted in pay months, and a month's contribution goes in at its start,
         // so keeping to the plan is on time even when average months from today run a few days past the deadline.
         $forecastPlan = $remaining > 0 && $planMonths !== null ? GoalMath::dateAfter($today, $planMonths) : null;
-        if ($forecastPlan !== null && $required > 0 && $deadline !== null && $forecastPlan->gt($deadline)) {
+        if ($forecastPlan !== null && $required > 0 && $monthly >= $required && $deadline !== null && $forecastPlan->gt($deadline)) {
             $forecastPlan = $deadline->copy();
         }
 
@@ -152,6 +155,10 @@ class GoalPlanner
         }
         if ($deadline->lt($today)) {
             return ['late', $remaining];
+        }
+        // Saving its own amount, less than the deadline needs: not behind, just later, and the plan's date says when.
+        if ($monthly < $required) {
+            return ['later', 0];
         }
 
         // A straight line from what the goal had when it was set to the target on the deadline,
