@@ -10,7 +10,8 @@
 /*
  * Design tokens. The page is plain paper (white, or near-black in the dark theme); lists sit right
  * on it, separated by hairlines, not boxed into cards. Colour is kept for meaning: green is money
- * and the main action, amber habits and pace warnings, blue tasks, plum goals, red over the limit.
+ * and the main action, amber habits and pace warnings, blue tasks, plum goals, teal prayers, red over
+ * the limit.
  * Text colours meet WCAG AA on `bg`, `surface-2` and `raised` in both themes.
  *
  * Surfaces: bg = surface (the page and its lists) → surface-2 (fields, chips, tracks, the rare
@@ -42,6 +43,8 @@
   --c-task-soft: #e7edfb;
   --c-goal: #7d3fae;
   --c-goal-soft: #f2e9f9;
+  --c-prayer: #0b7285;
+  --c-prayer-soft: #e2f1f4;
   --c-danger: #cc3328;
   --c-danger-soft: #fce8e5;
   --c-focus: #2a5bd7;
@@ -77,6 +80,8 @@
   --c-task-soft: #1a2238;
   --c-goal: #c894ee;
   --c-goal-soft: #281d32;
+  --c-prayer: #5cc4d6;
+  --c-prayer-soft: #14272b;
   --c-danger: #ff7a70;
   --c-danger-soft: #34191a;
   --c-focus: #86a8ff;
@@ -113,6 +118,8 @@
   --color-task-soft: var(--c-task-soft);
   --color-goal: var(--c-goal);
   --color-goal-soft: var(--c-goal-soft);
+  --color-prayer: var(--c-prayer);
+  --color-prayer-soft: var(--c-prayer-soft);
   --color-danger: var(--c-danger);
   --color-danger-soft: var(--c-danger-soft);
   --color-focus: var(--c-focus);

@@ -7,8 +7,10 @@ import type { HabitStreak } from '@/stores/habits'
 /**
  * A streak's milestones as a scale, the way a dial has its divisions: 0 · 7 · 14 · 30 … 365 stand
  * evenly apart, the run is filled up to its place, and the line above says how far the next mark is.
+ * In the habit colour, or the prayer colour on «Намаз».
  */
-const props = defineProps<{ streak: HabitStreak }>()
+const props = withDefaults(defineProps<{ streak: HabitStreak; tone?: 'habit' | 'prayer' }>(), { tone: 'habit' })
+const fill = computed(() => (props.tone === 'prayer' ? 'bg-prayer' : 'bg-habit'))
 const { t } = useI18n()
 
 const marks = computed(() => [0, ...milestones(props.streak.unit)])
@@ -30,15 +32,15 @@ const anchor = (share: number) => ({ left: `${share * 100}%`, transform: `transl
     </div>
     <div class="relative h-3">
       <span class="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-ink/10" />
-      <span class="fill absolute top-1/2 left-0 h-1 -translate-y-1/2 rounded-full bg-habit" :style="{ width: `${share * 100}%` }" />
+      <span class="fill absolute top-1/2 left-0 h-1 -translate-y-1/2 rounded-full" :class="fill" :style="{ width: `${share * 100}%` }" />
       <span
         v-for="(mark, i) in marks"
         :key="mark"
         class="absolute top-0 h-3 w-px -translate-x-1/2"
-        :class="streak.current >= mark ? 'bg-habit' : 'bg-ink/25'"
+        :class="streak.current >= mark ? fill : 'bg-ink/25'"
         :style="{ left: `${at(i) * 100}%` }"
       />
-      <span class="marker absolute top-1/2 size-3 -translate-1/2 rounded-full bg-habit ring-3 ring-bg" :style="{ left: `${share * 100}%` }" />
+      <span class="marker absolute top-1/2 size-3 -translate-1/2 rounded-full ring-3 ring-bg" :class="fill" :style="{ left: `${share * 100}%` }" />
     </div>
     <div class="relative h-4">
       <span

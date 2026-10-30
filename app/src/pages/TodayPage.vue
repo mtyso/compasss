@@ -24,6 +24,7 @@ import MoneyStreakLine from '@/components/plan/MoneyStreakLine.vue'
 import WeekSummaryCard from '@/components/plan/WeekSummaryCard.vue'
 import PaySheet from '@/components/plan/PaySheet.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
+import PrayerToday from '@/components/prayer/PrayerToday.vue'
 import { isoDate } from '@/lib/dates'
 import { formatDayHeading, formatDayMonth } from '@/lib/format'
 import { groupTasks } from '@/lib/tasks'
@@ -203,6 +204,7 @@ function saveValue(value: number): void {
 
       <div class="page-col">
         <TodayPlan />
+        <PrayerToday />
 
         <section v-if="habits.loaded" class="flex flex-col gap-3">
           <div class="flex items-baseline justify-between gap-3">
