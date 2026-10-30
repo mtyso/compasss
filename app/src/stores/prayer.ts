@@ -67,8 +67,17 @@ export const usePrayer = defineStore('prayer', () => {
     return value === undefined || value === null ? null : Boolean(value)
   })
 
-  async function load(): Promise<void> {
-    overview.value = await api<PrayerOverview>('/prayer')
+  // One request at a time: a screen and its clock asking together share it.
+  let loading: Promise<void> | null = null
+  function load(): Promise<void> {
+    loading ??= api<PrayerOverview>('/prayer')
+      .then((next) => {
+        overview.value = next
+      })
+      .finally(() => {
+        loading = null
+      })
+    return loading
   }
 
   async function ensureLoaded(): Promise<void> {

@@ -39,11 +39,15 @@ export function usePrayerNow() {
 
   /**
    * The clock moves on, and the day comes again from the server once a prayer's time has started or ended since
-   * it was loaded: the store's copy can be hours old when a screen comes back. Nothing for prayers turned off.
+   * it was loaded: the store's copy can be hours old when a screen comes back. A first load that failed is tried
+   * again here. With prayers off nothing is asked for, except a new day for a «Намаз» page that shows the times.
    */
   function refresh(): void {
     now.value = new Date()
-    if (prayer.on !== true || !prayer.overview) return
+    if (prayer.on !== true) {
+      if (prayer.overview) void prayer.ensureLoaded().catch(() => undefined)
+      return
+    }
     const ended = current.value !== null && current.value.left <= 0
     const started = next.value !== null && next.value.left <= 0
     if (ended || started) void prayer.load().catch(() => undefined)
