@@ -1,2 +1,2 @@
-source: b503663bf17dd49ac46db15d3164cab313f01925
-subject: Merge pull request #26: prayers (namaz) with reminders and the Qibla compass
+source: 424f85aafcd64c5989d940c59ee8e18473c8f84f
+subject: Merge pull request #27: make the predeploy dump work on the shared host
