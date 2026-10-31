@@ -137,7 +137,7 @@ fi
 
 DUMP_FILE=""
 dump_db() {
-    local dir tool db user pass host port cnf esc part
+    local dir tool db user pass host port socket cnf esc part
     dir="$(env_value BACKUP_PATH)"
     [ -n "$dir" ] || dir="$HOME/backups/kompas"
     dir="${dir%/}/predeploy"
@@ -152,10 +152,19 @@ dump_db() {
     [ -n "$db" ] && [ -n "$user" ] || fail "DB_DATABASE или DB_USERNAME в .env пусты"
     # пароль идёт через временный файл с правами 600, а не в командной строке (её видят другие процессы).
     # --defaults-file, а не --defaults-extra-file: с extra ~/.my.cnf читается позже и перебивает логин, а на общем
-    # аккаунте cPanel он бывает от другого сайта (Access denied for user 'другой'@'localhost' to database ...)
+    # аккаунте cPanel он бывает от другого сайта (Access denied for user 'другой'@'localhost' to database ...).
+    # Без общих файлов настроек клиент MariaDB 11.4 по умолчанию требует TLS, а MariaDB хостинга его не умеет
+    # (SSL is required, but the server does not support it). Приложение ходит в базу без TLS, пока в .env нет
+    # MYSQL_ATTR_SSL_CA, и дамп так же. Группа [client-mariadb] нужна потому, что mysqldump от MySQL не знает skip-ssl.
     cnf="$(mktemp "${TMPDIR:-/tmp}/kompas-dump.XXXXXX")"
     esc="$(printf '%s' "$pass" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
-    ( umask 077; printf '[client]\nuser="%s"\npassword="%s"\nhost="%s"\nport=%s\n' "$user" "$esc" "$host" "$port" > "$cnf" )
+    socket="$(env_value DB_SOCKET)"
+    (
+        umask 077
+        printf '[client]\nuser="%s"\npassword="%s"\nhost="%s"\nport=%s\n' "$user" "$esc" "$host" "$port"
+        [ -z "$socket" ] || printf 'socket="%s"\n' "$socket"
+        [ -n "$(env_value MYSQL_ATTR_SSL_CA)" ] || printf '[client-mariadb]\nskip-ssl\n'
+    ) > "$cnf"
     DUMP_FILE="$dir/predeploy_$(date +%Y%m%d_%H%M%S)_${prev:0:8}.sql.gz"
     part="$DUMP_FILE.part"
     if ! "$tool" --defaults-file="$cnf" --single-transaction --quick --routines --events --triggers --hex-blob \
