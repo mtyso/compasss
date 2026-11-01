@@ -34,7 +34,7 @@ final class MonthReport
     public function for(User $user, string $month, Carbon $now): array
     {
         [$start, $end] = MonthSpending::range($month);
-        $first = $this->firstTracked($user);
+        $first = self::firstOperation($user);
         $expense = MonthSpending::byCategory($user, $month);
         $income = MonthSpending::byCategory($user, $month, 'income');
         $incomeUzs = array_sum(array_column($income, 'total'));
@@ -79,8 +79,7 @@ final class MonthReport
         return [
             'month' => $month,
             'first_month' => $first?->format('Y-m'),
-            // Seen whole: the app's records start on or before the 5th of it (D30).
-            'tracked' => $first !== null && $month >= $this->trackedFrom($first),
+            'tracked' => self::tracked($month, $first),
             'over' => $now->gte($end),
             // Share of the month gone by: a month still going is compared with the usual level up to today.
             'pace' => $now->gte($end) ? 1 : ($now->lt($start) ? 0 : round($now->day / $start->daysInMonth, 4)),
@@ -204,15 +203,21 @@ final class MonthReport
     }
 
     /** The first operation, or null when there is none yet. */
-    private function firstTracked(User $user): ?Carbon
+    public static function firstOperation(User $user): ?Carbon
     {
         $first = $user->transactions()->min('occurred_at');
 
         return $first ? Carbon::parse($first, config('app.timezone')) : null;
     }
 
+    /** Whether the app saw the month whole: its records start on or before the 5th of it (D30). */
+    public static function tracked(string $month, ?Carbon $first): bool
+    {
+        return $first !== null && $month >= self::trackedFrom($first);
+    }
+
     /** The first month the app saw from the start: that of the first operation if it came by the 5th. */
-    private function trackedFrom(Carbon $first): string
+    public static function trackedFrom(Carbon $first): string
     {
         return ($first->day <= 5 ? $first->copy()->startOfMonth() : $first->copy()->startOfMonth()->addMonth())->format('Y-m');
     }
@@ -223,7 +228,7 @@ final class MonthReport
         if ($first === null) {
             return [];
         }
-        $from = $this->trackedFrom($first);
+        $from = self::trackedFrom($first);
         $months = [];
         $cursor = Carbon::createFromFormat('Y-m', $month, config('app.timezone'))->startOfMonth();
         for ($i = 1; $i <= self::HISTORY_MONTHS; $i++) {

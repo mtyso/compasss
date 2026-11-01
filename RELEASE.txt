@@ -1,2 +1,2 @@
-source: 424f85aafcd64c5989d940c59ee8e18473c8f84f
-subject: Merge pull request #27: make the predeploy dump work on the shared host
+source: 90755ffadba91a7dd6ebc9ed4214075e8e6a1c58
+subject: Merge pull request #28: spending analytics on the money screen

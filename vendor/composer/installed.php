@@ -3,7 +3,7 @@
         'name' => 'mtyso/kompas-server',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '424f85aafcd64c5989d940c59ee8e18473c8f84f',
+        'reference' => '90755ffadba91a7dd6ebc9ed4214075e8e6a1c58',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -475,7 +475,7 @@
         'mtyso/kompas-server' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '424f85aafcd64c5989d940c59ee8e18473c8f84f',
+            'reference' => '90755ffadba91a7dd6ebc9ed4214075e8e6a1c58',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
