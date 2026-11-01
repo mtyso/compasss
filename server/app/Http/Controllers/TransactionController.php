@@ -18,6 +18,7 @@ class TransactionController extends Controller
         $user = $request->user();
         $filters = $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
+            'day' => ['nullable', 'date_format:Y-m-d'],
             'account_id' => ['nullable', 'integer'],
             'category_id' => ['nullable', 'integer'],
             'type' => ['nullable', Rule::in(Transaction::TYPES)],
@@ -29,6 +30,10 @@ class TransactionController extends Controller
         if (isset($filters['month'])) {
             $start = Carbon::createFromFormat('Y-m', $filters['month'], config('app.timezone'))->startOfMonth();
             $query->where('occurred_at', '>=', $start)->where('occurred_at', '<', $start->copy()->addMonth());
+        }
+        if (isset($filters['day'])) {
+            $start = Carbon::createFromFormat('Y-m-d', $filters['day'], config('app.timezone'))->startOfDay();
+            $query->where('occurred_at', '>=', $start)->where('occurred_at', '<', $start->copy()->addDay());
         }
         if (isset($filters['account_id'])) {
             $id = $filters['account_id'];

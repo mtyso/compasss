@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdvisorController;
+use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\Auth\TelegramLoginController;
 use App\Http\Controllers\Auth\TelegramWebAppController;
 use App\Http\Controllers\BudgetController;
@@ -51,6 +52,7 @@ Route::middleware(['auth:sanctum', 'allowed'])->group(function () {
     Route::post('/transactions/{id}/restore', [TransactionController::class, 'restore']);
     Route::get('/summary', SummaryController::class);
     Route::get('/reports/month', [ReportController::class, 'month']);
+    Route::get('/analytics', AnalyticsController::class);
     Route::get('/rates', RateController::class);
 
     Route::get('/budgets', [BudgetController::class, 'show']);

@@ -17,8 +17,19 @@ import { useSettings } from '@/stores/settings'
  * the digits rolling from one value to the next. Days still ahead are dots on the baseline.
  *
  * `today` is the day of a month still going (days after it are ahead); null for a month that is over.
+ *
+ * With `selected` (the «Деньги» screen) a click or Enter also picks a day for good: its bar stays lit, the
+ * readout comes back to it, and `select` tells the screen to show that day's operations; again to let go.
  */
-const props = defineProps<{ days: ReportDay[]; today: string | null; tracked: boolean }>()
+const props = defineProps<{
+  days: (ReportDay & { count?: number })[]
+  today: string | null
+  tracked: boolean
+  selected?: string | null
+  /** The readout's line under the average. */
+  hint?: string
+}>()
+const emit = defineEmits<{ select: [date: string | null] }>()
 
 const settings = useSettings()
 const { t } = useI18n()
@@ -69,7 +80,18 @@ const ticks = computed(() => {
 })
 
 const picked = ref<number | null>(null)
-const day = computed(() => (picked.value === null ? null : (props.days[picked.value] ?? null)))
+const selectable = computed(() => props.selected !== undefined)
+const selectedIndex = computed(() => (props.selected ? props.days.findIndex((d) => d.date === props.selected) : -1))
+/** The day the readout and the lit bar show: the one under the finger, else the one selected. */
+const shown = computed(() => picked.value ?? (selectedIndex.value >= 0 ? selectedIndex.value : null))
+const day = computed(() => (shown.value === null ? null : (props.days[shown.value] ?? null)))
+
+function select(index: number): void {
+  const date = props.days[index]?.date
+  if (!date || bars.value[index]!.ahead) return
+  emit('select', date === props.selected ? null : date)
+  haptics.selection()
+}
 
 function pick(index: number | null, feel = false): void {
   if (index !== null && (index < 0 || index >= props.days.length || bars.value[index]!.ahead)) return
@@ -80,6 +102,7 @@ function pick(index: number | null, feel = false): void {
 
 const plot = ref<HTMLElement | null>(null)
 let pressed = false
+let downAt = -1
 
 function indexAt(event: PointerEvent): number {
   const box = plot.value!.getBoundingClientRect()
@@ -90,8 +113,20 @@ function indexAt(event: PointerEvent): number {
 function onDown(event: PointerEvent): void {
   pressed = true
   const index = indexAt(event)
+  downAt = index
+  if (selectable.value) return pick(index, true)
   // A tap on the day already shown puts the readout back to the average.
   pick(index === picked.value && event.pointerType !== 'mouse' ? null : index, true)
+}
+
+/** A tap (not a run along the bars) selects the day under it. */
+function onUp(event: PointerEvent): void {
+  pressed = false
+  if (!selectable.value) return
+  const index = indexAt(event)
+  if (index === downAt) select(index)
+  downAt = -1
+  if (event.pointerType !== 'mouse') pick(null)
 }
 
 function onMove(event: PointerEvent): void {
@@ -108,6 +143,7 @@ function onKey(event: KeyboardEvent): void {
   const from = picked.value ?? last
   const next = { ArrowLeft: from - 1, ArrowRight: picked.value === null ? last : from + 1, Home: 0, End: last }[event.key]
   if (event.key === 'Escape') pick(null)
+  else if ((event.key === 'Enter' || event.key === ' ') && selectable.value && picked.value !== null) select(picked.value)
   else if (next !== undefined) pick(Math.min(last, Math.max(0, next)))
   else return
   event.preventDefault()
@@ -116,11 +152,15 @@ function onKey(event: KeyboardEvent): void {
 const label = computed(() => (day.value ? formatDayHeading(dateAtNoon(day.value.date), settings.locale) : t('report.perDay')))
 const amount = computed(() => (day.value ? day.value.expense_uzs : average.value))
 const note = computed(() => {
-  if (!day.value) return t('report.perDayHint')
+  if (!day.value) return props.hint ?? t('report.perDayHint')
   if (!day.value.expense_uzs) return t('report.dayNone')
-  if (!day.value.one_off_uzs) return ''
-  if (day.value.one_off_uzs === day.value.expense_uzs) return t('report.oneOffShort')
-  return t('report.oneOff', { amount: formatMoney(day.value.one_off_uzs, 'UZS', settings.locale) })
+  const count = day.value.count ? t('analytics.operations', day.value.count) : null
+  const oneOff = !day.value.one_off_uzs
+    ? null
+    : day.value.one_off_uzs === day.value.expense_uzs
+      ? t('report.oneOffShort')
+      : t('report.oneOff', { amount: formatMoney(day.value.one_off_uzs, 'UZS', settings.locale) })
+  return [count, oneOff].filter(Boolean).join(' · ')
 })
 </script>
 
@@ -136,13 +176,13 @@ const note = computed(() => {
       <div
         ref="plot"
         class="plot relative h-28 touch-pan-y md:h-36 outline-none select-none"
-        :class="{ picking: picked !== null }"
+        :class="{ picking: shown !== null }"
         tabindex="0"
         role="group"
         :aria-label="$t('report.byDay')"
         @pointerdown="onDown"
         @pointermove="onMove"
-        @pointerup="pressed = false"
+        @pointerup="onUp"
         @pointercancel="pressed = false"
         @pointerleave="onLeave"
         @keydown="onKey"
@@ -153,7 +193,7 @@ const note = computed(() => {
             v-for="bar in bars"
             :key="bar.date"
             class="slot relative flex h-full flex-1 items-end justify-center"
-            :class="{ on: picked === bar.index }"
+            :class="{ on: shown === bar.index }"
           >
             <span v-if="bar.ahead" class="ahead" />
             <span v-else-if="!bar.expense_uzs" class="stub" />
