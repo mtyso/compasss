@@ -77,6 +77,8 @@ class Transaction extends Model
             'occurred_at' => $this->occurred_at->toIso8601String(),
             'is_one_off' => $this->is_one_off,
             'source' => $this->source,
+            // When it was written down, which for an operation entered later is not when it happened.
+            'created_at' => $this->created_at?->toIso8601String(),
             'recurring_payment_id' => $this->recurring_payment_id,
         ];
     }
