@@ -51,6 +51,8 @@ export interface Transaction {
   occurred_at: string
   is_one_off: boolean
   source: 'app' | 'web' | 'bot'
+  /** When it was written down, which for an operation entered later is not when it happened. */
+  created_at?: string | null
   /** The recurring payment it paid, set by «Оплачено» or when the server matched it to one. */
   recurring_payment_id: number | null
 }

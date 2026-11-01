@@ -2,11 +2,13 @@
 import { computed } from 'vue'
 import CategoryIcon from '@/components/CategoryIcon.vue'
 import MoneyAmount from '@/components/ui/MoneyAmount.vue'
-import { formatMoney } from '@/lib/format'
+import { isoDate, isoTime } from '@/lib/dates'
+import { formatDayMonthShort, formatMoney } from '@/lib/format'
 import { useMoney, type Transaction } from '@/stores/money'
 import { useSettings } from '@/stores/settings'
 
-const props = defineProps<{ transaction: Transaction }>()
+/** `dated`: the row stands outside a day's group (the month's biggest), so its time carries the date too. */
+const props = defineProps<{ transaction: Transaction; dated?: boolean }>()
 
 const money = useMoney()
 const settings = useSettings()
@@ -24,6 +26,14 @@ const title = computed(() =>
 const subtitle = computed(() =>
   [props.transaction.note, props.transaction.type === 'transfer' ? null : account.value?.name].filter(Boolean).join(' · '),
 )
+
+/** «14:32», or «29 окт, 14:32» on a dated row; after the sum in som when the operation was in another currency. */
+const when = computed(() => {
+  const at = new Date(props.transaction.occurred_at)
+  const time = props.dated ? `${formatDayMonthShort(isoDate(at), settings.locale)}, ${isoTime(at)}` : isoTime(at)
+  const inSom = props.transaction.currency !== 'UZS' && props.transaction.type !== 'transfer'
+  return inSom ? `${formatMoney(props.transaction.amount_uzs, 'UZS', settings.locale)} · ${time}` : time
+})
 </script>
 
 <template>
@@ -48,9 +58,7 @@ const subtitle = computed(() =>
         class="font-semibold"
         :class="{ 'text-money': transaction.type === 'income', 'text-ink-2': transaction.type === 'transfer' }"
       />
-      <span v-if="transaction.currency !== 'UZS' && transaction.type !== 'transfer'" class="num text-[0.6875rem] text-ink-3">
-        {{ formatMoney(transaction.amount_uzs, 'UZS', settings.locale) }}
-      </span>
+      <time class="num text-caption whitespace-nowrap text-ink-3" :datetime="transaction.occurred_at">{{ when }}</time>
     </span>
   </button>
 </template>

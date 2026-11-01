@@ -42,6 +42,8 @@ const categoryId = ref<number | null>(null)
 const openParentId = ref<number | null>(null)
 const day = ref(isoDate())
 const time = ref(isoTime())
+/** The time was set by hand; otherwise a new operation for today takes the moment it is saved. */
+const timeSet = ref(false)
 const note = ref('')
 const oneOff = ref(false)
 const saving = ref(false)
@@ -95,6 +97,7 @@ function fill(transaction: Transaction | null): void {
     openParentId.value = category ? money.rootOf(category).id : null
     day.value = isoDate(new Date(transaction.occurred_at))
     time.value = isoTime(new Date(transaction.occurred_at))
+    timeSet.value = false
     note.value = transaction.note ?? ''
     oneOff.value = transaction.is_one_off
     return
@@ -109,9 +112,22 @@ function fill(transaction: Transaction | null): void {
   openParentId.value = null
   day.value = isoDate()
   time.value = isoTime()
+  timeSet.value = false
   note.value = ''
   oneOff.value = false
 }
+
+/** «Записано: 31 октября, 14:35, через бота» for an operation being edited. */
+const recorded = computed(() => {
+  const at = quick.editing?.created_at
+  if (!at) return null
+  const moment = new Date(at)
+  return t('quickAdd.recorded', {
+    date: formatDayMonth(isoDate(moment), settings.locale),
+    time: isoTime(moment),
+    via: t(`quickAdd.via.${quick.editing!.source}`),
+  })
+})
 
 const account = computed(() => (accountId.value ? money.accountById.get(accountId.value) : undefined))
 const toAccount = computed(() => (toAccountId.value ? money.accountById.get(toAccountId.value) : undefined))
@@ -180,7 +196,7 @@ async function save(): Promise<void> {
           ? { to_account_id: toAccountId.value!, ...(needsToAmount.value ? { to_amount: toAmount.value! } : {}) }
           : { category_id: categoryId.value! }),
         note: note.value.trim() || undefined,
-        occurred_at: `${day.value} ${isNewToday ? isoTime() : time.value}`,
+        occurred_at: `${day.value} ${(isNewToday && !timeSet.value) || !time.value ? isoTime() : time.value}`,
         is_one_off: type.value === 'expense' && oneOff.value,
       },
       quick.editing?.id,
@@ -406,7 +422,16 @@ function addAccount(): void {
             {{ $t('quickAdd.yesterday') }}
           </button>
           <input v-model="day" type="date" :max="isoDate()" class="chip !py-1.5" :class="{ 'chip-on': day < shiftDate(isoDate(), -1) }" />
+          <input
+            v-model="time"
+            type="time"
+            required
+            class="chip num !py-1.5"
+            :aria-label="$t('quickAdd.time')"
+            @input="timeSet = true"
+          />
         </div>
+        <p v-if="recorded" class="text-caption text-ink-3">{{ recorded }}</p>
       </section>
 
       <input v-model="note" maxlength="255" :placeholder="$t('quickAdd.notePlaceholder')" class="field text-body" />
