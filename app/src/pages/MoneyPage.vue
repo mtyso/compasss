@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowDown, ChartColumn, ChevronLeft, ChevronRight, Handshake, Plus, ReceiptText, X } from 'lucide-vue-next'
 import CategoryIcon from '@/components/CategoryIcon.vue'
+import CategoryDonut from '@/components/money/CategoryDonut.vue'
 import CategoryStrip from '@/components/money/CategoryStrip.vue'
 import AccountIcon from '@/components/money/AccountIcon.vue'
 import DayBars from '@/components/money/DayBars.vue'
@@ -430,7 +431,14 @@ watch(
                 <RouterLink :to="{ name: 'budget' }" class="section-link">{{ budget?.items.length ? $t('money.editBudget') : $t('money.setBudget') }}</RouterLink>
               </div>
               <UiEmpty v-if="!spending.rows.length" :text="$t('money.noSpending')" />
-              <div v-else class="flex flex-col gap-1">
+              <CategoryDonut
+                v-if="spending.rows.some((row) => row.total > 0)"
+                :rows="spending.rows.map((row) => ({ id: row.category_id, name: row.category?.names[settings.locale] ?? '', color: row.category?.color, total: row.total }))"
+                :selected="filter.category"
+                class="pt-1 pb-2"
+                @select="toggleCategory"
+              />
+              <div v-if="spending.rows.length" class="flex flex-col gap-1">
                 <div v-for="row in spending.rows" :key="row.category_id" class="flex flex-col">
                   <button
                     type="button"
