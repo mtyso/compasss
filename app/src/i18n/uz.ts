@@ -1098,6 +1098,31 @@ const uz: typeof ru = {
     updated: 'Saqlandi',
     settings: 'Sozlamalar',
   },
+  // Views: a tap on an operation, an account or a payment shows it first, «O'zgartirish» opens the form (D42).
+  details: {
+    edit: "O'zgartirish",
+    editAccount: "Hisobni o'zgartirish",
+    yes: 'Ha',
+    no: "Yo'q",
+    today: 'bugun',
+    received: 'Tushdi',
+    inSom: "So'mda",
+    rate: 'kurs: $1 = {rate}',
+    oneOffHint: 'oddiy oy statistikasini buzmaydi',
+    recorded: 'Yozilgan',
+    spendableYes: 'kunlik limitga kiradi',
+    spendableNo: 'kunlik limitga kirmaydi',
+    accountEmpty: "Bu hisob bo'yicha hali operatsiyalar yo'q.",
+    dueToday: 'Muddati — bugun',
+    dueTomorrow: 'Muddati — ertaga',
+    repeats: 'Takrorlanadi',
+    monthlyOn: 'Har oy, {day}-sanada',
+    status: 'Holati',
+    paused: "O'chirilgan",
+    paidBefore: "Oxirgi to'lovlar",
+    nextIncome: 'Keyingi safar',
+    incomeHint: 'Kunlik limit eng yaqin daromad kunigacha hisoblanadi.',
+  },
 }
 
 export default uz

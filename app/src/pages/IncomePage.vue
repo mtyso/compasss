@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import AmountField from '@/components/AmountField.vue'
 import BottomSheet from '@/components/BottomSheet.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import MoneyAmount from '@/components/ui/MoneyAmount.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiRow from '@/components/ui/UiRow.vue'
+import UiFact from '@/components/ui/UiFact.vue'
 import UiSegmented from '@/components/ui/UiSegmented.vue'
+import UiSheet from '@/components/ui/UiSheet.vue'
 import { showToast } from '@/components/ui/toast'
 import { haptics } from '@/lib/haptics'
 import { api, ApiError } from '@/lib/api'
+import { isoDate } from '@/lib/dates'
 import { formatDayMonth, type Currency } from '@/lib/format'
 import { CURRENCIES } from '@/lib/money'
 import { useAuth, type User } from '@/stores/auth'
@@ -45,6 +48,25 @@ onMounted(async () => {
 })
 
 const currencyOptions = computed(() => CURRENCIES.map((value) => ({ value, label: value === 'UZS' ? t('accounts.som') : t('accounts.dollar') })))
+
+// A tap on a day of income shows it first (D42); its «Изменить» opens the form.
+const viewOpen = ref(false)
+const viewing = ref<IncomeSchedule | null>(null)
+function view(schedule: IncomeSchedule): void {
+  viewing.value = schedule
+  viewOpen.value = true
+}
+function editViewed(): void {
+  if (!viewing.value) return
+  viewOpen.value = false
+  open(viewing.value)
+}
+
+/** «через 7 дней», or «сегодня», for the next day the money comes. */
+function inDays(day: string): string {
+  const days = Math.round((Date.parse(`${day}T12:00:00+05:00`) - Date.parse(`${isoDate()}T12:00:00+05:00`)) / 86_400_000)
+  return days <= 0 ? t('details.today') : t('today.daysLeft', { n: days }, days)
+}
 
 function open(schedule: IncomeSchedule | null): void {
   editing.value = schedule
@@ -107,7 +129,7 @@ async function saveMinBalance(): Promise<void> {
       <p class="text-caption text-ink-3">{{ $t('income.intro') }}</p>
       <div v-if="!loaded" class="skeleton h-28 rounded-card" />
       <div v-else class="group">
-        <UiRow v-for="schedule in plan.incomes" :key="schedule.id" :title="schedule.name" @click="open(schedule)">
+        <UiRow v-for="schedule in plan.incomes" :key="schedule.id" :title="schedule.name" @click="view(schedule)">
           <template #leading>
             <span class="num grid size-10 place-items-center rounded-full bg-surface-2 text-[0.9375rem] font-semibold text-ink">{{ schedule.day_of_month }}</span>
           </template>
@@ -129,6 +151,33 @@ async function saveMinBalance(): Promise<void> {
       <p class="text-caption text-ink-3">{{ $t('income.minBalanceHint') }}</p>
       <UiButton variant="secondary" size="sm" class="self-start" :loading="minSaving" @click="saveMinBalance">{{ $t('accounts.save') }}</UiButton>
     </section>
+
+    <UiSheet v-model:open="viewOpen" :title="viewing?.name ?? ''">
+      <div v-if="viewing" class="flex flex-col gap-4 pt-1">
+        <section class="flex items-center gap-4">
+          <span class="num grid size-12 shrink-0 place-items-center rounded-full bg-money-soft text-lg font-semibold text-money">{{ viewing.day_of_month }}</span>
+          <div class="flex min-w-0 flex-1 flex-col gap-1">
+            <MoneyAmount :amount="viewing.expected_amount" :currency="viewing.currency" sign="always" class="text-[2rem] leading-none font-semibold tracking-[-0.03em] text-money" />
+            <span class="text-[0.9375rem] text-ink-2">{{ $t('details.monthlyOn', { day: viewing.day_of_month }) }}</span>
+          </div>
+        </section>
+        <dl class="facts">
+          <UiFact :label="$t('details.nextIncome')">
+            {{ formatDayMonth(viewing.next_date, settings.locale) }}
+            <template #hint>{{ inDays(viewing.next_date) }}</template>
+          </UiFact>
+          <UiFact :label="$t('income.account')">{{ (viewing.account_id && money.accountById.get(viewing.account_id)?.name) || $t('income.anyAccount') }}</UiFact>
+          <UiFact v-if="!viewing.active" :label="$t('details.status')">{{ $t('details.paused') }}</UiFact>
+        </dl>
+        <p class="text-caption text-ink-3">{{ $t('details.incomeHint') }}</p>
+      </div>
+      <template v-if="viewing" #footer>
+        <UiButton variant="secondary" block @click="editViewed">
+          <template #icon><Pencil class="size-[18px]" :stroke-width="2.2" /></template>
+          {{ $t('details.edit') }}
+        </UiButton>
+      </template>
+    </UiSheet>
 
     <BottomSheet v-model:open="sheetOpen" :title="editing ? editing.name : $t('income.new')">
       <label class="flex flex-col gap-2">

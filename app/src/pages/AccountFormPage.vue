@@ -30,7 +30,6 @@ const cushion = ref(false)
 /** Money lent: the day it was promised back (docs/PLAN.md, D29). */
 const dueOn = ref('')
 const saving = ref(false)
-const confirmingDelete = ref(false)
 const error = ref<string | null>(null)
 
 const types: AccountType[] = ['card', 'cash', 'savings', 'deposit', 'debt', 'lent', 'other']
@@ -88,7 +87,8 @@ async function save(): Promise<void> {
       },
       existing.value?.id,
     )
-    router.back()
+    if (window.history.state?.back) router.back()
+    else void router.replace(back.value)
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : t('quickAdd.failed')
   } finally {
@@ -96,22 +96,13 @@ async function save(): Promise<void> {
   }
 }
 
-async function toggleArchive(): Promise<void> {
-  if (!existing.value) return
-  await money.saveAccount({ archived: !existing.value.archived }, existing.value.id)
-  router.back()
-}
-
-async function remove(): Promise<void> {
-  if (!existing.value) return
-  await money.deleteAccount(existing.value.id)
-  router.back()
-}
+/** Back to where the form was opened: an account's own screen, or the list for a new one. */
+const back = computed(() => (id.value ? `/more/accounts/${id.value}` : '/more/accounts'))
 </script>
 
 <template>
   <div class="page">
-    <PageHeader :title="existing ? existing.name : $t('accounts.new')" back="/more/accounts" />
+    <PageHeader :title="existing ? $t('details.editAccount') : $t('accounts.new')" :back="back" />
 
     <label class="flex flex-col gap-2">
       <span class="field-label">{{ $t('accounts.name') }}</span>
@@ -168,23 +159,5 @@ async function remove(): Promise<void> {
     <p v-if="error" class="text-sm text-danger" role="alert">{{ error }}</p>
 
     <UiButton size="lg" block :disabled="!canSave" :loading="saving" @click="save">{{ $t('accounts.save') }}</UiButton>
-
-    <div v-if="existing" class="-mt-2 flex flex-col items-center gap-1">
-      <UiButton variant="ghost" size="sm" @click="toggleArchive">
-        {{ existing.archived ? $t('accounts.unarchive') : $t('accounts.archive') }}
-      </UiButton>
-      <template v-if="!existing.archived">
-        <Transition name="fade" mode="out-in">
-          <UiButton v-if="!confirmingDelete" variant="ghost" size="sm" class="!text-danger" @click="confirmingDelete = true">{{ $t('accounts.delete') }}</UiButton>
-          <div v-else class="card flex w-full flex-col gap-3 p-4 text-center">
-            <span class="text-sm text-ink-2">{{ $t('accounts.deleteConfirm') }}</span>
-            <div class="flex gap-2">
-              <UiButton variant="secondary" size="sm" class="flex-1 !bg-bg" @click="confirmingDelete = false">{{ $t('more.cancel') }}</UiButton>
-              <UiButton variant="danger" size="sm" class="flex-1" @click="remove">{{ $t('accounts.delete') }}</UiButton>
-            </div>
-          </div>
-        </Transition>
-      </template>
-    </div>
   </div>
 </template>

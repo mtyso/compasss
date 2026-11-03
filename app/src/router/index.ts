@@ -38,7 +38,9 @@ export const router = createRouter({
         { path: 'more', name: 'more', component: () => import('@/pages/MorePage.vue') },
         { path: 'more/accounts', name: 'accounts', component: () => import('@/pages/AccountsPage.vue') },
         { path: 'more/accounts/new', name: 'account-new', component: () => import('@/pages/AccountFormPage.vue') },
-        { path: 'more/accounts/:id(\\d+)', name: 'account-edit', component: () => import('@/pages/AccountFormPage.vue') },
+        // An account opens read-only (its balance, details and operations); «Изменить» opens the form (D42).
+        { path: 'more/accounts/:id(\\d+)', name: 'account', component: () => import('@/pages/AccountPage.vue') },
+        { path: 'more/accounts/:id(\\d+)/edit', name: 'account-edit', component: () => import('@/pages/AccountFormPage.vue') },
         { path: 'more/categories', name: 'categories', component: () => import('@/pages/CategoriesPage.vue') },
         { path: 'more/budget', name: 'budget', component: () => import('@/pages/BudgetPage.vue') },
         { path: 'more/income', name: 'income', component: () => import('@/pages/IncomePage.vue') },

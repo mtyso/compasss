@@ -509,7 +509,7 @@ watch(
                 <p class="text-caption text-ink-3">{{ $t('analytics.topHint') }}</p>
               </div>
               <div class="group">
-                <TransactionRow v-for="item in analytics.top" :key="item.id" :transaction="item" dated @click="quick.start(item)" />
+                <TransactionRow v-for="item in analytics.top" :key="item.id" :transaction="item" dated @click="quick.show(item)" />
               </div>
             </section>
 
@@ -523,7 +523,7 @@ watch(
                 <UiRow
                   v-for="account in money.activeAccounts"
                   :key="account.id"
-                  :to="{ name: 'account-edit', params: { id: account.id } }"
+                  :to="{ name: 'account', params: { id: account.id } }"
                   :title="account.name"
                   :subtitle="account.is_cushion ? $t('accounts.cushion') : $t(`accounts.types.${account.type}`)"
                   :chevron="false"
@@ -568,7 +568,7 @@ watch(
                     <MoneyAmount v-if="group.spent" :amount="group.spent" sign="expense" class="text-caption text-ink-3" />
                   </div>
                   <div class="group">
-                    <TransactionRow v-for="item in group.items" :key="item.id" :transaction="item" @click="quick.start(item)" />
+                    <TransactionRow v-for="item in group.items" :key="item.id" :transaction="item" @click="quick.show(item)" />
                   </div>
                 </div>
                 <UiButton v-if="nextCursor" variant="secondary" block :loading="loadingMore" class="mt-1" @click="loadMore">

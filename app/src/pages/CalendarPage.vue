@@ -17,6 +17,7 @@ import WeekView from '@/components/calendar/WeekView.vue'
 import { scrolledAlready } from '@/components/calendar/timeline'
 import { useCalendarOpen } from '@/components/calendar/useCalendarOpen'
 import PaySheet from '@/components/plan/PaySheet.vue'
+import PaymentSheet from '@/components/plan/PaymentSheet.vue'
 import HabitValueSheet from '@/components/things/HabitValueSheet.vue'
 import TaskSheet from '@/components/things/TaskSheet.vue'
 import { hasOverlay } from '@/components/ui/overlays'
@@ -501,6 +502,7 @@ onBeforeUnmount(() => {
     <ScopeSheet v-model:open="actions.scopeSheet.open" mode="edit" :allow-following="actions.scopeSheet.allowFollowing" @pick="actions.pickScope" />
     <RoutineSheet v-model:open="actions.routineSheet.open" :block="actions.routineSheet.block" />
     <TaskSheet v-model:open="actions.taskSheet.open" :task="actions.taskSheet.task" />
+    <PaymentSheet v-model:open="actions.paymentSheet.open" :payment="actions.paymentSheet.payment" @pay="actions.payPayment" @edit="actions.editPayment" />
     <PaySheet v-model:open="actions.paySheet.open" :payment="actions.paySheet.payment" @edit="actions.editPayment" />
     <HabitValueSheet
       v-model:open="actions.valueSheet.open"
