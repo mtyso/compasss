@@ -23,6 +23,11 @@ const props = withDefaults(
 )
 
 const tag = computed(() => (props.to ? RouterLink : props.href ? 'a' : 'button'))
+// Only what each element takes: an `href` bound to a RouterLink, even an empty one, replaces the
+// link's own, which leaves an <a> without an address (no link role, not reachable by Tab).
+const bound = computed(() =>
+  props.to ? { to: props.to } : props.href ? { href: props.href } : { type: props.type, disabled: props.disabled || props.loading },
+)
 
 const variants = {
   primary: 'lit bg-money text-on-money hover:brightness-105',
@@ -43,10 +48,7 @@ const sizes = {
 <template>
   <component
     :is="tag"
-    :to="to"
-    :href="href"
-    :type="tag === 'button' ? type : undefined"
-    :disabled="tag === 'button' ? disabled || loading : undefined"
+    v-bind="bound"
     :aria-disabled="disabled || loading || undefined"
     :aria-busy="loading || undefined"
     class="press relative inline-flex shrink-0 items-center justify-center font-semibold whitespace-nowrap disabled:opacity-40"
