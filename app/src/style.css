@@ -486,6 +486,15 @@
     background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--c-bg) 60%, transparent), transparent);
     animation: var(--animate-shimmer);
   }
+
+  /* The details of something shown read-only (ui/UiFact rows), hairlines between them. */
+  .facts {
+    @apply flex flex-col text-[0.9375rem];
+  }
+
+  .facts > * + * {
+    box-shadow: inset 0 1px 0 var(--c-line);
+  }
 }
 
 /*

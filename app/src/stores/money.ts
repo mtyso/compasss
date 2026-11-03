@@ -204,11 +204,16 @@ export const useMoney = defineStore('money', () => {
   }
 })
 
-/** Opens the quick-add sheet from anywhere: the «+» button, or a tap on an operation to edit it. */
+/**
+ * The operation sheets, from anywhere: the «+» button opens the form (QuickAddSheet); a tap on an
+ * operation in a list opens it read-only first (TransactionSheet), and its «Изменить» the form (D42).
+ */
 export const useQuickAdd = defineStore('quickAdd', () => {
   const open = ref(false)
   const editing = ref<Transaction | null>(null)
-  /** The operation just deleted from the sheet, for the «Вернуть» toast. */
+  const viewOpen = ref(false)
+  const viewing = ref<Transaction | null>(null)
+  /** The operation just deleted from a sheet, for the «Вернуть» toast. */
   const deletedId = ref<number | null>(null)
 
   function start(transaction: Transaction | null = null): void {
@@ -216,9 +221,21 @@ export const useQuickAdd = defineStore('quickAdd', () => {
     open.value = true
   }
 
+  function show(transaction: Transaction): void {
+    viewing.value = transaction
+    viewOpen.value = true
+  }
+
+  /** «Изменить» on the view: the form takes its place. */
+  function edit(): void {
+    if (!viewing.value) return
+    viewOpen.value = false
+    start(viewing.value)
+  }
+
   function close(): void {
     open.value = false
   }
 
-  return { open, editing, deletedId, start, close }
+  return { open, editing, viewOpen, viewing, deletedId, start, show, edit, close }
 })

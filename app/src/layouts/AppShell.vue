@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type RouteLocationNormalized } from 'vue-router'
 import { CalendarCheck, CalendarClock, CalendarDays, ChartColumn, HandCoins, Handshake, LayoutGrid, Lightbulb, MoonStar, PieChart, Plus, Scale, ScrollText, Settings, Sun, Target, Wallet, WalletCards } from 'lucide-vue-next'
 import QuickAddSheet from '@/components/QuickAddSheet.vue'
+import TransactionSheet from '@/components/money/TransactionSheet.vue'
 import CompassMark from '@/components/ui/CompassMark.vue'
 import UiButton from '@/components/ui/UiButton.vue'
 import UiToastHost from '@/components/ui/UiToastHost.vue'
@@ -41,7 +42,7 @@ const sideLinks = [
     { name: 'can-afford', label: 'advice.canAfford', icon: Scale },
   ],
   [
-    { name: 'accounts', label: 'more.accounts', icon: WalletCards, also: ['account-new', 'account-edit'] },
+    { name: 'accounts', label: 'more.accounts', icon: WalletCards, also: ['account', 'account-new', 'account-edit'] },
     { name: 'categories', label: 'more.categories', icon: LayoutGrid },
     { name: 'budget', label: 'more.budget', icon: PieChart },
     { name: 'report', label: 'more.report', icon: ChartColumn },
@@ -104,7 +105,7 @@ function openQuickAdd(): void {
 
 // On a keyboard, N opens «Записать» from any screen, unless something is being typed or a sheet is open.
 function onKey(event: KeyboardEvent): void {
-  if (event.code !== 'KeyN' || event.repeat || event.metaKey || event.ctrlKey || event.altKey || quick.open) return
+  if (event.code !== 'KeyN' || event.repeat || event.metaKey || event.ctrlKey || event.altKey || quick.open || quick.viewOpen) return
   const target = event.target as HTMLElement | null
   if (target?.closest('input, textarea, select, [contenteditable="true"]') || document.querySelector('[aria-modal="true"]')) return
   event.preventDefault()
@@ -113,7 +114,7 @@ function onKey(event: KeyboardEvent): void {
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
-// «Операция удалена · Вернуть» after deleting from the sheet.
+// «Операция удалена · Вернуть» after deleting from a sheet.
 watch(
   () => quick.deletedId,
   (id) => {
@@ -226,6 +227,7 @@ watch(
       </nav>
     </div>
 
+    <TransactionSheet />
     <QuickAddSheet />
   </div>
 </template>
