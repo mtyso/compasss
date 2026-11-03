@@ -13,8 +13,8 @@ import { useSettings } from '@/stores/settings'
  * it is overdue and orange on the day; the sum stands on the right, as in the money screens.
  */
 const props = defineProps<{ payment: RecurringPayment; today: string; hideToday?: boolean }>()
-/** `open` is a tap on the row, or a tick that needs the form (another currency, no account). */
-const emit = defineEmits<{ open: [] }>()
+/** `open` is a tap on the row (the payment's view); `pay`, a tick that needs the form (another currency, no account). */
+const emit = defineEmits<{ open: []; pay: [] }>()
 
 const { t } = useI18n()
 const settings = useSettings()
@@ -27,7 +27,7 @@ const urgency = computed(() => (props.payment.overdue ? 2 : props.payment.next_d
 
 async function tick(): Promise<void> {
   if (paying.value) return
-  if (!(await pay())) emit('open')
+  if (!(await pay())) emit('pay')
 }
 </script>
 

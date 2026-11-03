@@ -23,6 +23,7 @@ import LimitCard from '@/components/plan/LimitCard.vue'
 import MoneyStreakLine from '@/components/plan/MoneyStreakLine.vue'
 import WeekSummaryCard from '@/components/plan/WeekSummaryCard.vue'
 import PaySheet from '@/components/plan/PaySheet.vue'
+import PaymentSheet from '@/components/plan/PaymentSheet.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
 import PrayerToday from '@/components/prayer/PrayerToday.vue'
 import { isoDate } from '@/lib/dates'
@@ -41,7 +42,18 @@ const plan = usePlan()
 const router = useRouter()
 const failed = ref(false)
 
-// A payment's row opens «Оплачено» with the details: another sum, account or day, or «Пропустить».
+// A payment's row opens the payment read-only (D42); from there, or from a tick that needs them,
+// «Оплачено» with the details: another sum, account or day, or «Пропустить».
+const paymentViewOpen = ref(false)
+const viewingPayment = ref<RecurringPayment | null>(null)
+function viewPayment(payment: RecurringPayment): void {
+  viewingPayment.value = payment
+  paymentViewOpen.value = true
+}
+function editPayment(payment: RecurringPayment): void {
+  void router.push({ name: 'payments', query: { edit: payment.id } })
+}
+
 const paySheetOpen = ref(false)
 const paying = ref<RecurringPayment | null>(null)
 function openPayment(payment: RecurringPayment): void {
@@ -250,7 +262,7 @@ function saveValue(value: number): void {
               v-for="payment in today.payments"
               :key="payment.id"
               :payment="payment"
-              @open="openPayment(payment)"
+              @open="viewPayment(payment)"
               @edit="openPayment(payment)"
             />
           </div>
@@ -262,7 +274,8 @@ function saveValue(value: number): void {
     <HabitSheet v-model:open="habitSheetOpen" :habit="editingHabit" />
     <HabitValueSheet v-model:open="valueSheetOpen" :habit="valueHabit" @save="saveValue" />
     <ContributeSheet v-model:open="contributeOpen" />
-    <PaySheet v-model:open="paySheetOpen" :payment="paying" @edit="(p) => router.push({ name: 'payments', query: { edit: p.id } })" />
+    <PaymentSheet v-model:open="paymentViewOpen" :payment="viewingPayment" @pay="openPayment" @edit="editPayment" />
+    <PaySheet v-model:open="paySheetOpen" :payment="paying" @edit="editPayment" />
   </div>
 </template>
 

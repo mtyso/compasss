@@ -41,10 +41,10 @@ interface Move {
 
 /**
  * What a tap or a drop on the calendar does, with the sheets it opens (mounted once in CalendarPage):
- * an event opens EventSheet, a task TaskSheet, a payment PaySheet (or its settings, or the expense
- * that paid it), a payday, a goal or money lent their screens; a habit logs for its day, a hold asks
- * for the number. A tick, a log or a drop shows on the item at once and stays until the feed that
- * comes after the change arrives.
+ * an event opens EventSheet, a task TaskSheet, a payment its view (PaymentSheet, and from there PaySheet
+ * or its settings; a paid one, the expense that paid it), a payday, a goal or money lent their screens;
+ * a habit logs for its day, a hold asks for the number. A tick, a log or a drop shows on the item at
+ * once and stays until the feed that comes after the change arrives.
  */
 export function useCalendarOpen(feed: () => CalendarFeed | null, today: () => string) {
   const calendar = useCalendar()
@@ -63,6 +63,7 @@ export function useCalendarOpen(feed: () => CalendarFeed | null, today: () => st
     draft: null as EventInput | null,
   })
   const taskSheet = reactive({ open: false, task: null as Task | null })
+  const paymentSheet = reactive({ open: false, payment: null as RecurringPayment | null })
   const paySheet = reactive({ open: false, payment: null as RecurringPayment | null })
   const valueSheet = reactive({ open: false, habit: null as Habit | null, item: null as HabitItem | null })
   const routineSheet = reactive({ open: false, block: null as RoutineBlock | null })
@@ -160,22 +161,28 @@ export function useCalendarOpen(feed: () => CalendarFeed | null, today: () => st
     if (item.paid) {
       if (!item.transaction_id) return
       try {
-        quick.start(await api<Transaction>(`/transactions/${item.transaction_id}`))
+        quick.show(await api<Transaction>(`/transactions/${item.transaction_id}`))
       } catch {
         showToast({ message: t('calendar.loadFailed'), tone: 'danger' })
       }
       return
     }
     const payment = plan.payments.find((p) => p.id === item.payment_id)
-    if (item.projected || !payment) {
-      void router.push({ name: 'payments', query: { edit: String(item.payment_id) } })
+    if (!payment) {
+      void router.push({ name: 'payments' })
       return
     }
+    paymentSheet.payment = payment
+    paymentSheet.open = true
+  }
+
+  /** «Оплачено» on the payment's view: the details to pay it with. */
+  function payPayment(payment: RecurringPayment): void {
     paySheet.payment = payment
     paySheet.open = true
   }
 
-  /** «Изменить» in PaySheet: the payment's own settings. */
+  /** «Изменить» on the payment's view or in PaySheet: the payment's own settings. */
   function editPayment(payment: RecurringPayment): void {
     void router.push({ name: 'payments', query: { edit: String(payment.id) } })
   }
@@ -296,12 +303,14 @@ export function useCalendarOpen(feed: () => CalendarFeed | null, today: () => st
   return {
     eventSheet,
     taskSheet,
+    paymentSheet,
     paySheet,
     valueSheet,
     routineSheet,
     scopeSheet,
     patched,
     openItem,
+    payPayment,
     editPayment,
     newEvent,
     openRoutine,

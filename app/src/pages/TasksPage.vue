@@ -11,6 +11,7 @@ import PaymentTaskRow from '@/components/things/PaymentTaskRow.vue'
 import TaskRow from '@/components/things/TaskRow.vue'
 import TaskSheet from '@/components/things/TaskSheet.vue'
 import PaySheet from '@/components/plan/PaySheet.vue'
+import PaymentSheet from '@/components/plan/PaymentSheet.vue'
 import { habitIcon } from '@/components/things/habitIcons'
 import { useTaskToggle, useThingActions } from '@/components/things/useThingActions'
 import ScreenHeader from '@/components/ui/ScreenHeader.vue'
@@ -123,6 +124,14 @@ async function quickAdd(): Promise<void> {
 const taskSheetOpen = ref(false)
 const editingTask = ref<Task | null>(null)
 const taskDraft = ref<Partial<TaskInput>>({})
+
+// A tap on a payment shows it (D42); «Оплачено» there, or a tick that needs the details, opens PaySheet.
+const paymentViewOpen = ref(false)
+const viewingPayment = ref<RecurringPayment | null>(null)
+function viewPayment(payment: RecurringPayment): void {
+  viewingPayment.value = payment
+  paymentViewOpen.value = true
+}
 
 const paySheetOpen = ref(false)
 const paying = ref<RecurringPayment | null>(null)
@@ -273,7 +282,8 @@ function openNew(): void {
                   :payment="payment"
                   :today="today"
                   :hide-today="group.key === 'today'"
-                  @open="openPayment(payment)"
+                  @open="viewPayment(payment)"
+                  @pay="openPayment(payment)"
                 />
                 <TaskRow
                   v-for="task in group.tasks"
@@ -388,6 +398,7 @@ function openNew(): void {
     </Transition>
 
     <TaskSheet v-model:open="taskSheetOpen" :task="editingTask" :draft="taskDraft" />
+    <PaymentSheet v-model:open="paymentViewOpen" :payment="viewingPayment" @pay="openPayment" @edit="editPayment" />
     <PaySheet v-model:open="paySheetOpen" :payment="paying" @edit="editPayment" />
     <HabitSheet v-model:open="habitSheetOpen" :habit="editingHabit" />
     <HabitValueSheet v-model:open="valueSheetOpen" :habit="valueHabit" @save="saveValue" />

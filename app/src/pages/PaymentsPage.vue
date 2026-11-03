@@ -8,6 +8,7 @@ import BottomSheet from '@/components/BottomSheet.vue'
 import CategoryIcon from '@/components/CategoryIcon.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import PaySheet from '@/components/plan/PaySheet.vue'
+import PaymentSheet from '@/components/plan/PaymentSheet.vue'
 import PaymentRow from '@/components/plan/PaymentRow.vue'
 import MoneyAmount from '@/components/ui/MoneyAmount.vue'
 import UiButton from '@/components/ui/UiButton.vue'
@@ -58,6 +59,14 @@ onMounted(async () => {
   }
   if (Object.keys(route.query).length) void router.replace({ query: {} })
 })
+
+// A tap on a payment shows it first (D42); its «Изменить» opens the form, «Оплачено» the details to pay.
+const viewOpen = ref(false)
+const viewing = ref<RecurringPayment | null>(null)
+function view(payment: RecurringPayment): void {
+  viewing.value = payment
+  viewOpen.value = true
+}
 
 const paySheetOpen = ref(false)
 const paying = ref<RecurringPayment | null>(null)
@@ -188,7 +197,7 @@ async function remove(): Promise<void> {
             :key="payment.id"
             :payment="payment"
             :class="{ 'opacity-50': !payment.active }"
-            @open="open(payment)"
+            @open="view(payment)"
             @edit="openPay(payment)"
           />
           <UiRow :title="$t('payments.add')" tone="muted" :chevron="false" @click="open(null)">
@@ -219,6 +228,7 @@ async function remove(): Promise<void> {
       </section>
     </template>
 
+    <PaymentSheet v-model:open="viewOpen" :payment="viewing" @pay="openPay" @edit="open" />
     <PaySheet v-model:open="paySheetOpen" :payment="paying" @edit="open" />
 
     <BottomSheet v-model:open="sheetOpen" :title="editing ? editing.name : $t('payments.new')">
