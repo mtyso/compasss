@@ -31,7 +31,7 @@ const archived = computed(() => money.accounts.filter((a) => a.archived))
       <UiRow
         v-for="account in money.activeAccounts"
         :key="account.id"
-        :to="{ name: 'account-edit', params: { id: account.id } }"
+        :to="{ name: 'account', params: { id: account.id } }"
         :title="account.name"
       >
         <template #leading><AccountIcon :type="account.type" :cushion="account.is_cushion" /></template>
@@ -53,7 +53,7 @@ const archived = computed(() => money.accounts.filter((a) => a.archived))
     <section v-if="archived.length" class="flex flex-col gap-2.5">
       <h2 class="section-title">{{ $t('accounts.archived') }}</h2>
       <div class="group opacity-70">
-        <UiRow v-for="account in archived" :key="account.id" :to="{ name: 'account-edit', params: { id: account.id } }" :title="account.name">
+        <UiRow v-for="account in archived" :key="account.id" :to="{ name: 'account', params: { id: account.id } }" :title="account.name">
           <template #leading><AccountIcon :type="account.type" /></template>
           <template #trailing><MoneyAmount :amount="account.balance" :currency="account.currency" class="text-sm" /></template>
         </UiRow>
