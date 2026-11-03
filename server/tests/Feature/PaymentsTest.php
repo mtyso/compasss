@@ -120,6 +120,19 @@ it('keeps «Оплачено» to one month and lets a month be skipped', functi
     expect(Transaction::count())->toBe(1);
 });
 
+it('lists the operations that paid a payment, for its history', function () {
+    $payment = newPayment();
+    $this->postJson("/api/recurring-payments/{$payment['id']}/pay", ['amount' => 150_000], $this->auth)->assertOk();
+    spend(40_000, $this->cafe->id);
+    $this->travelTo(Carbon::parse('2026-11-20 12:00', 'Asia/Tashkent'));
+    $paid = spend(155_000, $this->internet->id, '2026-11-20 11:00');
+
+    $this->getJson("/api/transactions?recurring_payment_id={$payment['id']}", $this->auth)->assertOk()
+        ->assertJsonCount(2, 'data')
+        ->assertJsonPath('data.0.id', $paid['id'])
+        ->assertJsonPath('data.1.amount', 150_000);
+});
+
 // --- Reminders ---------------------------------------------------------------------------
 
 it('reminds the evening before, says what is missing, and once more the morning after', function () {

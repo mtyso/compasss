@@ -21,6 +21,7 @@ class TransactionController extends Controller
             'day' => ['nullable', 'date_format:Y-m-d'],
             'account_id' => ['nullable', 'integer'],
             'category_id' => ['nullable', 'integer'],
+            'recurring_payment_id' => ['nullable', 'integer'],
             'type' => ['nullable', Rule::in(Transaction::TYPES)],
             'q' => ['nullable', 'string', 'max:100'],
         ]);
@@ -43,6 +44,10 @@ class TransactionController extends Controller
             // A main category includes its subcategories.
             $ids = $user->categories()->where('id', $filters['category_id'])->orWhere('parent_id', $filters['category_id'])->pluck('id');
             $query->whereIn('category_id', $ids);
+        }
+        if (isset($filters['recurring_payment_id'])) {
+            // The operations that paid a recurring payment: its history on the payment's view.
+            $query->where('recurring_payment_id', $filters['recurring_payment_id']);
         }
         if (isset($filters['type'])) {
             $query->where('type', $filters['type']);
